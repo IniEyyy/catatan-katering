@@ -560,7 +560,6 @@ const state = {
   poMonth: monthKey(todayStr()),
   rptMonth: monthKey(todayStr()),
   stickerDate: todayStr(),
-  stickerMonth: monthKey(todayStr()),
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
@@ -915,14 +914,17 @@ function unpaidEntries() {
 /* ---------- Grafik (canvas, tanpa dependensi) ---------- */
 function setupCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
-  /* ukur lebar ruang dulu, bukan lebar kanvas: lebar px dari render sebelumnya
-     mengunci kanvas sehingga tidak pernah menyusut saat jendela dikecilkan */
-  canvas.style.width = '100%';
+  /* lebar = 100% ruang, kecuali kanvas berkotak kecil menyetel data-w sendiri */
+  const lebar = canvas.dataset.w ? canvas.dataset.w + 'px' : '100%';
+  canvas.style.width = lebar;
+  /* tinggi asli disimpan sekali: setelah canvas.width diisi dpr, atribut height
+     bukan lagi nilai desain dan rasio intrinsik kanvas membuat tingginya membesar */
+  if (!canvas.dataset.h) canvas.dataset.h = canvas.getAttribute('height') || 220;
+  const h = +canvas.dataset.h;
   const w = Math.round(canvas.clientWidth || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 400);
-  const h = canvas.clientHeight || parseInt(canvas.getAttribute('height')) || 220;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
-  canvas.style.width = '100%';
+  canvas.style.width = lebar;
   canvas.style.height = h + 'px';
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1164,7 +1166,7 @@ function renderPrint() {
   const mode = state.printMode === 'konfirmasi' ? 'konfirmasi' : 'stiker';
   document.querySelectorAll('#page-print .print-mode').forEach(el => { el.hidden = el.dataset.mode !== mode; });
   document.querySelectorAll('#page-print .print-seg .seg-btn').forEach(b => b.classList.toggle('is-on', b.dataset.mode === mode));
-  if (mode === 'stiker') { renderStickerCalendar(); renderStickerCustomers(); stickerPreview(); }
+  if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
   else satpamPreview();
 }
 
@@ -1805,20 +1807,23 @@ function dailyMatch(c, f) {
 }
 /* Chip makanan anak pada tanggal tsb. Dengan cid → jadi tombol pilihan (halaman harian & Pesanan Seminggu).
    data-tip = isi lengkap menu, ditampilkan sebagai dialog kecil saat chip disorot/difokus. */
+function foodTip(k, it, extra) {
+  const lines = menuLines(it.name);
+  return escapeHtml(LETTERS[k] + ' · ' + (lines[0] || it.name) + '\n' + lines.slice(1).join('\n') + (extra ? '\n' + extra : ''));
+}
 function foodChips(type, date, rec, cid) {
   const items = menuItemsFor(type, date);
   if (!items.length) return '<span class="muted tiny" title="Belum ada menu ' + type + ' pada tanggal ini — atur di Beranda › Menu Mingguan">tidak ada menu</span>';
   const picks = rec && rec.ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
   const label = it => shortTxt(menuLines(it.name)[0] || it.name, 16);
-  const tip = (k, it) => escapeHtml(LETTERS[k] + ' · ' + (menuLines(it.name)[0] || it.name) + '\n' + menuLines(it.name).slice(1).join('\n'));
   if (!cid) {
     if (!picks.length) return '<span class="muted tiny">' + (rec && rec.ordered ? 'belum dipilih' : '—') + '</span>';
-    return picks.map(k => '<span class="food-chip is-on" data-tip="' + tip(k, items[k]) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(label(items[k])) + '</span>').join('');
+    return picks.map(k => '<span class="food-chip is-on" data-tip="' + foodTip(k, items[k]) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(label(items[k])) + '</span>').join('');
   }
   return items.slice(0, LETTERS.length).map((it, k) => {
     const on = picks.indexOf(k) >= 0;
     return '<button type="button" class="food-chip ' + (on ? 'is-on' : 'is-off') + '" data-act="daily-food" data-type="' + type +
-      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + tip(k, it) + '">' +
+      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + foodTip(k, it) + '">' +
       '<b>' + LETTERS[k] + '</b>' + escapeHtml(label(it)) + '</button>';
   }).join('');
 }
@@ -1848,7 +1853,7 @@ function showFoodTip(chip) {
 }
 function hideFoodTip() { if (foodTipEl) foodTipEl.classList.remove('is-on'); }
 function chipFromEvent(e) {
-  const el = e.target && e.target.closest ? e.target.closest('.food-chip[data-tip]') : null;
+  const el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
   if (!el) return null;
   const to = e.relatedTarget;
   if (to && el.contains && to.nodeType === 1 && el.contains(to)) return null;
@@ -2100,7 +2105,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti paket pilihan pertama). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan, ubah harganya di halaman Hari Ini. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu atau ke nama makanan di judul kolom untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti paket pilihan pertama). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan, ubah harganya di halaman Hari Ini. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2227,7 +2232,7 @@ function renderCustom() {
       const items = col.items;
       const legend = items.length
         ? '<span class="cs-legend">' + items.slice(0, LETTERS.length).map((it, k) =>
-            '<span><b>' + LETTERS[k] + '</b>' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 15)) + '</span>').join('') +
+            '<span data-tip="' + foodTip(k, it) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 15)) + '</span>').join('') +
           (items.length > LETTERS.length ? '<span class="more">+' + (items.length - LETTERS.length) + ' lagi</span>' : '') +
           '<button type="button" class="cs-clear" data-act="custom-col-clear" data-date="' + col.date + '" title="Kosongkan seluruh pesanan di kolom ini">×</button></span>'
         : '<span class="cs-legend cs-none">belum ada menu</span>';
@@ -2261,8 +2266,8 @@ function renderCustom() {
       const picks = ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
         '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) =>
-          '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '" title="' +
-          escapeHtml(LETTERS[k] + ' · ' + (menuLines(it.name)[0] || it.name) + (pkgById(it.pkg) ? ' · ' + pkgLabel(pkgById(it.pkg)) : ' · tanpa paket menu')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
+          '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '" data-tip="' +
+          foodTip(k, it, (pkgById(it.pkg) ? 'Paket ' + pkgLabel(pkgById(it.pkg)) : 'Paket mengikuti pelanggan')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
         '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
         escapeHtml(picks.length > 1 ? ('2 pilihan — harga mengikuti paket pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu — harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
         escapeHtml(picks.length || ordered ? customPkgNote(type, rec, c, picks.length ? items[picks[0]] : null) : 'belum pesan') + '</div>' +
@@ -2626,14 +2631,14 @@ function renderPoGroups() {
         '<div class="muted tiny">' + escapeHtml(g.item) + ' · ' + fmtIDR(g.unit) + ' / porsi' + (g.note ? ' · ' + escapeHtml(g.note) : '') + '</div>' +
         (g.due ? '<div class="muted tiny">' + (late ? '<span class="danger-text">terlambat ' : 'jatuh tempo ') + fmtShortDate(g.due) + '</span>' : '') +
         (g.invNo ? '<div class="muted tiny">no. ' + escapeHtml(g.invNo) + '</div>' : '') + '</td>' +
-      '<td class="small">' + g.dates.map(d => fmtShortDate(d) + ' <span class="muted tiny">(' +
-        (g.rows.filter(p => p.date === d).reduce((s, p) => s + (+p.qty || 0), 0)) + ' porsi)</span>').join('<br>') + '</td>' +
+      '<td class="small">' + g.dates.map(d => '<div class="po-gd-date">' + fmtShortDate(d) + ' <span class="muted tiny">· ' +
+        (g.rows.filter(p => p.date === d).reduce((s, p) => s + (+p.qty || 0), 0)) + ' porsi</span></div>').join('') + '</td>' +
       '<td class="num">' + g.qty + '</td>' +
       '<td class="num">' + fmtIDR(g.nilai) + (g.bayar > 0 && g.bayar < g.nilai ? '<div class="muted tiny">barunya ' + fmtIDR(g.bayar) + '</div>' : '') + '</td>' +
       '<td class="c"><button class="badge ' + (g.sisa > 0 ? 'red' : 'green') + '" data-act="po-group-paid" data-id="' + g.id + '" title="' +
         (g.sisa > 0 ? 'Tandai lunas — sisa ' + fmtIDR(g.sisa) : 'Batalkan penandaan lunas') + '">' +
         (g.sisa > 0 ? 'Belum' : 'Lunas') + '</button>' +
-        (g.sisa > 0 ? '<div class="muted tiny danger-text">sisa ' + fmtIDR(g.sisa) + '</div>' : '') + '</td>' +
+        (g.sisa > 0 ? '<div class="muted tiny danger-text po-gd-sisa">sisa ' + fmtIDR(g.sisa) + '</div>' : '') + '</td>' +
       '<td class="end"><div class="row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="po-group-invoice" data-id="' + g.id + '">Invoice</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="po-group-detail" data-id="' + g.id + '">Detail</button>' +
@@ -2732,7 +2737,7 @@ function poGroupInvoiceImage(id) {
   const W = 620, pad = 26, scale = 2, rowH = 26;
   const bank = [db.settings.bankName, db.settings.bankNumber].filter(Boolean).join('  ');
   const holder = db.settings.bankHolder || db.settings.businessName;
-  const headH = 150, sumH = 118;
+  const headH = 156, sumH = 118;
   /* tinggi kanvas dihitung dari alur gambar yang sama — tidak ada ruang kosong di bawah ringkasan */
   const bodyY = headH + 24 + 16 + (g.note ? 12 : 0) + 12 + 7 + 17 + g.rows.length * rowH + 2 + 16 + 12 + 18 + 22 + 2 + 26;
   const payY = bodyY + 28;
@@ -2749,37 +2754,42 @@ function poGroupInvoiceImage(id) {
   const no = ensureInvoiceNo(g);
   c.textAlign = 'left'; c.fillStyle = th.text; c.font = '800 21px Segoe UI, sans-serif';
   c.fillText(clipText(c, db.settings.businessName, W - pad - 170), pad, 44);
-  if (db.settings.tagline) { c.fillStyle = th.muted; c.font = '11.5px Segoe UI, sans-serif'; c.fillText(clipText(c, db.settings.tagline, W - pad - 170), pad, 62); }
+  if (db.settings.tagline) { c.fillStyle = th.muted; c.font = '11.5px Segoe UI, sans-serif'; c.fillText(clipText(c, db.settings.tagline, W - pad - 170), pad, 63); }
   c.textAlign = 'right';
   c.fillStyle = th.strip[0]; c.font = '800 17px Segoe UI, sans-serif';
-  c.fillText('INVOICE', W - pad, 44);
+  c.fillText('INVOICE', W - pad, 40);
   c.fillStyle = th.muted; c.font = '700 11.5px Segoe UI, sans-serif';
-  c.fillText(no, W - pad, 62);
-  c.font = '11.5px Segoe UI, sans-serif';
-  c.fillText('Diterbitkan ' + fmtLong(todayStr()), W - pad, 79);
+  c.fillText(no, W - pad, 58);
+  c.font = '10.5px Segoe UI, sans-serif';
+  c.fillText('Diterbitkan ' + fmtLong(todayStr()), W - pad, 74);
   c.textAlign = 'left';
   c.strokeStyle = th.line; c.beginPath(); c.moveTo(pad, 96); c.lineTo(W - pad, 96); c.stroke();
 
-  roundRect(c, pad, 108, W - pad * 2, 44, 8);
+  roundRect(c, pad, 106, W - pad * 2, 50, 8);
   c.fillStyle = th.panel; c.fill();
   c.fillStyle = th.muted; c.font = '700 9.5px Segoe UI, sans-serif';
-  c.fillText('DITAGIHKAN KEPADA', pad + 12, 122);
+  c.fillText('DITAGIHKAN KEPADA', pad + 12, 121);
   c.fillStyle = th.text; c.font = '800 14px Segoe UI, sans-serif';
   c.fillText(clipText(c, g.org, W - pad * 2 - 220), pad + 12, 138);
   const pic = (g.pic ? 'PIC: ' + g.pic : '') + (g.pic && g.contact ? ' · ' : '') + (g.contact || '');
   c.fillStyle = th.muted; c.font = '11px Segoe UI, sans-serif';
-  c.fillText(clipText(c, pic || 'PIC belum diisi', 250), pad + 12, 150);
+  c.fillText(clipText(c, pic || 'PIC belum diisi', 250), pad + 12, 151);
   c.textAlign = 'right';
   c.fillStyle = th.muted; c.font = '700 9.5px Segoe UI, sans-serif';
-  c.fillText('JATUH TEMPO', W - pad - 12, 122);
+  c.fillText('JATUH TEMPO', W - pad - 12, 121);
   const late = !!g.due && g.sisa > 0 && g.due < todayStr();
   c.fillStyle = g.due ? (late ? th.danger : th.text) : th.muted;
   c.font = '800 13px Segoe UI, sans-serif';
   c.fillText(clipText(c, g.due ? fmtShortDate(g.due) : 'belum diatur', 200), W - pad - 12, 138);
-  if (late) { c.font = '700 9.5px Segoe UI, sans-serif'; c.fillStyle = th.danger; c.fillText('SUDAH LEWAT', W - pad - 12, 150); }
+  if (late) { c.font = '700 9.5px Segoe UI, sans-serif'; c.fillStyle = th.danger; c.fillText('SUDAH LEWAT', W - pad - 12, 151); }
   c.textAlign = 'left';
 
-  const colPorsi = pad + 250, colHarga = pad + 350, colJumlah = pad + 452, colStat = W - pad;
+  /* kolom tabel dihitung dari isi terlebar: tidak ada lubang besar sebelum STATUS, tidak ada yang bertabrakan */
+  const statusOf = p => (p.method === 'Gratis' ? 'GRATIS' : (p.paid ? 'LUNAS' : 'BELUM')) +
+    (p.status === 'kirim' ? ' · dikirim' : p.status === 'siap' ? ' · siap' : '');
+  c.font = '700 11px Segoe UI, sans-serif';
+  const statusW = g.rows.reduce((m, p) => Math.max(m, c.measureText(statusOf(p)).width), 0);
+  const colStat = W - pad, colJumlah = colStat - statusW - 18, colHarga = colJumlah - 88, colPorsi = colHarga - 66;
   let y = headH + 24;
   c.fillStyle = th.text; c.font = '800 13px Segoe UI, sans-serif';
   c.fillText(clipText(c, g.item, W - pad * 2), pad, y);
@@ -2814,17 +2824,19 @@ function poGroupInvoiceImage(id) {
     const free = p.method === 'Gratis';
     c.fillStyle = free ? th.muted : (p.paid ? th.ok : th.danger);
     c.font = '700 11px Segoe UI, sans-serif';
-    c.fillText((free ? 'GRATIS' : (p.paid ? 'LUNAS' : 'BELUM')) + (p.status === 'kirim' ? ' · dikirim' : p.status === 'siap' ? ' · siap' : ''), colStat, y);
+    c.fillText(statusOf(p), colStat, y);
     c.textAlign = 'left';
     y += rowH;
   });
   y += 2;
   c.strokeStyle = th.line; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke();
   y += 16;
-  c.font = '700 11px Segoe UI, sans-serif'; c.fillStyle = th.muted;
+  c.font = '800 11.5px Segoe UI, sans-serif'; c.fillStyle = th.muted;
   c.fillText('TOTAL', pad, y);
   c.textAlign = 'right';
+  c.font = '11.5px Segoe UI, sans-serif';
   c.fillText(g.qty + ' porsi', colPorsi, y);
+  c.fillStyle = th.text; c.font = '800 13px Segoe UI, sans-serif';
   c.fillText(fmtIDR(g.nilai), colJumlah, y);
   c.textAlign = 'left';
   y += 12;
@@ -3392,10 +3404,13 @@ function billImage() {
   g.font = '800 16px Segoe UI, sans-serif';
   const tAmtW = g.measureText(tAmt).width;
   const tGap = 12, tStart = pad + (W - pad * 2 - (tLblW + tGap + tAmtW)) / 2;
+  /* kotak total punya tinggi 38 mulai y-6 — pakai baseline tengah agar angkanya tidak naik sendiri */
+  g.textBaseline = 'middle';
   g.textAlign = 'left'; g.fillStyle = th.muted; g.font = '700 13px Segoe UI, sans-serif';
   g.fillText('TOTAL', tStart, y + 13);
   g.fillStyle = th.danger; g.font = '800 16px Segoe UI, sans-serif';
   g.fillText(tAmt, tStart + tLblW + tGap, y + 13);
+  g.textBaseline = 'alphabetic';
   g.textAlign = 'left';
   g.fillStyle = th.muted; g.font = '10.5px Segoe UI, sans-serif';
   g.fillText('Dibuat otomatis oleh ' + db.settings.businessName, pad, y + 48);
@@ -3631,27 +3646,8 @@ function buildRecapHTML(rows, mode) {
 }
 
 /* ---------- Render: Stiker ---------- */
-function renderStickerCalendar() {
-  const el = document.getElementById('stickerCal');
-  if (!el) return;
-  const p = (state.stickerMonth || monthKey(state.stickerDate || todayStr())).split('-').map(Number);
-  const y = p[0], mo = p[1];
-  el.innerHTML =
-    '<div class="cal-head">' +
-      '<button type="button" class="cal-nav" data-act="sticker-cal-prev" aria-label="Bulan sebelumnya">' + ICO_PREV + '</button>' +
-      '<div class="cal-title">' + MONTHS_FULL[mo - 1] + ' ' + y + '</div>' +
-      '<button type="button" class="cal-nav" data-act="sticker-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
-    '</div>' +
-    '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-    '<div class="cal-grid">' + buildDayGrid(y, mo, state.stickerDate || '', todayStr(), satpamDot, 'sticker-day', '', isFullHoliday) + '</div>';
-  setText('stickerDateLabel', fmtLong(state.stickerDate || todayStr()));
-}
-function shiftStickerMonth(delta) {
-  const p = state.stickerMonth.split('-').map(Number);
-  let y = p[0], mo = p[1] + delta;
-  if (mo < 1) { mo = 12; y--; } else if (mo > 12) { mo = 1; y++; }
-  state.stickerMonth = y + '-' + pad(mo);
-  renderStickerCalendar();
+function renderStickerDate() {
+  setText('stickerDateText', fmtLong(state.stickerDate || todayStr()));
 }
 function stickerOrdersOn(date) {
   const s = db.snack[date] || {}, l = db.lunch[date] || {};
@@ -3922,8 +3918,12 @@ function satpamPreview() {
   setText('satpamDateText', fmtLong(date));
 }
 function printFrame(frame) {
+  /* judul dokumen ikut tercetak sebagai header browser — kosongkan selama dialog cetak terbuka */
+  const prev = document.title;
+  document.title = ' ';
   try { frame.contentWindow.focus(); frame.contentWindow.print(); }
   catch (e) { toast('Tidak bisa mencetak. Gunakan menu cetak browser.'); }
+  document.title = prev;
 }
 
 /* ---------- Pengingat & tagihan WhatsApp ---------- */
@@ -5039,9 +5039,6 @@ function onDocClick(e) {
       if (box && r && box.querySelectorAll('.po-sched-row').length > 1) { r.remove(); updatePoGroupTotal(); }
       break;
     }
-    case 'sticker-cal-prev': shiftStickerMonth(-1); break;
-    case 'sticker-cal-next': shiftStickerMonth(1); break;
-    case 'sticker-day': { state.stickerDate = act.dataset.ymd; state.stickerMonth = monthKey(state.stickerDate); renderStickerCalendar(); renderStickerCustomers(); stickerPreview(); break; }
     case 'sticker-select-all': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = true); stickerPreview(); break;
     case 'sticker-clear': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = false); stickerPreview(); break;
     case 'print-mode': state.printMode = act.dataset.mode === 'konfirmasi' ? 'konfirmasi' : 'stiker'; renderPrint(); break;
@@ -5199,6 +5196,7 @@ function onDocClick(e) {
       const field = act.dataset.field;
       if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDots(ymd, false) });
       else if (field === 'satpam') openCalendar({ mode: 'day', field, value: state.satpamDate || todayStr(), dotFn: satpamDot });
+      else if (field === 'sticker') openCalendar({ mode: 'day', field, value: state.stickerDate || todayStr(), dotFn: satpamDot });
       else if (field === 'poMonth') openCalendar({ mode: 'month', field, value: state.poMonth });
       else if (field === 'rptMonth') openCalendar({ mode: 'month', field, value: state.rptMonth });
       break;
@@ -5420,6 +5418,11 @@ function applyCalPick(v) {
   if (f === 'hari') { state.currentDate = v; renderDailyMerged(); } else if (f === 'satpam') {
     state.satpamDate = v;
     satpamPreview();
+  } else if (f === 'sticker') {
+    state.stickerDate = v;
+    renderStickerDate();
+    renderStickerCustomers();
+    stickerPreview();
   } else if (f === 'poMonth') {
     state.poMonth = v;
     renderPO();
@@ -5456,7 +5459,7 @@ function init() {
   setText('poMonthText', monthTitle(state.poMonth));
   setText('rptMonthText', monthTitle(state.rptMonth));
   state.stickerDate = todayStr();
-  state.stickerMonth = monthKey(todayStr());
+  renderStickerDate();
 
   document.addEventListener('click', onDocClick);
   document.addEventListener('change', onDocChange);
