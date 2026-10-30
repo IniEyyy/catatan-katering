@@ -131,8 +131,10 @@
               <span><i class="cal-dot y"></i> pre-order</span>
               <span><i class="cal-dot r"></i> hanya sebagian orang libur</span>
             </div>
-            <div class="card-head pkg-head"><h3>Paket</h3><span class="muted tiny" id="pkgShowcaseDate"></span></div>
-            <div class="pkg-showcase" id="pkgShowcase"></div>
+            <div class="pkg-block" id="pkgBlock">
+              <div class="card-head pkg-head"><h3>Paket</h3><span class="muted tiny" id="pkgShowcaseDate"></span></div>
+              <div class="pkg-showcase" id="pkgShowcase"></div>
+            </div>
           </div>
           <div class="card panel">
             <div class="card-head"><h3>Menu</h3><span class="head-tools"><span class="muted tiny" id="menuWeekLabel"></span><button type="button" class="btn btn-ghost btn-sm" data-act="menu-share" title="Simpan atau bagikan menu sebagai foto">Bagikan Foto</button></span></div>
@@ -149,6 +151,8 @@
             <p class="muted tiny" id="menuTabHint">Menu per tanggal — isi paket ditulis satu baris per komponen.</p>
           </div>
         </div>
+
+        <div id="pkgSlot"></div>
 
         <div class="chart-grid">
           <div class="card chart-card">
@@ -241,12 +245,14 @@
         <div class="stat-grid" id="poStats"></div>
 
         <div class="card">
-          <div class="card-head"><h3>Menu PO</h3><span class="muted tiny" id="poMenuCount"></span></div>
+          <div class="card-head"><h3>Menu PO</h3><span class="muted tiny" id="poMenuCount"></span>
+            <span class="head-tools"><button type="button" class="btn btn-ghost btn-sm" id="poMenuHome" data-act="goto-menu" data-po="1" title="Buka Beranda › Menu Harian untuk tanggal ini dan siapkan baris menu PO">Atur menu di Beranda</button></span>
+          </div>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Tanggal</th><th>Menu</th><th class="num">Harga</th><th class="num">Pembeli</th><th class="num">Total</th><th class="end">Aksi</th></tr></thead>
             <tbody id="poMenuList"></tbody>
           </table></div>
-          <p class="empty" id="poMenuEmpty" hidden>Belum ada menu PO. Klik "Tambah Menu PO" untuk mulai.</p>
+          <p class="empty" id="poMenuEmpty" hidden>Belum ada menu PO. Klik "Tambah Menu PO" untuk mulai, atau tulis menunya lebih dulu di Beranda › Menu Harian <button type="button" class="btn btn-ghost btn-sm" data-act="goto-menu" data-po="1">Buat di Beranda</button>.</p>
         </div>
 
         <div class="card">
@@ -460,7 +466,25 @@
                 <option value="namamark">Nama + Kelas + penanda alergi</option>
                 <option value="namealg">Nama + tulisan alergi</option>
               </select>
-              <span class="muted tiny" id="stickerMarkNote">Penanda alergi = lingkaran merah bertanda "!" di pojok kanan bawah kotak, tanpa tulisan — isinya tetap bisa dilihat di aplikasi.</span>
+              <span class="muted tiny" id="stickerMarkNote">Penanda alergi: titik kecil di pojok kanan bawah kotak — isinya tetap bisa dilihat di aplikasi.</span>
+            </label>
+            <label class="field">
+              <span>Bentuk penanda alergi</span>
+              <select id="stickerMark" class="input">
+                <option value="dot">Titik kecil di pojok</option>
+                <option value="letter">Lingkaran huruf A di pojok</option>
+                <option value="bar">Garis di bawah nama</option>
+                <option value="word">Tulisan "ALERGI" di bawah nama</option>
+                <option value="none">Tanpa penanda</option>
+              </select>
+            </label>
+            <label class="field" id="stickerToneRow">
+              <span>Warna penanda</span>
+              <select id="stickerTone" class="input">
+                <option value="soft">Cokelat kalem</option>
+                <option value="gold">Kuning kayu</option>
+                <option value="red">Merah</option>
+              </select>
             </label>
             <div class="stk-font">
               <div class="stk-font-title">Font stiker</div>
@@ -483,11 +507,17 @@
                 <span class="stk-font-val" id="stickerClsScaleVal">100%</span>
               </div>
               <div class="stk-font-row">
-                <span class="stk-font-tag">Tinggi baris</span>
-                <input type="range" id="stickerRowH" min="12" max="45" step="0.5" value="28.7" title="Tinggi satu baris stiker dalam milimeter — jumlah baris per halaman menyesuaikan" style="grid-column:2/4">
-                <span class="stk-font-val" id="stickerRowHVal">28,7 mm</span>
+                <span class="stk-font-tag">Padding sel</span>
+                <input type="range" id="stickerCellPad" min="0" max="10" step="0.2" value="2.6" title="Jarak atas-bawah isi di dalam setiap sel stiker, dalam milimeter" style="grid-column:2/4">
+                <span class="stk-font-val" id="stickerCellPadVal">2,6 mm</span>
               </div>
-              <p class="muted tiny" id="stickerRowHNote">Tinggi satu baris stiker; font menyesuaikan ruang ini.</p>
+              <p class="muted tiny" id="stickerCellPadNote">Jarak atas-bawah isi dalam setiap sel; font menyesuaikan ruang yang tersisa.</p>
+              <div class="stk-font-row">
+                <span class="stk-font-tag">Rapat sel</span>
+                <input type="range" id="stickerCellTight" min="50" max="100" step="5" value="100" title="Tinggi setiap sel sebagai persen dari tinggi otomatis — kecilkan untuk kotak yang lebih pipih" style="grid-column:2/4">
+                <span class="stk-font-val" id="stickerCellTightVal">100%</span>
+              </div>
+              <p class="muted tiny" id="stickerCellTightNote">Kecilkan kalau kotak terasa terlalu panjang; sisanya jadi jarak antar stiker.</p>
             </div>
             <label class="check">
               <input type="checkbox" id="stickerBrand"> Tampilkan nama usaha

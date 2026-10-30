@@ -324,6 +324,8 @@ body.theme-dark .card{background:linear-gradient(180deg,rgba(255,255,255,.035),r
 .input::placeholder{color:var(--muted);opacity:.8}
 .input:hover{border-color:var(--border-strong)}
 .input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft)}
+/* catatan alergi: tinggi mengikuti isi, hanya tumbuh ke bawah */
+#custForm textarea[name=allergy]{resize:vertical;overflow:hidden;min-height:58px}
 select.input{appearance:none;-webkit-appearance:none;
   background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A90A8' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:16px;padding-right:32px;cursor:pointer}
@@ -658,7 +660,7 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 /* ===== Kustomisasi mingguan ===== */
 .custom-wrap{overflow:auto;max-height:70vh}
 .custom-table{min-width:940px}
-.custom-table th.day{min-width:108px;line-height:1.25}
+.custom-table th.day{min-width:108px;line-height:1.25;text-align:center}
 .custom-table th.day small{display:block;font-size:10px;font-weight:600;letter-spacing:0;color:var(--muted);text-transform:none}
 .custom-table td.cell{padding:5px;min-width:104px}
 .custom-table td.cell select{width:100%;font-size:12.5px;padding:6px 22px 6px 8px;background-position:right 6px center}
@@ -671,23 +673,15 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cs-pkg.is-off{opacity:.55;font-weight:600}
 .cs-pkg.is-manual{color:var(--gold);font-style:italic}
-.cs-legend{display:flex;flex-direction:column;gap:1px;margin-top:6px;font-size:10px;font-weight:600;letter-spacing:0;
+.cs-legend{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:6px;font-size:10px;font-weight:600;letter-spacing:0;
   text-transform:none;color:var(--muted);line-height:1.35}
-.cs-legend b{display:inline-block;min-width:13px;color:var(--primary-dark);font-weight:800}
-/* tulisan makanan di judul kolom bisa disorot → dialog isi lengkap (mekanisme .food-tip) */
-.cs-legend span[data-tip]{cursor:help;border-bottom:1px dotted transparent;transition:border-color .15s}
-.cs-legend span[data-tip]:hover{border-bottom-color:var(--border-strong)}
-.cs-legend .more{opacity:.7}
 .cs-letter-xs{width:17px;height:17px;border-radius:5px;font-size:10px;flex:none}
-.cs-clear{border:1px solid var(--border);background:var(--surface-2);color:var(--muted);width:18px;height:18px;border-radius:6px;
-  font-size:13px;line-height:1;padding:0;margin-top:3px;cursor:pointer;transition:.15s}
 .cs-plain{display:block;width:100%;padding:5px 4px;border-radius:9px;border:1px dashed var(--border-strong);background:var(--surface-2);
   color:var(--muted);font-size:11px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit;transition:.15s}
 .cs-plain:hover{border-color:var(--primary);color:var(--primary-dark)}
 .cs-plain.is-on{border-style:solid;background:var(--grad);border-color:transparent;color:#fff}
 .wa-table tr.is-group td{background:var(--surface-2)}
 .wa-table tr.is-group:nth-child(even) td{background:var(--surface-3)}
-.cs-clear:hover{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
 .cs-legend.cs-none{opacity:.5;font-style:italic}
 .custom-table .sticky-col{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:1px 0 0 var(--border);min-width:150px}
 .custom-table thead .sticky-col{z-index:3}
@@ -725,6 +719,15 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 /* ===== Display paket ===== */
 .pkg-head{margin:18px 0 10px}
 .pkg-showcase{display:grid;grid-template-columns:1fr;gap:14px}
+/* Paket jadi blok sendiri yang melebar di bawah menu saat tab Menu Harian */
+#pkgSlot:empty{display:none}
+.pkg-block.is-wide{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+.pkg-block.is-wide .pkg-head{margin:0 0 12px}
+.pkg-block.is-wide .pkg-showcase{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+/* Pintasan saat hari itu belum bisa dikerjakan (menu belum dibuat / belum ada pelanggan) */
+.quick-strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;
+  border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--muted)}
+.quick-strip[hidden]{display:none}
 .pkg-group-title{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .pkg-chips{display:flex;flex-direction:column;gap:8px}
 .pkg-chip{
@@ -950,6 +953,8 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 .libur-btn{color:var(--danger);border-color:var(--border-strong)}
 .libur-btn:hover{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
 .libur-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+/* tab Harian: agenda libur tampil menyamping di bawah menu, terpisah dari kalender */
+.libur-chips.is-flat{flex-wrap:nowrap;overflow-x:auto;margin:12px 0 0;padding-bottom:2px}
 .libur-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;
   border:1px solid var(--border);background:var(--danger-soft);color:var(--danger);font-size:11px;font-weight:700}
 .libur-chip em{font-style:normal;font-weight:600;opacity:.8}

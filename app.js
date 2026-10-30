@@ -37,6 +37,20 @@ const STK_FONTS = {
   narrow: '"Arial Narrow",Arial,Helvetica,sans-serif'
 };
 function clampScale(v, lo, hi, fb) { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : (fb === undefined ? 100 : fb); }
+/* Penanda alergi di stiker. Lingkaran merah bertanda "!" terbaca seperti rambu bahaya,
+   jadi bentuk dan warnanya bisa dipilih owner. */
+const STK_MARKS = {
+  dot: 'Titik kecil di pojok kanan bawah',
+  letter: 'Lingkaran huruf A di pojok',
+  bar: 'Garis pendek di bawah nama',
+  word: 'Tulisan kecil "ALERGI" di bawah nama',
+  none: 'Tanpa penanda'
+};
+const STK_TONES = {
+  soft: { fg: '#7A6A5B', label: 'Cokelat kalem' },
+  gold: { fg: '#B8862F', label: 'Kuning kayu' },
+  red: { fg: '#C0272D', label: 'Merah' }
+};
 /* Pilihan font untuk seluruh aplikasi — key => stack CSS ('default' = ikut styles.css) */
 const UI_FONTS = {
   default: '',
@@ -72,7 +86,7 @@ function defaultData() {
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
-      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, rowH: 0 },
+      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, padV: 2.6, tight: 100, mark: 'dot', tone: 'soft' },
       uiFont: 'default', // jenis huruf seluruh aplikasi (key UI_FONTS)
       uiZoom: 100,       // skala teks seluruh aplikasi, 85–130 %
       customDisplay: 'both', // tampilan sel Kustomisasi: 'both' | 'name' | 'price'
@@ -107,8 +121,14 @@ function normalize(d) {
   sk.nameScale = clampScale(sk.nameScale, 70, 140);
   sk.clsScale = clampScale(sk.clsScale, 40, 160);
   sk.brandScale = clampScale(sk.brandScale, 40, 200);
-  /* rowH 0 = tinggi baris otomatis mengikuti jumlah baris ukuran stiker */
-  sk.rowH = +sk.rowH > 0 ? Math.min(45, Math.max(12, +sk.rowH)) : 0;
+  /* padV = jarak atas-bawah isi dalam satu sel stiker (mm); gantikan rowH lama */
+  const pv = +sk.padV;
+  sk.padV = Number.isFinite(pv) ? Math.min(10, Math.max(0, pv)) : 2.6;
+  /* tight = persen tinggi sel terhadap tinggi otomatis — memperkecil kotak tanpa mengubah font manual */
+  const tg = +sk.tight;
+  sk.tight = Number.isFinite(tg) ? Math.min(100, Math.max(50, tg)) : 100;
+  sk.mark = STK_MARKS[sk.mark] ? sk.mark : 'dot';
+  sk.tone = STK_TONES[sk.tone] ? sk.tone : 'soft';
   d.settings.sticker = sk;
   d.settings.uiFont = UI_FONTS[d.settings.uiFont] ? d.settings.uiFont : 'default';
   d.settings.uiZoom = clampScale(d.settings.uiZoom, UI_ZOOM_MIN, UI_ZOOM_MAX);
@@ -1147,6 +1167,7 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('is-active', p.id === 'page-' + name));
   document.getElementById('topbarTitle').textContent = TITLES[name];
   closeSidebar();
+  if (name === 'print') autoPrintDates();
   renderPage(name);
 }
 function renderPage(name) {
@@ -1161,9 +1182,25 @@ function renderPage(name) {
   else if (name === 'log') renderLog();
   else if (name === 'settings') renderSettings();
 }
+/* Tanggal berikutnya yang punya pesanan (dipakai saat membuka halaman Cetak) */
+function nextOrderDate(from) {
+  let d = from || todayStr();
+  for (let i = 0; i < 60; i++) {
+    if (Object.keys(stickerOrdersOn(d)).length) return d;
+    d = shiftDate(d, 1);
+  }
+  return '';
+}
+/* Membuka halaman Cetak di tanggal tanpa pelanggan hanya menampilkan daftar kosong,
+   jadi tanggal stiker & konfirmasi dimajukan ke hari berikutnya yang ada pesanan. */
+function autoPrintDates() {
+  const s = nextOrderDate(state.stickerDate || todayStr());
+  if (s && s !== state.stickerDate) state.stickerDate = s;
+  const k = nextOrderDate(state.satpamDate || todayStr());
+  if (k && k !== state.satpamDate) state.satpamDate = k;
+}
 /* Halaman Cetak: stiker & kertas konfirmasi berbagi satu tempat, mode dipilih lewat toggle */
-function renderPrint() {
-  const mode = state.printMode === 'konfirmasi' ? 'konfirmasi' : 'stiker';
+function renderPrint() {  const mode = state.printMode === 'konfirmasi' ? 'konfirmasi' : 'stiker';
   document.querySelectorAll('#page-print .print-mode').forEach(el => { el.hidden = el.dataset.mode !== mode; });
   document.querySelectorAll('#page-print .print-seg .seg-btn').forEach(b => b.classList.toggle('is-on', b.dataset.mode === mode));
   if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
@@ -1326,7 +1363,7 @@ function renderHomeCalendar() {
       '<div class="cal-title">' + MONTHS_FULL[mo - 1] + ' ' + y + '</div>' +
       '<button type="button" class="cal-nav" data-act="home-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
     '</div>' +
-    '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
+    '<div class="cal-week">' + CAL_WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
     '<div class="cal-grid">' + buildDayGrid(y, mo, state.menuDate || '', todayStr(), homeDayDot, 'home-day', '', isFullHoliday) + '</div>';
 }
 const WEEK_MENU_MAX = 6;
@@ -1339,6 +1376,17 @@ function menuFor(date) { return db.menuPlan[date] || []; }
 function menuItemsFor(type, date) {
   return menuFor(date).filter(it => (it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack') === type);
 }
+/* Menu PO dicatat dua kali (nama di rencana menu, harga di db.poMenus) — dicari atas nama yang sama */
+function poMenuFor(date, name) {
+  const n = String(name || '').trim().toLowerCase();
+  if (!n) return null;
+  return db.poMenus.find(m => m.date === date && String(m.item || '').trim().toLowerCase() === n) || null;
+}
+function poPrice(it, date) {
+  if (+it.price > 0) return +it.price;
+  const m = poMenuFor(date, it.name);
+  return m ? +m.price || 0 : 0;
+}
 function menuItemsHtml(date) {
   const items = menuPlanItems(date);
   return items.map((it, idx) => {
@@ -1347,6 +1395,13 @@ function menuItemsHtml(date) {
     let pkgSel, priceInp = '';
     if (type === 'po') {
       pkgSel = '<select class="input input-sm wm-pkg" disabled title="PO tidak memakai paket"><option>PO</option></select>';
+      const m = poMenuFor(date, it.name);
+      const def = m ? +m.price || 0 : 0;
+      const shown = (+it.price > 0) ? +it.price : (def || '');
+      priceInp = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
+        '" value="' + shown + '" placeholder="harga" title="Harga per porsi PO ini' +
+        (m ? ' — terbawa dari menu PO ' + escapeHtml(m.item) + ' di halaman Pre-Order (' + fmtIDR(def) + ')' : ' — belum ada menu PO dengan nama ini di halaman Pre-Order, isi sendiri') +
+        '.">';
     } else if (!pkgs.length) {
       pkgSel = '<select class="input input-sm wm-pkg" disabled title="Belum ada paket"><option>Belum ada paket</option></select>';
     } else {
@@ -1382,6 +1437,18 @@ function growMenuNames(scope) {
     el.style.height = Math.min(el.scrollHeight + 2, 170) + 'px';
   });
 }
+/* Paket berpindah: menempel di bawah kalender saat Menu Mingguan,
+   jadi blok melebar di bawah menu (sebelum grafik) saat Menu Harian */
+function layoutPkgBlock(daily) {
+  const block = document.getElementById('pkgBlock');
+  const slot = document.getElementById('pkgSlot');
+  if (!block || !slot) return;
+  if (!block.dataset.home) { block.dataset.home = '1'; block._home = block.parentElement; }
+  const home = block._home;
+  block.classList.toggle('is-wide', !!daily);
+  if (daily) { if (block.parentElement !== slot) slot.appendChild(block); }
+  else if (home && block.parentElement !== home) home.appendChild(block);
+}
 function renderWeekMenu() {
   const el = document.getElementById('weekMenuEditor');
   if (!el) return;
@@ -1410,6 +1477,7 @@ function renderWeekMenu() {
         '</div>' +
       '</div>';
     growMenuNames(el);
+    layoutPkgBlock(true);
     return;
   }
 
@@ -1427,11 +1495,13 @@ function renderWeekMenu() {
     '</div>';
   }).join('');
   growMenuNames(el);
+  layoutPkgBlock(false);
 }
 function applyMenuEdit(t, quiet) {
   const date = t.dataset.date, idx = +t.dataset.idx;
   const items = menuPlanItems(date).map(it => Object.assign({}, it));
   if (!items[idx]) return;
+  let poSync = 0;
   const isName = t.classList.contains('wm-name');
   if (isName) {
     items[idx].name = (t.value || '').trim();
@@ -1450,10 +1520,15 @@ function applyMenuEdit(t, quiet) {
     const def = p ? +p.price || 0 : 0;
     const v = t.value === '' ? null : Math.max(0, +t.value || 0);
     items[idx].price = (v === null || v === def) ? '' : v;
+    if (items[idx].type === 'po' && v !== null && v !== def) {
+      const m = poMenuFor(date, items[idx].name);
+      if (m && +m.price !== v) { m.price = v; poSync = v; }
+    }
   }
   writeMenuPlan(date, items);
   save();
   if (!quiet) logAction('menu', 'Menu ' + date + ': ' + (menuPlanItems(date).map(i => flatName(i.name)).join(', ') || '(kosong)'));
+  if (poSync) logAction('po', 'Harga menu PO ' + flatName(items[idx].name) + ' @ ' + date + ' jadi ' + fmtIDR(poSync));
   const row = menuPlanItems(date)[idx];
   if (!isName || !row || (isName && !row.name)) renderWeekMenu();
   renderHomeCalendar();
@@ -1484,11 +1559,12 @@ function menuShareImage() {
     items: menuFor(d).map(it => {
       const parts = menuLines(it.name);
       const p = it.pkg ? pkgById(it.pkg) : null;
+      const po = it.type === 'po' ? poPrice(it, d) : 0;
       return {
         type: it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack',
         title: parts[0] || it.name,
         comps: parts.slice(1).join(' · '),
-        pkg: p ? p.name + ' · ' + fmtIDR(+it.price > 0 ? +it.price : p.price) : (it.type === 'po' ? 'Pre-Order' : '')
+        pkg: p ? p.name + ' · ' + fmtIDR(+it.price > 0 ? +it.price : p.price) : (it.type === 'po' ? 'Pre-Order' + (po ? ' · ' + fmtIDR(po) : '') : '')
       };
     })
   }));
@@ -1778,10 +1854,9 @@ function buildDailyMergedPage() {
         '<span class="menu-note" id="hariFilterNote"></span>' +
       '</div>' +
     '</div>' +
-    '<div class="stat-grid" id="hariStats"></div>' +
+    '<div class="quick-strip" id="hariQuick" hidden></div>' +
     '<div class="card">' +
-      '<div class="card-head"><h3>Absensi Hari Ini</h3><span class="muted tiny" id="hariCount"></span>' +
-        '<button class="btn btn-ghost btn-sm" data-act="daily-pay-all" title="Tandai lunas semua pesanan hari ini yang belum dibayar">Lunasi semua yang belum</button></div>' +
+      '<div class="card-head"><h3>Absensi Hari Ini</h3><span class="muted tiny" id="hariCount"></span></div>' +
       '<p class="muted tiny" id="hariPkgSummary"></p>' +
       '<div class="table-wrap"><table class="table table-daily">' +
         '<thead>' +
@@ -2005,6 +2080,7 @@ function renderDailyMerged() {
     }).join('');
   }
   renderDailyStats();
+  renderDailyQuick(date, customers.length);
 }
 
 /* Perbarui baris tanpa render ulang — fokus input catatan tidak hilang */
@@ -2021,12 +2097,12 @@ function syncMergedRow(tr) {
   if (tot) tot.innerHTML = dayTotalHTML(s);
 }
 
+/* Ringkasan kecil di judul tabel — kartu statistikanya sendiri sudah dihapus dari halaman Hari Ini */
 function renderDailyStats() {
   const date = state.currentDate;
   const f = state.daily.hari;
   const filtered = !!(f.level || f.cohort || f.cls);
-  let pesan = 0, lunas = 0, belum = 0, gratis = 0, revenue = 0, belumValue = 0;
-  const perType = { snack: 0, lunch: 0 };
+  let pesan = 0, lunas = 0, gratis = 0;
   DAY_TYPES.forEach(type => {
     const recs = db[type][date] || {};
     for (const id in recs) {
@@ -2034,42 +2110,59 @@ function renderDailyStats() {
       if (!r.ordered) continue;
       const c = customerById(id);
       if (filtered && (!c || !dailyMatch(c, f))) continue;
-      pesan++; perType[type]++;
+      pesan++;
       if (r.method === 'Gratis') { gratis++; lunas++; continue; }
-      if (r.paid) { lunas++; revenue += effPrice(type, r, c, date); } else { belum++; belumValue += effPrice(type, r, c, date); }
+      if (r.paid) lunas++;
     }
   });
-  document.getElementById('hariStats').innerHTML =
-    statCard('Pesan', pesan, perType.snack + ' snack · ' + perType.lunch + ' lunch') +
-    statCard('Lunas', lunas, '', 'accent') +
-    statCard('Belum Lunas', belum, belumValue ? fmtIDR(belumValue) : '', 'danger') +
-    statCard('Omset', fmtIDR(revenue), '', 'gold') +
-    (gratis ? statCard('Gratis', gratis, 'harga 0', 'primary') : '');
   setText('hariCount', pesan + ' pesanan • ' + lunas + ' lunas' + (gratis ? ' • ' + gratis + ' gratis' : ''));
   const br = DAY_TYPES.map(t => pkgBreakdown(t, date)).filter(Boolean).join('  ·  ');
   const sum = document.getElementById('hariPkgSummary');
   if (sum) { sum.textContent = br ? 'Pilihan paket hari ini: ' + br : ''; sum.hidden = !br; }
 }
-
-/* Lunasi seluruh pesanan hari ini (satu klik untuk semua anak) */
-function payAllToday() {
-  const date = state.currentDate;
-  let n = 0;
-  DAY_TYPES.forEach(type => {
-    const recs = db[type][date] || {};
-    for (const id in recs) {
-      const r = recs[id];
-      if (!r.ordered || r.paid || r.method === 'Gratis') continue;
-      r.paid = true; n++;
+/* Pintasan saat hari itu belum bisa dikerjakan: menu belum dibuat / tidak ada pelanggan */
+function renderDailyQuick(date, shown) {
+  const box = document.getElementById('hariQuick');
+  if (!box) return;
+  const missing = DAY_TYPES.filter(t => !menuItemsFor(t, date).length);
+  const go = '<button type="button" class="btn btn-ghost btn-sm" data-act="goto-menu" data-date="' + date + '">' +
+    'Buat menu di Beranda › Menu Harian</button>';
+  const btn = '<button type="button" class="btn btn-ghost btn-sm" data-nav="customers">Tambah pelanggan</button>';
+  let msg = '';
+  if (!shown) msg = '<span>Belum ada pelanggan aktif untuk hari ini.</span>' + btn;
+  else if (missing.length) msg = '<span>Menu ' + missing.join(' & ') + ' belum dibuat untuk tanggal ini — pilihannya masih kosong di semua halaman.</span>' + go;
+  box.innerHTML = msg;
+  box.hidden = !msg;
+}
+/* Pintasan dari halaman lain: buka Beranda › Menu Harian untuk satu tanggal.
+   withPo menyiapkan satu baris PO kosong supaya tinggal ditulis. */
+function openDailyMenu(date, withPo) {
+  const d = date || todayStr();
+  state.menuDate = d;
+  state.menuMonth = monthKey(d);
+  state.menuDay = weekdayOf(d) - 1;
+  state.menuTab = 'daily';
+  showPage('dashboard');
+  if (withPo && !menuItemsFor('po', d).length) {
+    const items = menuPlanItems(d).map(it => Object.assign({}, it));
+    if (items.length >= WEEK_MENU_MAX) toast('Maksimal ' + WEEK_MENU_MAX + ' pilihan per hari');
+    else {
+      items.push({ name: '', type: 'po', pkg: '', price: '' });
+      writeMenuPlan(d, items);
+      save();
+      renderWeekMenu();
     }
-  });
-  if (!n) { toast('Semua pesanan hari ini sudah lunas'); return; }
-  logAction('bayar', 'Lunasi ' + n + ' pesanan semua anak @ ' + date);
-  save();
-  renderDailyMerged(); renderDashboard();
-  toast(n + ' pesanan ditandai lunas');
+  }
+  const ed = document.getElementById('weekMenuEditor');
+  if (ed) ed.scrollIntoView({ block: 'center' });
+  if (withPo) {
+    const inputs = document.querySelectorAll('.wm-name[data-date="' + d + '"]');
+    const el = inputs[inputs.length - 1];
+    if (el) el.focus();
+  }
 }
 
+/* Lunasi seluruh pesanan hari ini (satu klik untuk semua anak) */
 /* ---------- Render: Kustomisasi (edit pesanan seminggu) ---------- */
 function buildCustomPage() {
   document.getElementById('page-custom').innerHTML =
@@ -2105,7 +2198,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu atau ke nama makanan di judul kolom untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti paket pilihan pertama). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan, ubah harganya di halaman Hari Ini. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti paket pilihan pertama). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan, ubah harganya di halaman Hari Ini. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2186,21 +2279,6 @@ function togglePlainOrder(cid, date, typeIn) {
   save();
   renderCustom(); renderDailyMerged(); renderDashboard();
 }
-function clearColumn(date) {
-  const type = customType();
-  const ids = (state.customVisible || []).filter(cid => customerById(cid));
-  if (!ids.length) { toast('Tidak ada anak yang tampil'); return; }
-  if (!confirm('Kosongkan kolom ' + fmtShortDate(date) + ' untuk ' + ids.length + ' anak yang tampil?')) return;
-  let n = 0;
-  ids.forEach(cid => {
-    const rec = (db[type][date] || {})[cid];
-    if (!rec || !rec.ordered) return;
-    rec.ordered = false; rec.paid = false; delete rec.mis; delete rec.mi; n++;
-  });
-  logAction('kustomisasi', 'Kosongkan kolom ' + type + ' ' + date + ' (' + n + ' anak)');
-  save(); renderCustom(); renderDailyMerged(); renderDashboard();
-  toast(n + ' pesanan dihapus dari kolom ini · Ctrl+Z untuk membatalkan', { undo: true });
-}
 function renderCustom() {
   const st = state.custom;
   if (!st.weekStart) st.weekStart = mondayOf(todayStr());
@@ -2230,12 +2308,7 @@ function renderCustom() {
     '<th class="sticky-col">Nama</th><th>Kelas</th>' +
     cols.map(col => {
       const items = col.items;
-      const legend = items.length
-        ? '<span class="cs-legend">' + items.slice(0, LETTERS.length).map((it, k) =>
-            '<span data-tip="' + foodTip(k, it) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 15)) + '</span>').join('') +
-          (items.length > LETTERS.length ? '<span class="more">+' + (items.length - LETTERS.length) + ' lagi</span>' : '') +
-          '<button type="button" class="cs-clear" data-act="custom-col-clear" data-date="' + col.date + '" title="Kosongkan seluruh pesanan di kolom ini">×</button></span>'
-        : '<span class="cs-legend cs-none">belum ada menu</span>';
+      const legend = items.length ? '' : '<span class="cs-legend cs-none">belum ada menu</span>';
       return '<th class="day">' + WEEKDAYS[col.dow] + '<small>' + col.date.slice(8) + '/' + col.date.slice(5, 7) + '</small>' + legend + '</th>';
     }).join('') +
     '<th class="num">Total mingguan</th>';
@@ -2311,6 +2384,7 @@ function renderPO() {
       '<td class="num"><strong>' + fmtIDR(total) + '</strong></td>' +
       '<td class="end"><div class="row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="po-buyer-add" data-id="' + m.id + '">+ Pembeli</button>' +
+        '<button class="btn btn-ghost btn-sm" data-act="goto-menu" data-date="' + escapeHtml(m.date) + '" data-po="1" title="Buka Beranda › Menu Harian tanggal ' + escapeHtml(fmtShortDate(m.date)) + ' untuk menuliskan menu ini">Beranda</button>' +
         '<button class="icon-act" data-act="po-menu-edit" data-id="' + m.id + '" title="Ubah menu">' + ICO_EDIT + '</button>' +
         '<button class="icon-act danger" data-act="po-menu-delete" data-id="' + m.id + '" title="Hapus menu">' + ICO_TRASH + '</button>' +
       '</div></td>' +
@@ -2318,6 +2392,14 @@ function renderPO() {
   }).join('');
   document.getElementById('poMenuEmpty').hidden = menus.length > 0;
   document.getElementById('poMenuCount').textContent = menus.length + ' menu';
+  const homeBtn = document.getElementById('poMenuHome');
+  if (homeBtn) {
+    const t = todayStr();
+    const d = menus.map(m => m.date).filter(x => x >= t).sort()[0] ||
+      (state.poMonth === monthKey(t) ? t : state.poMonth + '-01');
+    homeBtn.dataset.date = d;
+    homeBtn.title = 'Buka Beranda › Menu Harian ' + fmtShortDate(d) + ' dan siapkan baris menu PO';
+  }
 
   /* --- Pembeli PO --- */
   const monthList = db.po.filter(p => month ? (p.date || '').slice(0, 7) === month : true);
@@ -3687,11 +3769,11 @@ function stickerOptions() {
   const parts = document.getElementById('stickerSize').value.split('x').map(Number);
   const style = db.settings.sticker;
   const per = Math.max(1, parts[1] || 10);
-  /* tinggi baris 0 = otomatis: setinggi A4 dibagi jumlah baris ukuran terpilih */
-  const custom = +style.rowH > 0 ? Math.min(45, Math.max(12, +style.rowH)) : 0;
-  const rowH = custom || +(STICKER_SHEET_H / per).toFixed(2);
+  /* tinggi baris otomatis = setinggi A4 dibagi jumlah baris, lalu dirapatkan menurut slider tight */
+  const tight = Math.min(100, Math.max(50, +(style.tight || 100)));
+  const rowH = +((STICKER_SHEET_H / per) * tight / 100).toFixed(2);
   return {
-    cols: parts[0], rows: custom ? Math.max(1, Math.floor(STICKER_SHEET_H / custom)) : per, rowH: rowH,
+    cols: parts[0], rows: per, rowH: rowH,
     content: document.getElementById('stickerContent').value,
     brand: document.getElementById('stickerBrand').checked,
     lines: document.getElementById('stickerLines').checked,
@@ -3707,7 +3789,7 @@ function buildStickerHTML(customers, o) {
   if (!pages.length) pages.push([]);
   const MM = 96 / 25.4;
   const cellWpx = (STICKER_SHEET_W / cols) * MM, cellHpx = rowH * MM;
-  const padMm = 2.6;
+  const padMm = Math.min(10, Math.max(0, +style.padV || 0));
   const padPx = padMm * MM;
   const innerW = Math.max(20, cellWpx - padPx * 2), innerH = Math.max(20, cellHpx - padPx * 2);
   const autoName = Math.max(12, Math.min(40, innerW / 4.2, innerH / 3.8));
@@ -3724,11 +3806,16 @@ function buildStickerHTML(customers, o) {
   const brandName = db.settings.businessName;
   const frame = document.getElementById('stickerFrame');
   const fit = frame && frame.clientWidth ? Math.min(1, (frame.clientWidth - 16) / 794).toFixed(3) : 1;
-  const flagMm = Math.max(3.2, Math.min(8, (STICKER_SHEET_W / cols) * 0.17));
-  const flagPx = flagMm * MM * 0.66;
+  const markKind = STK_MARKS[style.mark] ? style.mark : 'dot';
+  const markFg = (STK_TONES[style.tone] || STK_TONES.soft).fg;
+  const corner = markKind === 'dot' || markKind === 'letter';
+  const markMm = Math.max(2.6, Math.min(8, (STICKER_SHEET_W / cols) * (markKind === 'letter' ? 0.15 : 0.06)));
+  const markPx = markMm * MM * 0.6;
+  const wordPx = Math.max(5, clsSize * 0.4);
   const rowHmm = rowH;
   const sheets = pages.map(page => {
     const items = page.map(c => {
+      const marked = c.allergy && markKind !== 'none' && o.content === 'namamark';
       let cls = '';
       if (o.content === 'namealg' && c.allergy) {
         const len = Math.max(8, c.allergy.length);
@@ -3738,14 +3825,23 @@ function buildStickerHTML(customers, o) {
           const s = Math.min(clsSize, ln * innerW / (0.72 * len), availH / (1.12 * ln));
           if (s > best.sz) best = { sz: s, lines: ln };
         }
-        cls = '<div class="alg" style="font-size:' + best.sz.toFixed(1) + 'px;-webkit-line-clamp:' + best.lines + '">&#9888; ' + escapeHtml(c.allergy) + '</div>';
+        cls = '<div class="alg" style="color:' + markFg + ';font-size:' + best.sz.toFixed(1) + 'px;-webkit-line-clamp:' + best.lines + '">' +
+          '<i class="alg-dot" style="background:' + markFg + '"></i>' + escapeHtml(c.allergy) + '</div>';
       } else if ((o.content === 'nameclass' || o.content === 'namamark') && c.className) {
         cls = '<div class="cls">' + escapeHtml(c.className) + '</div>';
       }
-      const mark = (o.content === 'namamark' && c.allergy)
-        ? '<span class="flag" title="' + escapeHtml(c.allergy) + '">!</span>' : '';
+      const cornerMark = marked && corner
+        ? (markKind === 'dot'
+          ? '<span class="mk mk-dot" style="width:' + markMm.toFixed(1) + 'mm;height:' + markMm.toFixed(1) + 'mm;background:' + markFg + '" title="' + escapeHtml(c.allergy) + '"></span>'
+          : '<span class="mk mk-letter" style="width:' + markMm.toFixed(1) + 'mm;height:' + markMm.toFixed(1) + 'mm;font-size:' + markPx.toFixed(1) + 'px;color:' + markFg + ';border-color:' + markFg + '" title="' + escapeHtml(c.allergy) + '">A</span>')
+        : '';
+      const underMark = marked && !corner
+        ? (markKind === 'bar'
+          ? '<span class="mk mk-bar" style="background:' + markFg + '" title="' + escapeHtml(c.allergy) + '"></span>'
+          : '<span class="mk mk-word" style="color:' + markFg + ';font-size:' + wordPx.toFixed(1) + 'px">alergi</span>')
+        : '';
       const br = o.brand ? '<div class="brand">' + escapeHtml(brandName) + '</div>' : '';
-      return '<div class="label' + (mark ? ' has-flag' : '') + '">' + mark + '<div class="name">' + escapeHtml(c.name) + '</div>' + cls + br + '</div>';
+      return '<div class="label' + (cornerMark ? ' has-mark' : '') + '">' + cornerMark + '<div class="name">' + escapeHtml(c.name) + '</div>' + underMark + cls + br + '</div>';
     }).join('');
     /* berhenti di baris terakhir yang terisi — tidak ada kotak kosong di bawahnya */
     const usedRows = Math.ceil(page.length / cols);
@@ -3762,11 +3858,16 @@ function buildStickerHTML(customers, o) {
     '.sheet{display:grid;gap:0;width:' + STICKER_SHEET_W + 'mm;margin:0 auto;border-top:' + edge + ';border-left:' + edge + ';page-break-inside:avoid}' +
     '.sheet + .sheet{margin-top:5mm;page-break-before:always}' +
     '.label{position:relative;border-right:' + edge + ';border-bottom:' + edge + ';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:' + padMm.toFixed(2) + 'mm ' + (padMm * 0.45).toFixed(2) + 'mm;overflow:hidden;min-height:0;line-height:1.02;gap:.25mm}' +
-    '.flag{position:absolute;bottom:.6mm;right:.6mm;width:' + flagMm.toFixed(1) + 'mm;height:' + flagMm.toFixed(1) + 'mm;border-radius:50%;background:#C0272D;color:#fff;font-weight:800;font-size:' + flagPx.toFixed(1) + 'px;display:flex;align-items:center;justify-content:center;line-height:1}' +
-    '.label.has-flag .brand,.label.has-flag .alg,.label.has-flag .cls{max-width:calc(100% - ' + (flagMm + 1).toFixed(1) + 'mm)}' +
+    '.mk{position:absolute;bottom:.8mm;right:.8mm;display:block}' +
+    '.mk-dot{border-radius:50%}' +
+    '.mk-letter{border:1.1px solid ' + markFg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1;background:#fff}' +
+    '.mk-bar{position:static;width:34%;height:1.1mm;border-radius:1mm;margin:.9mm auto 0}' +
+    '.mk-word{position:static;display:block;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:.7mm;line-height:1}' +
+    '.label.has-mark .brand,.label.has-mark .alg,.label.has-mark .cls{max-width:calc(100% - ' + (markMm + 1).toFixed(1) + 'mm)}' +
     '.name{font-family:' + nameFont + ';font-weight:700;font-size:' + nameSize.toFixed(1) + 'px;max-width:100%;overflow-wrap:anywhere}' +
     '.cls{font-family:' + clsFont + ';color:#5F564B;font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-    '.alg{font-family:' + clsFont + ';color:#C0272D;font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;line-height:1.08;max-width:100%;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}' +
+    '.alg{font-family:' + clsFont + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;line-height:1.08;max-width:100%;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}' +
+    '.alg-dot{display:inline-block;width:1.6mm;height:1.6mm;border-radius:50%;margin-right:1mm;vertical-align:middle}' +
     '.brand{font-family:' + brandFont + ';color:#C0272D;font-size:' + brandSize.toFixed(1) + 'px;letter-spacing:.3px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '</style></head><body>' + sheets + '</body></html>';
 }
@@ -3785,14 +3886,26 @@ function syncStickerControls() {
   setText('stickerBrandScaleVal', st.brandScale + '%');
   setText('stickerLineVal', st.lineW + ' px');
   const o = stickerOptions();
-  set('stickerRowH', String(o.rowH));
-  setText('stickerRowHVal', mmLabel(o.rowH) + ' mm');
-  const rowNote = document.getElementById('stickerRowHNote');
+  set('stickerCellPad', String(st.padV));
+  setText('stickerCellPadVal', mmLabel(st.padV) + ' mm');
+  set('stickerCellTight', String(st.tight));
+  setText('stickerCellTightVal', st.tight + '%');
+  const rowNote = document.getElementById('stickerCellPadNote');
   if (rowNote) {
-    rowNote.textContent = (st.rowH > 0 ? '' : 'Otomatis mengikuti ukuran stiker. ') +
-      o.rows + ' baris muat di halaman A4 · ' + (o.cols * o.rows) + ' stiker per lembar' +
-      (st.rowH > 0 ? ' — geser ke nilai ukuran untuk kembali otomatis.' : '.');
+    rowNote.textContent = 'Jarak atas-bawah isi dalam setiap sel; font menyesuaikan ruang yang tersisa · ' +
+      o.rows + ' baris · ' + (o.cols * o.rows) + ' stiker per lembar';
   }
+  const tightNote = document.getElementById('stickerCellTightNote');
+  if (tightNote) {
+    const full = +(STICKER_SHEET_H / o.rows).toFixed(1);
+    tightNote.textContent = st.tight >= 100
+      ? 'Sel memakai tinggi penuh ' + mmLabel(full) + ' mm. Kecilkan untuk mempertebal jarak antar stiker tanpa memperbesar tulisan.'
+      : 'Tinggi sel ' + mmLabel(o.rowH) + ' mm dari ' + mmLabel(full) + ' mm — sisa ruang jadi jarak antar stiker, tulisan ikut mengecil.';
+  }
+  set('stickerMark', st.mark);
+  set('stickerTone', st.tone);
+  const toneRow = document.getElementById('stickerToneRow');
+  if (toneRow) toneRow.hidden = st.mark === 'none';
   const brandChk = document.getElementById('stickerBrand');
   const linesChk = document.getElementById('stickerLines');
   const brandRow = document.getElementById('stickerBrandRow');
@@ -3800,7 +3913,18 @@ function syncStickerControls() {
   const row = document.getElementById('stickerLineRow');
   if (row) row.classList.toggle('is-dim', !(linesChk && linesChk.checked));
   const markNote = document.getElementById('stickerMarkNote');
-  if (markNote) markNote.hidden = document.getElementById('stickerContent').value !== 'namamark';
+  if (markNote) {
+    const content = document.getElementById('stickerContent').value;
+    if (content !== 'namamark' && content !== 'namealg') {
+      markNote.textContent = 'Penanda hanya muncul kalau konten stiker dipilih "Nama + Kelas + penanda alergi" atau "Nama + tulisan alergi".';
+    } else if (content === 'namealg') {
+      markNote.textContent = 'Isi alergi ditulis langsung di bawah nama; warnanya mengikuti warna penanda, bentuk penanda tidak dipakai di sini.';
+    } else {
+      markNote.textContent = st.mark === 'none'
+        ? 'Anak dengan alergi tidak diberi tanda pada stiker — catatannya tetap ada di aplikasi.'
+        : 'Penanda alergi: ' + STK_MARKS[st.mark] + '. Sengaja tanpa tanda seru agar tidak terbaca sebagai rambu bahaya.';
+    }
+  }
 }
 function saveStickerStyle() {
   const st = db.settings.sticker;
@@ -3812,11 +3936,10 @@ function saveStickerStyle() {
   st.nameScale = clampScale(val('stickerNameScale', 100), 70, 140);
   st.clsScale = clampScale(val('stickerClsScale', 100), 40, 160);
   st.brandScale = clampScale(val('stickerBrandScale', 100), 40, 200);
-  /* nilai yang sama dengan tinggi otomatis disimpan sebagai 0 (ikut ukuran) */
-  const parts = (val('stickerSize', '4x10').split('x').map(Number));
-  const autoH = STICKER_SHEET_H / (parts[1] || 10);
-  const rh = +val('stickerRowH', autoH);
-  st.rowH = (!rh || Math.abs(rh - autoH) < 0.26) ? 0 : Math.min(45, Math.max(12, rh));
+  st.padV = Math.min(10, Math.max(0, +val('stickerCellPad', 2.6) || 0));
+  st.tight = Math.min(100, Math.max(50, +val('stickerCellTight', 100) || 100));
+  st.mark = STK_MARKS[val('stickerMark', 'dot')] ? val('stickerMark', 'dot') : 'dot';
+  st.tone = STK_TONES[val('stickerTone', 'soft')] ? val('stickerTone', 'soft') : 'soft';
   save({ noUndo: true });
 }
 function stickerPreview() {
@@ -4306,6 +4429,17 @@ function renderHomeHoliday() {
     ? daftar.length + ' tanggal libur ' + (daily ? 'hari ini' : 'minggu ini')
     : 'Tidak ada libur ' + (daily ? 'hari ini' : 'minggu ini');
   if (!chips) return;
+  /* tab Harian: agenda libur dipisah dari kalender — di bawah menu, menyamping,
+     dan hanya berisi libur tanggal terpilih (tidak ada pesan kalau kosong) */
+  const editor = document.getElementById('weekMenuEditor');
+  const hint = document.getElementById('menuTabHint');
+  if (daily) {
+    if (hint && hint.parentElement) hint.insertAdjacentElement('afterend', chips);
+    chips.classList.add('is-flat');
+  } else {
+    if (editor && editor.parentElement) editor.parentElement.insertBefore(chips, editor);
+    chips.classList.remove('is-flat');
+  }
   chips.innerHTML = daftar.length
     ? daftar.map(h => {
         let who = '';
@@ -4315,7 +4449,7 @@ function renderHomeHoliday() {
           (who ? ' · ' + escapeHtml(who) : '') + (h.note ? ' <em>' + escapeHtml(h.note) + '</em>' : '') +
           '<button type="button" class="chip-x" data-act="holiday-remove" data-id="' + escapeHtml(h.id) + '" title="Hapus libur ini">&times;</button></span>';
       }).join('')
-    : '<span class="muted tiny">Tekan ' + (daily ? 'Libur Harian' : 'Libur Mingguan') + ' supaya pesanan anak tidak terisi otomatis pada tanggal itu.</span>';
+    : (daily ? '' : '<span class="muted tiny">Tekan Libur Mingguan supaya pesanan anak tidak terisi otomatis pada tanggal itu.</span>');
 }
 function openHolidayModal(mode) {
   const dates = holidayDates(mode);
@@ -4630,6 +4764,9 @@ function openCustomerModal(c) {
   document.getElementById('custSnackChk').addEventListener('change', syncPkgFields);
   document.getElementById('custLunchChk').addEventListener('change', syncPkgFields);
   syncPkgFields();
+  /* catatan alergi tinggi mengikuti isinya — hanya tumbuh ke bawah */
+  const algTa = document.querySelector('#custForm textarea[name="allergy"]');
+  if (algTa) { algTa.style.height = 'auto'; algTa.style.height = Math.min(algTa.scrollHeight + 2, 150) + 'px'; }
   document.getElementById('custForm').addEventListener('submit', e => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -4880,7 +5017,6 @@ function onDocClick(e) {
       state.daily.hari = { level: '', cohort: '', cls: '', q: '' };
       renderDailyMerged();
       break;
-    case 'daily-pay-all': payAllToday(); break;
     case 'daily-pay-cfg': openDayPayModal(act.closest('tr').dataset.cid, state.currentDate); break;
     case 'daily-pay-save': saveDayPay(act.dataset.cid, act.dataset.date); break;
     case 'week-menu-add': {
@@ -4932,7 +5068,6 @@ function onDocClick(e) {
     case 'daily-food': setCustomFood(act.dataset.cid, act.dataset.date, +act.dataset.mi, act.dataset.type); break;
     case 'custom-plain': togglePlainOrder(act.dataset.cid, act.dataset.date); break;
     case 'daily-plain': togglePlainOrder(act.dataset.cid, state.currentDate, act.dataset.type); break;
-    case 'custom-col-clear': clearColumn(act.dataset.date); break;
     case 'custom-display':
       db.settings.customDisplay = ['name', 'price', 'both'].indexOf(act.dataset.mode) >= 0 ? act.dataset.mode : 'both';
       save({ noUndo: true }); renderCustom();
@@ -5049,6 +5184,7 @@ function onDocClick(e) {
     case 'home-cal-prev': shiftHomeMonth(-1); break;
     case 'home-cal-next': shiftHomeMonth(1); break;
     case 'home-day': { state.menuDate = act.dataset.ymd; state.menuMonth = monthKey(state.menuDate); state.menuDay = weekdayOf(state.menuDate) - 1; renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase(); renderHomeHoliday(); break; }
+    case 'goto-menu': openDailyMenu(act.dataset.date, act.dataset.po === '1'); break;
     case 'holiday-day': openHolidayModal('day'); break;
     case 'holiday-week': openHolidayModal('week'); break;
     case 'holiday-save': saveHoliday(act.dataset.mode === 'week' ? 'week' : 'day'); break;
@@ -5244,7 +5380,8 @@ function onDocChange(e) {
   if (t.id === 'setUiFont' || t.id === 'setUiZoom') { saveUiStyle(); return; }
   if (t.id === 'stickerNameFont' || t.id === 'stickerClsFont' || t.id === 'stickerBrandFont' ||
       t.id === 'stickerNameScale' || t.id === 'stickerClsScale' || t.id === 'stickerBrandScale' ||
-      t.id === 'stickerRowH' || t.id === 'stickerLineW') {
+      t.id === 'stickerCellPad' || t.id === 'stickerCellTight' || t.id === 'stickerLineW' ||
+      t.id === 'stickerMark' || t.id === 'stickerTone') {
     saveStickerStyle(); stickerPreview(); return;
   }
   if (t.id === 'satpamType' || t.id === 'satpamShowClass') { satpamPreview(); return; }
@@ -5326,6 +5463,8 @@ function onDocChange(e) {
 /* ---------- Kalender besar ---------- */
 let cal = { open: false, mode: 'day', field: null, year: 0, month: 1, selected: '', dotFn: null };
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+/* Urutan kolom kalender dimulai Minggu — beda dengan daftar hari (menu, tabel) yang tetap Senin */
+const CAL_WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
 
@@ -5360,7 +5499,7 @@ function renderCalendar() {
         '<div class="cal-title">' + title + '</div>' +
         '<button type="button" class="cal-nav" data-act="cal-next" aria-label="Berikutnya">' + ICO_NEXT + '</button>' +
       '</div>' +
-      '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
+      '<div class="cal-week">' + CAL_WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
       '<div class="cal-grid">' + buildDayGrid(cal.year, cal.month, cal.selected, todayStr(), cal.dotFn, 'cal-pick', '', isFullHoliday) + '</div>' +
       '<div class="cal-foot">' +
         '<button type="button" class="btn btn-primary" data-act="cal-today">Hari ini</button>' +
@@ -5383,7 +5522,7 @@ function renderCalendar() {
 
 function buildDayGrid(year, month, selectedYmd, todayYmd, dotFn, act, markCls, flagFn) {
   act = act || 'cal-pick';
-  const startIdx = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Senin pertama
+  const startIdx = new Date(year, month - 1, 1).getDay(); // 0 = Minggu
   const days = new Date(year, month, 0).getDate();
   let html = '';
   for (let i = 0; i < startIdx; i++) html += '<div class="cal-empty"></div>';
@@ -5494,10 +5633,12 @@ function init() {
     if (t.id === 'hariSearch') { state.daily.hari.q = (t.value || '').trim().toLowerCase(); renderDailyMerged(); }
     if (t.id === 'custSearch') { state.cust.q = (t.value || '').trim().toLowerCase(); renderCustomers(); }
     if (t.classList.contains('wm-name')) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 170) + 'px'; applyMenuEdit(t, true); }
+    if (t.name === 'allergy') { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 150) + 'px'; }
     if (t.id === 'stickerNameScale') setText('stickerNameScaleVal', t.value + '%');
     if (t.id === 'stickerClsScale') setText('stickerClsScaleVal', t.value + '%');
     if (t.id === 'stickerBrandScale') setText('stickerBrandScaleVal', t.value + '%');
-    if (t.id === 'stickerRowH') setText('stickerRowHVal', mmLabel(t.value) + ' mm');
+    if (t.id === 'stickerCellPad') setText('stickerCellPadVal', mmLabel(t.value) + ' mm');
+    if (t.id === 'stickerCellTight') setText('stickerCellTightVal', t.value + '%');
     if (t.id === 'setUiZoom') { db.settings.uiZoom = clampScale(t.value, UI_ZOOM_MIN, UI_ZOOM_MAX); applyUiStyle(); }
     if (t.closest && t.closest('#poGroupForm')) updatePoGroupTotal();
   });
