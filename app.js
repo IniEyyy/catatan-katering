@@ -1099,6 +1099,29 @@ function paintDonut(id, segments, centerLabel, fmtVal) {
 }
 function pct(x, total) { return total > 0 ? Math.round(x / total * 100) + '%' : '0%'; }
 
+/* ---------- Pusat cetak & bagikan (Beranda) ---------- */
+const PRINT_HUB = [
+  { t: 'Foto Menu Mingguan', k: 'Foto', h: 'gambar siap dikirim ke grup sekolah', act: 'menu-share' },
+  { t: 'Stiker Nama', k: 'A4', h: 'cetak sesuai centangan terakhir di halaman Stiker', act: 'sticker-print' },
+  { t: 'Kertas Konfirmasi', k: 'A4', h: 'daftar porsi hari terpilih untuk dapur', act: 'satpam-print' },
+  { t: 'Rekap PO per Bulan', k: 'PDF', h: 'bulan terpilih di halaman Pre-Order', act: 'po-print-month' },
+  { t: 'Cetak Laporan', k: 'PDF', h: 'rekap semua anak, bulan berjalan', act: 'hub-print-report' },
+  { t: 'CSV Rekap Pelanggan', k: 'CSV', h: 'tagihan / dibayar / sisa tiap anak, dibuka di Excel', act: 'hub-csv-report' },
+  { t: 'Invoice Kelompok', k: 'Buka', h: 'pilih kelompoknya dulu, lalu PDF atau foto', nav: 'po' },
+  { t: 'Kirim Tagihan', k: 'Buka', h: 'daftar penunggak + template pesan WhatsApp', nav: 'pengingat' },
+  { t: 'Cadangan JSON', k: 'Simpan', h: 'unduh semua data sebagai berkas cadangan', act: 'export' }
+];
+function renderHub() {
+  const el = document.getElementById('hubGrid');
+  if (!el) return;
+  el.innerHTML = PRINT_HUB.map(x =>
+    '<button type="button" class="hub-item" data-act="' + (x.act ? x.act : 'hub-nav') + '"' +
+    (x.nav ? ' data-page="' + x.nav + '"' : '') + ' data-t="' + escapeHtml(x.t) + '" data-h="' + escapeHtml(x.h) + '">' +
+      '<span class="hub-kind">' + x.k + '</span>' +
+      '<span class="hub-txt"><strong>' + escapeHtml(x.t) + '</strong><span>' + escapeHtml(x.h) + '</span></span>' +
+    '</button>').join('');
+}
+
 function renderDashboard() {
   const today = todayStr();
   const thisMonth = monthKey(today);
@@ -1126,6 +1149,7 @@ function renderDashboard() {
   renderWeekMenu();
   renderPkgShowcase();
   renderRemStrip();
+  renderHub();
 
   const months = lastMonths(6);
   drawLine(document.getElementById('chartMonthly'),
@@ -2163,7 +2187,6 @@ function renderPO() {
       '<td class="num"><strong>' + fmtIDR(total) + '</strong></td>' +
       '<td class="end"><div class="row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="po-buyer-add" data-id="' + m.id + '">+ Pembeli</button>' +
-        '<button class="btn btn-ghost btn-sm" data-act="po-labels-menu" data-id="' + m.id + '">Label</button>' +
         '<button class="icon-act" data-act="po-menu-edit" data-id="' + m.id + '" title="Ubah menu">' + ICO_EDIT + '</button>' +
         '<button class="icon-act danger" data-act="po-menu-delete" data-id="' + m.id + '" title="Hapus menu">' + ICO_TRASH + '</button>' +
       '</div></td>' +
@@ -2208,9 +2231,9 @@ function renderPO() {
       '<td class="num">' + fmtIDR(p.price) + '</td>' +
       '<td class="num"><strong>' + fmtIDR((+p.qty * +p.price) || 0) + '</strong></td>' +
       '<td class="c"><button class="badge ' + (p.method === 'Gratis' ? 'gold' : (p.paid ? 'green' : 'red')) + '" data-act="po-toggle-paid" data-id="' + p.id + '">' + (p.method === 'Gratis' ? 'Gratis' : (p.paid ? 'Lunas' : 'Belum')) + '</button></td>' +
-      '<td class="c"><button class="badge ' + poStatusClass(p) + '" data-act="po-toggle-status" data-id="' + p.id + '" title="Klik untuk ubah status proses">' + poStatusLabel(p) + '</button></td>' +
+      '<td class="c"><button class="badge ' + poStatusClass(p) + '" data-act="po-toggle-status" data-id="' + p.id + '" title="Klik untuk ubah status ambil">' + poStatusLabel(p) + '</button></td>' +
       '<td class="end"><div class="row-actions">' +
-        '<button class="icon-act" data-act="po-label" data-id="' + p.id + '" title="Cetak label / resi">' + ICO_PRINT + '</button>' +
+        '<button class="icon-act" data-act="po-resi" data-id="' + p.id + '" title="Cetak resi pembeli ini">' + ICO_PRINT + '</button>' +
         '<button class="icon-act" data-act="po-edit" data-id="' + p.id + '" title="Ubah">' + ICO_EDIT + '</button>' +
         '<button class="icon-act danger" data-act="po-delete" data-id="' + p.id + '" title="Hapus">' + ICO_TRASH + '</button>' +
       '</div></td>' +
@@ -2236,10 +2259,10 @@ function renderPO() {
     years.map(y => poMap[y] || 0), { color: '#C0272D' });
 }
 
-function poStatusLabel(p) { return p.status === 'siap' ? 'Siap diambil' : p.status === 'kirim' ? 'Dikirim' : 'Belum diproses'; }
+function poStatusLabel(p) { return p.status === 'siap' ? 'Siap diambil' : p.status === 'kirim' ? 'Dikirim' : 'Belum siap'; }
 function poStatusClass(p) { return p.status === 'siap' ? 'gold' : p.status === 'kirim' ? 'green' : 'orange'; }
 function poNextStatus(p) { p.status = p.status === '' ? 'siap' : p.status === 'siap' ? 'kirim' : ''; }
-function poLabelBoxHTML(p, i) {
+function poResiBoxHTML(p, i) {
   const total = (+p.qty * +p.price) || 0;
   return '<div class="lbl">' +
     '<div class="lbl-top">' + (i == null ? '' : (i + 1) + ' · ') + escapeHtml(fmtShortDate(p.date)) + '</div>' +
@@ -2257,16 +2280,10 @@ function printPoDoc(html) {
   f.srcdoc = html;
   setTimeout(() => printFrame(f), 320);
 }
-function buildPoLabelsHTML(list, subtitle) {
-  const boxes = list.length
-    ? list.map((p, i) => poLabelBoxHTML(p, i)).join('')
-    : '<p style="text-align:center">Tidak ada pembeli pada menu ini.</p>';
-  return printableDoc('Label Pre-Order', subtitle, '<div class="lbl-grid">' + boxes + '</div>');
-}
 function buildPoResiHTML(p) {
   const total = (+p.qty * +p.price) || 0;
   return printableDoc('Resi Pre-Order', fmtShortDate(p.date) + ' · ' + p.item,
-    poLabelBoxHTML(p, null) +
+    poResiBoxHTML(p, null) +
     '<h4>Rincian pesanan</h4>' +
     '<table><tbody>' +
       '<tr><th>Nama</th><td>' + escapeHtml(p.name) + '</td></tr>' +
@@ -2275,7 +2292,7 @@ function buildPoResiHTML(p) {
       '<tr><th>Jumlah</th><td>' + (+p.qty || 0) + ' × ' + fmtIDR(p.price) + '</td></tr>' +
       '<tr><th>Metode</th><td>' + escapeHtml(p.method || '—') + '</td></tr>' +
       '<tr><th>Pembayaran</th><td>' + (p.method === 'Gratis' ? 'GRATIS (kompensasi)' : (p.paid ? 'Lunas' : 'Belum dibayar')) + '</td></tr>' +
-      '<tr><th>Status proses</th><td>' + escapeHtml(poStatusLabel(p)) + '</td></tr>' +
+      '<tr><th>Status ambil</th><td>' + escapeHtml(poStatusLabel(p)) + '</td></tr>' +
       (p.note ? '<tr><th>Catatan</th><td>' + escapeHtml(p.note) + '</td></tr>' : '') +
       '<tr><th>Total</th><td class="r"><strong>' + fmtIDR(total) + '</strong></td></tr>' +
     '</tbody></table>' +
@@ -2306,7 +2323,7 @@ function buildPoMonthHTML(month) {
     '<table><thead><tr><th>Tanggal</th><th>Menu</th><th class="r">Porsi</th><th class="r">Pembeli</th><th class="r">Nilai</th></tr></thead>' +
     '<tbody>' + (needRows || '<tr><td colspan="5" class="c">Belum ada PO pada periode ini.</td></tr>') + '</tbody></table>' +
     '<h4>Daftar pembeli</h4>' +
-    '<table><thead><tr><th>Tanggal</th><th>Nama</th><th>Menu</th><th class="r">Jml</th><th class="r">Nilai</th><th class="c">Bayar</th><th class="c">Status</th></tr></thead>' +
+    '<table><thead><tr><th>Tanggal</th><th>Nama</th><th>Menu</th><th class="r">Jumlah</th><th class="r">Nilai</th><th class="c">Lunas</th><th class="c">Status ambil</th></tr></thead>' +
     '<tbody>' + (buyRows || '<tr><td colspan="7" class="c">Belum ada PO pada periode ini.</td></tr>') + '</tbody>' +
     '<tfoot><tr><td colspan="3">Total</td><td class="r">' + totQty + '</td><td class="r">' + fmtIDR(totNilai) + '</td><td class="c" colspan="2">Belum dibayar: ' + fmtIDR(totBelum) + '</td></tr></tfoot></table>');
 }
@@ -2493,10 +2510,11 @@ function renderPoGroups() {
       '<td class="small">' + g.dates.map(d => fmtShortDate(d) + ' <span class="muted tiny">(' +
         (g.rows.filter(p => p.date === d).reduce((s, p) => s + (+p.qty || 0), 0)) + ' porsi)</span>').join('<br>') + '</td>' +
       '<td class="num">' + g.qty + '</td>' +
-      '<td class="num">' + fmtIDR(g.nilai) + (g.sisa > 0 ? '<div class="muted tiny danger-text">sisa ' + fmtIDR(g.sisa) + '</div>' : '<div class="muted tiny">lunas</div>') + '</td>' +
+      '<td class="num">' + fmtIDR(g.nilai) + (g.bayar > 0 && g.bayar < g.nilai ? '<div class="muted tiny">barunya ' + fmtIDR(g.bayar) + '</div>' : '') + '</td>' +
       '<td class="c"><button class="badge ' + (g.sisa > 0 ? 'red' : 'green') + '" data-act="po-group-paid" data-id="' + g.id + '" title="' +
         (g.sisa > 0 ? 'Tandai lunas — sisa ' + fmtIDR(g.sisa) : 'Batalkan penandaan lunas') + '">' +
-        (g.sisa > 0 ? 'Belum' : 'Lunas') + '</button></td>' +
+        (g.sisa > 0 ? 'Belum' : 'Lunas') + '</button>' +
+        (g.sisa > 0 ? '<div class="muted tiny danger-text">sisa ' + fmtIDR(g.sisa) + '</div>' : '') + '</td>' +
       '<td class="end"><div class="row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="po-group-invoice" data-id="' + g.id + '">Invoice</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="po-group-detail" data-id="' + g.id + '">Detail</button>' +
@@ -2568,10 +2586,10 @@ function poGroupInvoicePrint(id) {
     '<table><tbody>' +
       '<tr><th>Ditagihkan kepada</th><td>' + escapeHtml(g.org) + '</td><th>PIC</th><td>' + escapeHtml(g.pic || '—') + '</td></tr>' +
       '<tr><th>No. HP / WA</th><td>' + escapeHtml(g.contact || '—') + '</td><th>Jatuh tempo</th><td>' + (g.due ? escapeHtml(fmtLong(g.due)) : 'belum diatur') + '</td></tr>' +
-      '<tr><th>Item</th><td colspan="3">' + escapeHtml(g.item) + ' · ' + fmtIDR(g.unit) + ' / porsi' + (g.note ? ' · ' + escapeHtml(g.note) : '') + '</td></tr>' +
+      '<tr><th>Menu</th><td colspan="3">' + escapeHtml(g.item) + ' · ' + fmtIDR(g.unit) + ' / porsi' + (g.note ? ' · ' + escapeHtml(g.note) : '') + '</td></tr>' +
     '</tbody></table>' +
     '<h4>Rincian tanggal ambil</h4>' +
-    '<table><thead><tr><th class="no">No</th><th>Tanggal ambil</th><th class="c">Porsi</th><th class="r">Harga</th><th class="r">Jumlah</th><th class="c">Status bayar</th></tr></thead>' +
+    '<table><thead><tr><th class="no">No</th><th>Tanggal ambil</th><th class="c">Porsi</th><th class="r">Harga</th><th class="r">Jumlah</th><th class="c">Lunas</th></tr></thead>' +
     '<tbody>' + rows + '</tbody>' +
     '<tfoot><tr><td colspan="2">TOTAL</td><td class="c">' + g.qty + '</td><td></td><td class="r">' + fmtIDR(g.nilai) + '</td><td></td></tr></tfoot></table>' +
     '<h4>Ringkasan pembayaran</h4>' +
@@ -3427,7 +3445,7 @@ function openReportDetail(cid) {
     '</div>' +
     '<h4 style="margin-bottom:8px">Catatan harian</h4>' +
     '<div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th class="c">Snack</th><th class="c">Lunch</th></tr></thead><tbody>' + dailyRows + '</tbody></table></div>' +
-    (det.pos.length ? '<h4 style="margin:16px 0 8px">Pre-Order</h4><div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Item</th><th class="num">Nilai</th><th class="c">Bayar</th></tr></thead><tbody>' + poRows + '</tbody></table></div>' : '') +
+    (det.pos.length ? '<h4 style="margin:16px 0 8px">Pre-Order</h4><div class="table-wrap"><table class="table"><thead><tr><th>Tanggal</th><th>Menu</th><th class="num">Nilai</th><th class="c">Lunas</th></tr></thead><tbody>' + poRows + '</tbody></table></div>' : '') +
     '<div class="modal-actions">' +
       '<button type="button" class="btn btn-ghost" data-act="modal-close">Tutup</button>' +
       '<button type="button" class="btn btn-accent" data-act="report-image" data-id="' + c.id + '">Simpan Gambar</button>' +
@@ -3451,7 +3469,6 @@ function printableDoc(title, subtitle, inner) {
     'td.r,th.r{text-align:right}' +
     'tfoot td{font-weight:700;background:#faf6ef}' +
     '.info{margin-bottom:2mm}' +
-    '.lbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:4mm}' +
     '.lbl{border:1.4px solid #333;border-radius:3mm;padding:3mm;text-align:center;break-inside:avoid;page-break-inside:avoid}' +
     '.lbl-top{font-size:10.5px;color:#555;letter-spacing:.5px;text-transform:uppercase}' +
     '.lbl-item{font-size:19px;font-weight:800;margin:1.5mm 0}' +
@@ -3469,6 +3486,12 @@ function printableDoc(title, subtitle, inner) {
     '</div>' + inner + '</body></html>';
 }
 
+function printRecap() {
+  if (!state.report || !state.report.rows.length) { toast('Tidak ada data untuk dicetak.'); return; }
+  const fr = document.getElementById('reportFrame');
+  fr.srcdoc = buildRecapHTML(state.report.rows, state.report.mode);
+  setTimeout(() => printFrame(fr), 300);
+}
 function buildRecapHTML(rows, mode) {
   const scope = mode.allTime ? 'Semua Waktu' : fmtShortDate(mode.month + '-01');
   const totTagihan = rows.reduce((s, r) => s + r.tagihan, 0);
@@ -4674,13 +4697,7 @@ function onDocClick(e) {
       if (p) { poNextStatus(p); logAction('po', 'Status PO ' + p.name + ' → ' + poStatusLabel(p)); save(); renderPO(); }
       break;
     }
-    case 'po-label': { const p = db.po.find(x => x.id === id); if (p) printPoDoc(buildPoResiHTML(p)); break; }
-    case 'po-labels-menu': {
-      const m = db.poMenus.find(x => x.id === id);
-      const list = db.po.filter(x => x.menuId === id).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      if (m) printPoDoc(buildPoLabelsHTML(list, m.item + ' · ' + fmtShortDate(m.date) + ' · ' + list.length + ' pembeli'));
-      break;
-    }
+    case 'po-resi': { const p = db.po.find(x => x.id === id); if (p) printPoDoc(buildPoResiHTML(p)); break; }
     case 'po-print-month': printPoDoc(buildPoMonthHTML(state.poMonth)); break;
     case 'po-group-add': openPoGroupModal(null); break;
     case 'po-group-edit': { const g = poGroups().find(x => x.id === id); if (g) openPoGroupModal(g); break; }
@@ -4895,13 +4912,10 @@ function onDocClick(e) {
     case 'wa-save': saveWaSettings(); break;
     case 'report-detail': openReportDetail(id); break;
     case 'report-image': customerRincianImage(id); break;
-    case 'report-print': {
-      if (!state.report || !state.report.rows.length) { toast('Tidak ada data untuk dicetak.'); break; }
-      const fr = document.getElementById('reportFrame');
-      fr.srcdoc = buildRecapHTML(state.report.rows, state.report.mode);
-      setTimeout(() => printFrame(fr), 300);
-      break;
-    }
+    case 'report-print': printRecap(); break;
+    case 'hub-print-report': renderReport(); printRecap(); break;
+    case 'hub-csv-report': renderReport(); exportReportCSV(); break;
+    case 'hub-nav': showPage(act.dataset.page); toast(act.dataset.t + ' — ' + act.dataset.h); break;
     case 'open-cal': {
       const field = act.dataset.field;
       if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDot('snack')(ymd) || dayDot('lunch')(ymd) });
