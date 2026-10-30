@@ -72,7 +72,7 @@ function defaultData() {
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
-      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, cellPad: 25 },
+      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, rowH: 0 },
       uiFont: 'default', // jenis huruf seluruh aplikasi (key UI_FONTS)
       uiZoom: 100,       // skala teks seluruh aplikasi, 85–130 %
       customDisplay: 'both', // tampilan sel Kustomisasi: 'both' | 'name' | 'price'
@@ -107,7 +107,8 @@ function normalize(d) {
   sk.nameScale = clampScale(sk.nameScale, 70, 140);
   sk.clsScale = clampScale(sk.clsScale, 40, 160);
   sk.brandScale = clampScale(sk.brandScale, 40, 200);
-  sk.cellPad = clampScale(sk.cellPad, 0, 100, 25);
+  /* rowH 0 = tinggi baris otomatis mengikuti jumlah baris ukuran stiker */
+  sk.rowH = +sk.rowH > 0 ? Math.min(45, Math.max(12, +sk.rowH)) : 0;
   d.settings.sticker = sk;
   d.settings.uiFont = UI_FONTS[d.settings.uiFont] ? d.settings.uiFont : 'default';
   d.settings.uiZoom = clampScale(d.settings.uiZoom, UI_ZOOM_MIN, UI_ZOOM_MAX);
@@ -126,9 +127,10 @@ function normalize(d) {
   if (!d.menu || typeof d.menu !== 'object') d.menu = { snack: {}, lunch: {} };
   if (!d.menu.snack || typeof d.menu.snack !== 'object') d.menu.snack = {};
   if (!d.menu.lunch || typeof d.menu.lunch !== 'object') d.menu.lunch = {};
+  /* price = harga porsi hari itu; '' berarti ikut harga paketnya */
   const normMenu = arr => (Array.isArray(arr) ? arr : []).map(it => typeof it === 'string'
-    ? { name: it, type: 'snack', pkg: '' }
-    : { name: String((it && it.name) || '').trim(), type: ['snack', 'lunch', 'po'].includes(it && it.type) ? it.type : 'snack', pkg: (it && it.pkg) || '' }
+    ? { name: it, type: 'snack', pkg: '', price: '' }
+    : { name: String((it && it.name) || '').trim(), type: ['snack', 'lunch', 'po'].includes(it && it.type) ? it.type : 'snack', pkg: (it && it.pkg) || '', price: (it && +it.price > 0) ? +it.price : '' }
   ).filter(it => it.name);
   if (!d.menuPlan || typeof d.menuPlan !== 'object') d.menuPlan = {};
   for (const date in d.menuPlan) {
@@ -201,73 +203,92 @@ function makeDemoData() {
   d.settings.tagline = brand[1];
   d.settings.bankHolder = brand[0];
   const pk = (type, name, price) => ({ id: uid(), type, name, price });
-  const sLite = pk('snack', 'Snack Ringan', 4000);
-  const sMid = pk('snack', 'Snack Sedang', 6000);
-  const sFull = pk('snack', 'Snack Komplit', 8000);
-  const lStd = pk('lunch', 'Lunch Standar', 15000);
-  const lPrem = pk('lunch', 'Lunch Premium', 22000);
-  d.settings.packages = [sLite, sMid, sFull, lStd, lPrem];
-  d.settings.bankName = 'BCA';
-  d.settings.bankNumber = '8765432190';
-  d.settings.invSeq = 12;
+  const sMini = pk('snack', 'Snack Mini', 4500);
+  const sSedang = pk('snack', 'Snack Sedang', 7000);
+  const sKomplit = pk('snack', 'Snack Komplit', 9500);
+  const lStandar = pk('lunch', 'Nasi Kotak Standar', 16000);
+  const lSpesial = pk('lunch', 'Nasi Kotak Spesial', 20000);
+  const lPrem = pk('lunch', 'Nasi Kotak Premium', 24000);
+  d.settings.packages = [sMini, sSedang, sKomplit, lStandar, lSpesial, lPrem];
+  d.settings.bankName = 'Mandiri';
+  d.settings.bankNumber = '1390022114455';
+  d.settings.invSeq = 24;
 
   const mk = (name, className, parent, period, days, snack, lunch, extra) =>
-    Object.assign({ id: uid(), name, className, parent: parent || '', period, days: days || [], snackDefault: !!snack, lunchDefault: !!lunch, snackPkg: '', lunchPkg: '', allergy: '', active: true }, extra || {});
+    Object.assign({ id: uid(), name, className, parent: parent || '', period, days: days || [], snackDefault: !!snack, lunchDefault: !!lunch, snackPkg: '', lunchPkg: '', allergy: '', active: true, status: 'aktif' }, extra || {});
   const kids = [
-    mk('Andi Pratama', '2C', 'Bpk. Surya', 'weekly', [], true, true, { snackPkg: sMid.id, lunchPkg: lStd.id, phone: '0812-3456-7890', allergy: 'Alergi kacang & kerang' }),
-    mk('Bella Surya', '2C', 'Bpk. Surya', 'weekly', [], true, false, { snackPkg: sLite.id }),
-    mk('Cici Lestari', '3A', 'Ibu Rina', 'weekly', [], true, true, { lunchPkg: lPrem.id, phone: '0857-1122-3344', allergy: 'Tidak makan pedas' }),
-    mk('Dodo Ramdan', '3A', 'Ibu Rina', 'daily', [1, 3, 5], true, true, { snackPkg: sFull.id, phone: '0857-1122-3344' }),
-    mk('Eko Saputra', '4B', '', 'weekly', [], true, true, { lunchPkg: lStd.id }),
-    mk('Fira Anisa', '4B', 'Bpk. Tono', 'monthly', [], true, true, { phone: '0821-9876-5432', allergy: 'Intoleransi laktosa — tanpa susu' }),
-    mk('Gita Melia', '2C', 'Ibu Dewi', 'semester', [], false, true, { phone: '0811-2233-4455', lunchPkg: lPrem.id }),
-    mk('Hana Kirana', '3A', '', 'weekly', [], true, false, { snackPkg: sMid.id, allergy: 'Alergi cokelat' }),
-    mk('Intan Permata', '4B', 'Bpk. Tono', 'weekly', [], true, true, { phone: '0813-2244-6688' }),
-    mk('Joko Slamet', '3A', 'Ibu Dewi', 'monthly', [], false, true, { lunchPkg: lStd.id, status: 'berhenti' }),
-    mk('Miko Tanoto', '7B', 'Bpk. Surya', 'weekly', [], true, true, { snackPkg: sMid.id, allergy: ' Vegetarian — tanpa daging' }),
-    mk('Nadia Putri', '8C', 'Ibu Rina', 'monthly', [], false, true, { lunchPkg: lPrem.id, allergy: 'Alergi telur' }),
-    mk('Oscar Wijaya', '10A', '', 'weekly', [], true, true, { snackPkg: sLite.id, phone: '0819-3355-7799' }),
-    mk('Putri Ayu', '10B', 'Bpk. Tono', 'daily', [2, 4], true, false, { snackPkg: sLite.id }),
-    mk('Quinn Azalea', '8C', 'Ibu Dewi', 'weekly', [], true, true, { allergy: 'Alergi seafood' }),
-    mk('Raka Aditya', '11B', 'Ibu Dewi', 'weekly', [], true, true, { snackPkg: sFull.id, phone: '0811-2233-4455' }),
-    mk('Sinta Lestari', '12A', '', 'monthly', [], true, false, { snackPkg: sMid.id }),
-    mk('Sinta Lestari', '12A', 'Bpk. Lestari', 'weekly', [], false, true, { lunchPkg: lStd.id }),
-    mk('Tio Nugroho', '11B', 'Bpk. Surya', 'weekly', [], true, true, { phone: '0812-3456-7890' }),
-    mk('Umi Kalsum', '12A', 'Ibu Rina', 'semester', [], true, true, { lunchPkg: lPrem.id, allergy: 'Maag — tidak pedas & tidak asam' }),
-    mk('Vino Alfarizi', '6A', 'Bpk. Vino', 'weekly', [], true, true, { snackPkg: sMid.id, status: 'selesai', allergy: 'Riwayat alergi udang' })
+    mk('Alya Ramadhani', '1B', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id, phone: '0812-3400-1122', allergy: 'Alergi kacang — tanpa kue kacang' }),
+    mk('Bagas Nugraha', '1B', 'Bpk. Hendra', 'weekly', [], true, false, { snackPkg: sSedang.id }),
+    mk('Cahaya Illaika', '2A', 'Ibu Sari', 'monthly', [], true, true, { lunchPkg: lSpesial.id, phone: '0812-3400-1122' }),
+    mk('Dimas Aryo', '2A', 'Bpk. Yusuf', 'daily', [1, 2, 3], true, true, { snackPkg: sMini.id, phone: '0857-2200-3311' }),
+    mk('Elora Suci', '3C', 'Ibu Marni', 'weekly', [], false, true, { lunchPkg: lPrem.id, allergy: 'Intoleransi susu — tanpa keju' }),
+    mk('Farhan Maulana', '3C', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sKomplit.id, phone: '0857-2200-3311' }),
+    mk('Gadis Puspita', '4A', 'Ibu Endah', 'semester', [], true, true, { snackPkg: sSedang.id, allergy: 'Tidak makan pedas' }),
+    mk('Hafiz Ramadhan', '4A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sMini.id, phone: '0821-7788-9001' }),
+    mk('Indira Kayana', '5B', 'Ibu Marni', 'monthly', [], true, true, { lunchPkg: lSpesial.id }),
+    mk('Jibril Anwar', '5B', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lStandar.id, status: 'berhenti' }),
+    mk('Kiran Maheswari', '6A', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sSedang.id, phone: '0821-7788-9001', allergy: 'Alergi seafood' }),
+    mk('Luthfi Hakim', '6A', 'Ibu Sari', 'daily', [1, 3, 5], true, true, { lunchPkg: lStandar.id }),
+    mk('Mutiara Zahra', '7C', 'Bpk. Yusuf', 'weekly', [], true, true, { snackPkg: sMini.id, allergy: 'Vegetarian — lauk tahu/tempe' }),
+    mk('Nabil Prakoso', '8A', 'Ibu Marni', 'weekly', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244' }),
+    mk('Oka Sriwibowo', '8A', 'Bpk. Hendra', 'monthly', [], false, true, { lunchPkg: lSpesial.id, status: 'selesai' }),
+    mk('Puput Arumbani', '9B', 'Ibu Endah', 'weekly', [], true, true, { snackPkg: sKomplit.id }),
+    mk('Qori Amelia', '10A', 'Ibu Sari', 'semester', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244', allergy: 'Maag — hindari asam & pedas' }),
+    mk('Rafan Syahputra', '10A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sSedang.id }),
+    mk('Salsabila Azzahra', '11C', 'Ibu Marni', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id }),
+    mk('Taufik Hidayat', '11C', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lSpesial.id, phone: '0857-2200-3311' }),
+    mk('Ulva Hanum', '12A', 'Bpk. Hendra', 'monthly', [], true, true, { allergy: 'Alergi telur' }),
+    mk('Wira Santoso', '12A', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sKomplit.id, lunchPkg: lPrem.id, phone: '0821-7788-9001' }),
+    mk('Yolanda Putri', '12B', 'Ibu Marni', 'daily', [2, 4, 6], true, false, { snackPkg: sSedang.id }),
+    /* nama kembar sengaja ada dua — memperlihatkan daftar pelanggan dengan nama sama tetap dibedakan kelasnya */
+    mk('Zaki Maulana', '2A', 'Bpk. Yusuf', 'weekly', [], true, true, {}),
+    mk('Zaki Maulana', '9B', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lStandar.id })
   ];
   d.customers = kids;
 
   const today = todayStr();
-  const offAll = shiftDate(today, -10);
-  const offCohort = shiftDate(today, -7);
+  const offAll = shiftDate(today, -13);
+  const offClass = shiftDate(today, -6);
   const methods = ['Tunai', 'Transfer', 'QRIS'];
 
-  /* menu 2 varian yang berganti tiap minggu — paket yang sama, makanan berbeda */
-  const mi = (name, type, pkg) => ({ name, type, pkg: pkg || '' });
+  /* tiga rotasi menu mingguan — paket sama, makanan berbeda; satu-dua hari harganya diubah dari menu */
+  const mi = (name, type, pkg, price) => ({ name, type, pkg: pkg || '', price: price || '' });
   const W1 = [
-    [mi('Roti & Buah\nSelai stroberi\nPisang', 'snack', sLite.id), mi('Susu Cair\nCokelat', 'snack', sMid.id)],
-    [mi('Nasi Goreng Mini\nAyam\nSayur\nBuah', 'lunch', lStd.id), mi('Bakwan Jagung\nSayur', 'snack', sLite.id)],
-    [mi('Bubur Kacang\nKurma', 'snack', sMid.id), mi('Pisang Goreng\nNangka', 'snack', sLite.id),
-      mi('Nasi Uduk\nAyam Bakar\nTempe\nPuding', 'lunch', lPrem.id)],
-    [mi('Perkedel\nKentang', 'snack', sLite.id), mi('Teh Manis\nJeruk', 'snack', sMid.id),
-      mi('Mie Goreng\nBakso\nSayur', 'lunch', lPrem.id), mi('Nasi Ayam\nSayur\nBuah', 'lunch', lStd.id)],
-    [mi('Kue Pelita\nTelur', 'snack', sLite.id), mi('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', lStd.id)],
-    [mi('Sandwich Selai\nPisang', 'snack', sMid.id), mi('Kue Tart', 'po')],
+    [mi('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', sMini.id), mi('Susu Cokelat\nBiskuit', 'snack', sSedang.id)],
+    [mi('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', lStandar.id), mi('Risoles Mayo\nMelon', 'snack', sSedang.id)],
+    [mi('Bubur Merah\nKacang\nRoti', 'snack', sSedang.id), mi('Kue Lumpur\nKelapa', 'snack', sMini.id),
+      mi('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', lPrem.id)],
+    [mi('Perkedel Jagung\nSayur', 'snack', sMini.id), mi('Es Jeruk\nNata', 'snack', sSedang.id),
+      mi('Mie Ayam\nBakso\nSawi', 'lunch', lSpesial.id, 22000), mi('Nasi Ayam Kalio\nSayur', 'lunch', lStandar.id)],
+    [mi('Kue Putu\nBulan', 'snack', sMini.id), mi('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', lStandar.id)],
+    [mi('Sandwich Telur\nKeju', 'snack', sSedang.id), mi('Kue Tart Ulang Tahun', 'po')],
     []
   ];
   const W2 = [
-    [mi('Donat Mini\nGula', 'snack', sLite.id), mi('Susu\nVanila', 'snack', sMid.id), mi('Abon\nSapi', 'snack', sFull.id)],
-    [mi('Nasi Ayam\nSayur\nBuah', 'lunch', lStd.id), mi('Lontong Sayur\nAyam', 'lunch', lPrem.id), mi('Lapis Legit', 'snack', sMid.id)],
-    [mi('Bola-bola Tahu\nSayur', 'snack', sLite.id), mi('Camilan Manis\nPuding', 'snack', sMid.id)],
-    [mi('Soto\nNasi\nPerkedel', 'lunch', lStd.id), mi('Tahu Isi\nSayur', 'snack', sLite.id), mi('Es Teh\nManila', 'snack', sLite.id)],
-    [mi('Nasi Uduk\nAyam Goreng\nTempe\nBuah', 'lunch', lPrem.id)],
-    [mi('Roti Bakar\nKeju', 'snack', sMid.id), mi('Kue Tart', 'po')],
+    [mi('Donat Kampung\nGula Halus', 'snack', sMini.id), mi('Puding Roti\nSaus Vanila', 'snack', sSedang.id),
+      mi('Abon Daging\nNasi', 'snack', sKomplit.id)],
+    [mi('Nasi Ayam Bakar\nSayur\nBuah', 'lunch', lStandar.id), mi('Lontong Sayur\nTelur Balado', 'lunch', lPrem.id),
+      mi('Lapis Legit\nTeh', 'snack', sSedang.id)],
+    [mi('Bola Tahu\nSayur', 'snack', sMini.id), mi('Cemilan Manis\nPuding Cokelat', 'snack', sSedang.id)],
+    [mi('Soto Ayam\nNasi\nPerkedel', 'lunch', lStandar.id), mi('Tahu Isi\nSayur', 'snack', sMini.id),
+      mi('Es Teh Manis\nJeruk', 'snack', sMini.id, 5000)],
+    [mi('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', lPrem.id)],
+    [mi('Roti Bakar Keju\nSusu', 'snack', sSedang.id), mi('Nasi Box Pengajian', 'po')],
+    []
+  ];
+  const W3 = [
+    [mi('Klepon\nUnu', 'snack', sMini.id), mi('Susu Stroberi\nRoti', 'snack', sSedang.id)],
+    [mi('Nasi Goreng Kampung\nTelur\nSayur', 'lunch', lStandar.id), mi('Pastel Isi\nSayur', 'snack', sSedang.id)],
+    [mi('Pisang Rebus\nKaramel', 'snack', sMini.id), mi('Nasi Ayam Woku\nSayur\nPuding', 'lunch', lSpesial.id)],
+    [mi('Tahu Bulat\nBakso', 'snack', sKomplit.id), mi('Es Buah\nSemangka', 'snack', sSedang.id),
+      mi('Nasi Rendang\nSayur\nBuah', 'lunch', lPrem.id)],
+    [mi('Getuk Singkong\nKelapa', 'snack', sMini.id), mi('Nasi Pecel\nAyam Goreng', 'lunch', lStandar.id)],
+    [mi('Martabak Mini\nCokelat', 'snack', sSedang.id), mi('Tumpeng Mini', 'po')],
     []
   ];
   const mon = mondayOf(today);
-  for (let w = -2; w <= 1; w++) {
-    const tpl = w % 2 === 0 ? W1 : W2;
+  for (let w = -3; w <= 1; w++) {
+    const tpl = [W1, W2, W3][((w % 3) + 3) % 3];
     for (let i = 0; i < 7; i++) {
       const date = shiftDate(mon, w * 7 + i);
       if (tpl[i].length) d.menuPlan[date] = tpl[i].map(x => Object.assign({}, x));
@@ -279,31 +300,33 @@ function makeDemoData() {
     if (!items.length) return { items: [], mis: [] };
     const first = (i * 3 + c.name.length + (type === 'lunch' ? 2 : 0)) % items.length;
     const mis = [first];
-    if (type === 'snack' && items.length > 1 && (i + c.name.length) % 3 === 0) {
-      const second = (first + 1) % items.length;
-      mis.push(second);
+    if (type === 'snack' && items.length > 1 && (i + c.name.length) % 4 === 0) {
+      mis.push((first + 1) % items.length);
       mis.sort((a, b) => a - b);
     }
     return { items, mis };
   };
-  for (let i = 21; i >= 0; i--) {
+  for (let i = 41; i >= 0; i--) {
     const date = shiftDate(today, -i);
-    if (date === offAll) continue;
+    if (weekdayOf(date) === 7) continue;              // Minggu diliburkan
+    if (date === offAll) continue;                    // libur nasional (contoh)
     for (const type of ['snack', 'lunch']) {
       for (const c of kids) {
         if (!c.active) continue;
-        if (date === offCohort && cohortOf(c.className) === '11') continue;
+        if (date === offClass && c.className === '11C') continue;
         if (c.period === 'daily' && !(c.days || []).includes(weekdayOf(date))) continue;
+        if (c.status !== 'aktif') continue;
         if (!c[type === 'snack' ? 'snackDefault' : 'lunchDefault']) continue;
         if (!d[type][date]) d[type][date] = {};
-        const gratis = (type === 'lunch' && c.name === 'Eko Saputra' && i % 8 === 0) || (type === 'snack' && c.name === 'Gita Melia' && i % 11 === 0);
-        const unpaid = (i * 5 + c.name.length + (type === 'lunch' ? 3 : 0)) % 9 === 0;
+        const gratis = (type === 'lunch' && c.name === 'Dimas Aryo' && i % 9 === 0) || (type === 'snack' && c.name === 'Elora Suci' && i % 13 === 0);
+        /* tunggakan menumpuk di hari-hari terakhir supaya daftar tagihan dan grafik punya isi */
+        const unpaid = (i * 5 + c.name.length + (type === 'lunch' ? 3 : 0)) % 11 === 0 || (i < 8 && (i + c.name.length) % 3 === 0);
         const pick = pickOf(type, date, c, i);
         const rec = {
           ordered: true, paid: gratis || !unpaid,
           method: gratis ? 'Gratis' : methods[(i + c.name.length + (type === 'lunch' ? 1 : 0)) % 3],
-          note: i === 3 && c.name === 'Andi Pratama' ? 'Tanpa sambal (alergi)' : '',
-          pkg: pick.mis.length ? (pick.items[pick.mis[0]].pkg || '') : (type === 'snack' && c.name === 'Dodo Ramdan' && i % 5 === 0 ? sFull.id : '')
+          note: i === 4 && c.name === 'Alya Ramadhani' ? 'Tanpa selai (alergi)' : (i === 2 && c.name === 'Wira Santoso' ? 'Bawa kotak sendiri' : ''),
+          pkg: pick.mis.length ? (pick.items[pick.mis[0]].pkg || '') : (type === 'snack' && c.name === 'Mutiara Zahra' && i % 5 === 0 ? sKomplit.id : '')
         };
         if (pick.mis.length) { rec.mis = pick.mis; rec.mi = pick.mis[0]; }
         d[type][date][c.id] = rec;
@@ -312,22 +335,26 @@ function makeDemoData() {
   }
 
   const pm = (date, item, price) => ({ id: uid(), date, item, price, note: '' });
-  const m1 = pm(shiftDate(today, -35), 'Snack Box Rapat OSIS', 15000);
-  const m2 = pm(shiftDate(today, -12), 'Tumpeng Mini', 25000);
-  const m3 = pm('2025-12-20', 'Hampers Natal', 150000);
-  const m4 = pm('2024-05-10', 'Nasi Box Ulang Tahun', 20000);
-  const m5 = pm(shiftDate(today, 5), 'Kue Ulang Tahun', 120000);
-  d.poMenus = [m1, m2, m3, m4, m5];
+  const m1 = pm(shiftDate(today, -4), 'Rice Bowl Rapat Guru', 18000);
+  const m2 = pm(shiftDate(today, -21), 'Snack Box Seminar Sekolah', 12000);
+  const m3 = pm(shiftDate(today, 4), 'Tumpeng Ulang Tahun Sekolah', 250000);
+  const m4 = pm(today.slice(0, 8) + '20', 'Nasi Kotak Pengajian', 22000);
+  const m5 = pm('2025-12-20', 'Hampers Akhir Tahun', 165000);
+  const m6 = pm('2026-08-17', 'Nasi Box HUT RI', 20000);
+  d.poMenus = [m1, m2, m3, m4, m5, m6];
   const buyer = (m, name, qty, method, paid, note, status) =>
     ({ id: uid(), menuId: m.id, date: m.date, item: m.item, name, qty, price: method === 'Gratis' ? 0 : m.price, method, paid: method === 'Gratis' ? true : !!paid, note: note || '', status: status || '' });
   d.po = [
-    buyer(m1, 'Bpk. Surya', 10, 'Transfer', true, '', 'kirim'),
-    buyer(m1, 'Ibu Rina', 5, 'Tunai', false, '', 'siap'),
-    buyer(m2, 'Ibu Dewi', 2, 'QRIS', true),
-    buyer(m2, 'Bpk. Tono', 1, 'Gratis', true, 'kompensasi kegiatan'),
-    buyer(m3, 'Ibu Rina', 3, 'Transfer', false),
-    buyer(m4, 'Bpk. Surya', 4, 'Tunai', true, '', 'kirim'),
-    buyer(m5, 'Raka Aditya', 1, 'QRIS', false, 'DP 50%', 'siap')
+    buyer(m1, 'Bpk. Hendra', 12, 'Transfer', true, '', 'kirim'),
+    buyer(m1, 'Ibu Sari', 6, 'Tunai', false, '', 'siap'),
+    buyer(m2, 'Komite Sekolah', 40, 'Transfer', true, 'sudah dibayar penuh', 'kirim'),
+    buyer(m2, 'Ibu Marni', 3, 'QRIS', true),
+    buyer(m3, 'Panitia Kelas 6', 1, 'Transfer', false, 'DP 40%', 'siap'),
+    buyer(m4, 'Bpk. Yusuf', 8, 'Tunai', false),
+    buyer(m4, 'Ibu Endah', 4, 'Gratis', true, 'kompensasi kegiatan'),
+    buyer(m5, 'Yayasan Citra Bangsa', 10, 'Transfer', true, '', 'kirim'),
+    buyer(m6, 'Bpk. Surya', 4, 'Tunai', true, '', 'kirim'),
+    buyer(m6, 'Qori Amelia', 1, 'QRIS', false, 'DP 50%', 'siap')
   ];
 
   /* contoh pesanan kelompok (lembaga pesan banyak porsi, beberapa tanggal ambil) */
@@ -347,46 +374,66 @@ function makeDemoData() {
     });
     return { gid: gid, left: cover };
   };
-  const gHut = groupOrder('Panitia HUT SDN 05', 'Ibu Rina', '0812-3456-7890', 'Nasi Box Ulang Tahun Sekolah', 18000,
-    'Tanpa pedas, antar pukul 10.00 (contoh)', [[shiftDate(today, 2), 40], [shiftDate(today, 9), 60]], 720000,
-    shiftDate(today, 12), ['siap', '']);
-  const gDesa = groupOrder('Kantor Desa Sukamaju', 'Bpk. Tono', '0821-9876-5432', 'Rapat Bulanan (Nasi Box)', 22000,
-    '2 porsi extra untuk panitia (contoh)', [[shiftDate(today, -4), 25], [shiftDate(today, 11), 30]], 550000,
-    shiftDate(today, -1), ['kirim', '']);
-  /* satu kelompok sudah diterbitkan invoice-nya, satu lagi belum — untuk melihat dua keadaan nomor invoice */
-  d.po.forEach(p => { if (p.groupId === gDesa.gid) p.invNo = 'INV/' + today.slice(0, 4) + '/' + today.slice(5, 7) + '/012'; });
+  const gTrip = groupOrder('Panitia Study Tour Kelas 6', 'Ibu Marni', '0813-9900-2244', 'Nasi Kotak Siswa', 20000,
+    'Tanpa pedas, antar pukul 06.30 (contoh)', [[shiftDate(today, 3), 48], [shiftDate(today, 10), 52]], 960000,
+    shiftDate(today, 14), ['siap', '']);
+  const gDesa = groupOrder('Kantor Desa Sukamaju', 'Bpk. Yusuf', '0821-7788-9001', 'Rapat Bulanan (Nasi Kotak)', 24000,
+    'Tambahan 2 porsi untuk panitia (contoh)', [[shiftDate(today, -6), 26], [shiftDate(today, 8), 34]], 600000,
+    shiftDate(today, -2), ['kirim', '']);
+  const gYayasan = groupOrder('Yayasan Citra Bangsa', 'Ibu Endah', '0857-2200-3311', 'Baksos Snack Box', 9500,
+    'Kemas per 50 kotak (contoh)', [[shiftDate(today, 12), 120], [shiftDate(today, 13), 80]], 500000,
+    shiftDate(today, 15), ['', '']);
+  /* satu kelompok sudah diterbitkan invoice-nya, dua lainnya belum — memperlihatkan dua keadaan nomor invoice */
+  d.po.forEach(p => { if (p.groupId === gDesa.gid) p.invNo = 'INV/' + today.slice(0, 4) + '/' + today.slice(5, 7) + '/023'; });
 
   d.holidays = [
     { id: uid(), date: offAll, scope: 'all', value: '', note: 'Libur nasional (contoh)' },
-    { id: uid(), date: offCohort, scope: 'cohort', value: '11', note: 'Study tour kelas 11 (contoh)' },
-    { id: uid(), date: shiftDate(today, 3), scope: 'person', value: kids[3].id, note: 'Sakit (contoh)' }
+    { id: uid(), date: offClass, scope: 'class', value: '11C', note: 'Kelas 11C outing (contoh)' },
+    { id: uid(), date: shiftDate(today, 6), scope: 'cohort', value: '12', note: 'Wisuda kelas 12 (contoh)' },
+    { id: uid(), date: shiftDate(today, 2), scope: 'person', value: kids[5].id, note: 'Sakit (contoh)' }
   ];
 
   d.reminders = [
-    { id: uid(), date: shiftDate(today, -2), time: '', text: 'Ambil kotak snack yang tertinggal di sekolah', repeat: 'once', doneOn: '', ref: '' },
-    { id: uid(), date: today, time: '07:00', text: 'Belanja bahan untuk besok', repeat: 'weekly', doneOn: '', ref: '' },
-    { id: uid(), date: shiftDate(today, 2), time: '', text: 'Cek pesanan PO yang diambil minggu ini', repeat: 'once', doneOn: '', ref: '' },
+    { id: uid(), date: shiftDate(today, -3), time: '', text: 'Ambil kotak snack yang tertinggal di sekolah', repeat: 'once', doneOn: '', ref: '' },
+    { id: uid(), date: today, time: '06:30', text: 'Belanja bahan untuk besok', repeat: 'weekly', doneOn: '', ref: '' },
+    { id: uid(), date: shiftDate(today, 1), time: '', text: 'Cek pesanan PO yang diambil minggu ini', repeat: 'once', doneOn: '', ref: '' },
     { id: uid(), date: today.slice(0, 8) + '05', time: '', text: 'Tagih langganan bulanan', repeat: 'monthly', doneOn: '', ref: '' },
-    { id: uid(), date: shiftDate(today, 1), time: '13:30', text: 'Kirim invoice Panitia HUT SDN 05', repeat: 'once', doneOn: '', ref: gHut.gid },
-    { id: uid(), date: shiftDate(today, -1), time: '', text: 'Bungkus 25 porsi Kantor Desa', repeat: 'once', doneOn: shiftDate(today, -1), ref: '' },
-    { id: uid(), date: shiftDate(today, -1), time: '', text: 'Tagih Kantor Desa Sukamaju — jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
+    { id: uid(), date: shiftDate(today, 2), time: '13:30', text: 'Kirim invoice Panitia Study Tour Kelas 6', repeat: 'once', doneOn: '', ref: gTrip.gid },
+    { id: uid(), date: shiftDate(today, 5), time: '09:00', text: 'Masak 120 snack box baksos', repeat: 'once', doneOn: '', ref: gYayasan.gid },
+    { id: uid(), date: shiftDate(today, -1), time: '', text: 'Bungkus 26 porsi rapat desa', repeat: 'once', doneOn: shiftDate(today, -1), ref: '' },
+    { id: uid(), date: shiftDate(today, -2), time: '', text: 'Tagih Kantor Desa Sukamaju — jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
   ];
 
   d.log = [
     { id: uid(), ts: new Date().toISOString(), action: 'default', detail: 'Data contoh dimuat untuk demo' },
-    { id: uid(), ts: new Date(Date.now() - 3600e3).toISOString(), action: 'kustomisasi', detail: 'Pilih snack Andi Pratama — menu A+B' },
-    { id: uid(), ts: new Date(Date.now() - 7200e3).toISOString(), action: 'po', detail: 'Tambah pesanan kelompok Kantor Desa Sukamaju' },
-    { id: uid(), ts: new Date(Date.now() - 108000e3).toISOString(), action: 'pelanggan', detail: 'Catatan alergi Umi Kalsum diperbarui' }
+    { id: uid(), ts: new Date(Date.now() - 2400e3).toISOString(), action: 'menu', detail: 'Harga Mie Ayam hari ini diubah ke Rp 22.000' },
+    { id: uid(), ts: new Date(Date.now() - 6600e3).toISOString(), action: 'kustomisasi', detail: 'Pilih snack Alya Ramadhani — menu A+B' },
+    { id: uid(), ts: new Date(Date.now() - 15000e3).toISOString(), action: 'po', detail: 'Tambah pesanan kelompok Yayasan Citra Bangsa' },
+    { id: uid(), ts: new Date(Date.now() - 132000e3).toISOString(), action: 'pelanggan', detail: 'Catatan alergi Qori Amelia diperbarui' }
   ];
   return d;
 }
-
 function load() {
   try {
     const raw = localStorage.getItem(DB_KEY);
     if (!raw) return normalize(makeDemoData());
     return normalize(JSON.parse(raw));
   } catch (e) { return normalize(defaultData()); }
+}
+
+function clockedTime(d) {
+  return (d || new Date()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+/* Kaki sidebar: jam simpan terakhir — saat baru dibuka memakai waktu aksi terakhir di Log */
+function setSaveStatus(txt) {
+  const st = document.getElementById('saveStatus');
+  if (!st) return;
+  if (!txt) {
+    const last = (db.log && db.log[0] && db.log[0].ts) ? new Date(db.log[0].ts) : null;
+    txt = last ? 'Tersimpan ' + clockedTime(last) : 'Tersimpan otomatis';
+  }
+  st.textContent = txt;
+  st.title = 'Perubahan tersimpan otomatis di browser ini';
 }
 
 function save(opts) {
@@ -396,9 +443,9 @@ function save(opts) {
   try { localStorage.setItem(DB_KEY, json); }
   catch (e) { toast('Gagal menyimpan: penyimpanan penuh?'); return; }
   lastSaved = json;
-  const st = document.getElementById('saveStatus');
-  if (st) st.textContent = 'Tersimpan ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  setSaveStatus('Tersimpan ' + clockedTime());
   updateReminderBadge();
+  renderNotif();
   if (!quiet) autoBackup();
   updateUndoBtn();
 }
@@ -550,6 +597,7 @@ function lastNDates(n) {
 }
 
 function fmtIDR(n) { return 'Rp ' + (+n || 0).toLocaleString('id-ID'); }
+function mmLabel(v) { return (+v || 0).toFixed(1).replace('.', ','); }
 function fmtShort(n) {
   n = +n || 0;
   if (n >= 1e9) return trim1(n / 1e9) + 'M';
@@ -592,9 +640,22 @@ function pkgFor(type, rec, cust) {
   return pkgList(type)[0] || null;
 }
 /* Harga sebuah porsi selalu dari paket: override harian > paket pelanggan > paket pertama */
-function effPrice(type, rec, cust) {
+/* Harga satu porsi: harga paketnya, kecuali menu pada tanggal itu memberi harga lain.
+   Anak yang memilih makanan (chip A/B/C) mengikuti harga pilihan pertama. */
+function effPrice(type, rec, cust, date) {
   const p = pkgFor(type, rec, cust);
-  return p ? +p.price || 0 : basePrice(type);
+  const base = p ? +p.price || 0 : basePrice(type);
+  if (!date) return base;
+  const items = menuItemsFor(type, date);
+  if (!items.length) return base;
+  const picks = rec && rec.ordered ? customPicks(type, rec) : [];
+  const it = picks.length
+    ? items.filter((x, i) => picks.indexOf(i) >= 0)[0]
+    : items.filter(x => x.pkg === (p && p.id))[0];
+  if (!it) return base;
+  if (+it.price > 0) return +it.price;
+  const ip = pkgById(it.pkg);
+  return ip ? +ip.price || 0 : base;
 }
 function pkgLabel(p) { return p.name + ' (Rp ' + (+p.price || 0).toLocaleString('id-ID') + ')'; }
 function defaultMethod() {
@@ -692,6 +753,7 @@ const ICO_NEXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ICO_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>';
 const ICO_PRINT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M8 16h8v4H8z"/></svg>';
 const ICO_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6.5-2.5 7.5-2.5 7.5h17S18 15 18 8.5"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></svg>';
+const ICO_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19V11M12 19V5M19 19v-5"/><path d="M3 19h18"/></svg>';
 
 /* ---------- Toast & modal ---------- */
 let toastTimer;
@@ -756,7 +818,7 @@ function dailyIncome(type, date) {
   let paid = 0;
   for (const id in recs) {
     const r = recs[id];
-    if (r.ordered && r.paid && r.method !== 'Gratis') paid += effPrice(type, r, customerById(id));
+    if (r.ordered && r.paid && r.method !== 'Gratis') paid += effPrice(type, r, customerById(id), date);
   }
   return paid;
 }
@@ -774,7 +836,7 @@ function nominalByType(m, paidOnly) {
         const r = db[type][date][id];
         if (!r.ordered || r.method === 'Gratis') continue;
         if (paidOnly && !r.paid) continue;
-        out[type] += effPrice(type, r, customerById(id));
+        out[type] += effPrice(type, r, customerById(id), date);
       }
     }
   }
@@ -819,7 +881,7 @@ function paymentStatusThisMonth() {
         const r = db[type][date][id];
         if (!r.ordered) continue;
         if (r.method === 'Gratis') { gratis++; continue; }
-        const v = effPrice(type, r, customerById(id));
+        const v = effPrice(type, r, customerById(id), date);
         if (r.paid) { lunas++; nilaiLunas += v; } else { belum++; nilaiBelum += v; }
       }
     }
@@ -840,7 +902,7 @@ function unpaidEntries() {
         const r = db[type][date][id];
         if (r.ordered && !r.paid) {
           const c = customerById(id);
-          out.push({ name: c ? c.name : '(dihapus)', cls: c ? c.className : '', type: type === 'snack' ? 'Snack' : 'Lunch', date, amount: effPrice(type, r, c) });
+          out.push({ name: c ? c.name : '(dihapus)', cls: c ? c.className : '', type: type === 'snack' ? 'Snack' : 'Lunch', date, amount: effPrice(type, r, c, date) });
         }
       }
     }
@@ -860,7 +922,7 @@ function setupCanvas(canvas) {
   const h = canvas.clientHeight || parseInt(canvas.getAttribute('height')) || 220;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
-  canvas.style.width = w + 'px';
+  canvas.style.width = '100%';
   canvas.style.height = h + 'px';
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1250,11 +1312,7 @@ function mondayOf(ymd) {
   const d = new Date(ymd.split('-')[0], ymd.split('-')[1] - 1, ymd.split('-')[2]);
   return shiftDate(ymd, -((d.getDay() + 6) % 7));
 }
-function homeDayDot(ymd) {
-  if (menuFor(ymd).length) return true;
-  if (countOrdered('snack', ymd) || countOrdered('lunch', ymd)) return true;
-  return db.po.some(p => p.date === ymd);
-}
+function homeDayDot(ymd) { return dayDots(ymd, true); }
 function renderHomeCalendar() {
   const el = document.getElementById('homeCal');
   if (!el) return;
@@ -1267,7 +1325,7 @@ function renderHomeCalendar() {
       '<button type="button" class="cal-nav" data-act="home-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
     '</div>' +
     '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-    '<div class="cal-grid">' + buildDayGrid(y, mo, state.menuDate || '', todayStr(), homeDayDot, 'home-day', '', holidayOn) + '</div>';
+    '<div class="cal-grid">' + buildDayGrid(y, mo, state.menuDate || '', todayStr(), homeDayDot, 'home-day', '', isFullHoliday) + '</div>';
 }
 const WEEK_MENU_MAX = 6;
 function menuPlanItems(date) { return db.menuPlan[date] || []; }
@@ -1284,7 +1342,7 @@ function menuItemsHtml(date) {
   return items.map((it, idx) => {
     const type = ['snack', 'lunch', 'po'].includes(it.type) ? it.type : 'snack';
     const pkgs = pkgList(type);
-    let pkgSel;
+    let pkgSel, priceInp = '';
     if (type === 'po') {
       pkgSel = '<select class="input input-sm wm-pkg" disabled title="PO tidak memakai paket"><option>PO</option></select>';
     } else if (!pkgs.length) {
@@ -1293,8 +1351,12 @@ function menuItemsHtml(date) {
       const cur = pkgs.some(p => p.id === it.pkg) ? it.pkg : pkgs[0].id;
       pkgSel = '<select class="input input-sm wm-pkg" data-date="' + date + '" data-idx="' + idx + '" title="Paket harga">' +
         pkgs.map(p => '<option value="' + escapeHtml(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' +
-          escapeHtml(p.name) + ' · ' + fmtShort(p.price) + '</option>').join('') +
+          escapeHtml(p.name) + '</option>').join('') +
         '</select>';
+      const def = (pkgById(cur) ? +pkgById(cur).price : 0) || 0;
+      const shown = (+it.price > 0) ? +it.price : def;
+      priceInp = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
+        '" value="' + shown + '" placeholder="' + def + '" title="Harga porsi hari ini. Bawaannya harga paket (' + fmtIDR(def) + ') — ubah kalau hari itu harganya beda; kosongkan untuk mengikuti paket.">';
     }
     return '<div class="wm-item">' +
       '<select class="input input-sm wm-type" data-date="' + date + '" data-idx="' + idx + '">' +
@@ -1302,7 +1364,7 @@ function menuItemsHtml(date) {
         '<option value="lunch"' + (type === 'lunch' ? ' selected' : '') + '>Lunch</option>' +
         '<option value="po"' + (type === 'po' ? ' selected' : '') + '>PO</option>' +
       '</select>' +
-      pkgSel +
+      pkgSel + priceInp +
       '<textarea class="input input-sm wm-name" rows="1" data-date="' + date + '" data-idx="' + idx + '" placeholder="Nama menu / isi paket — tekan Enter untuk baris baru">' + escapeHtml(it.name) + '</textarea>' +
       '<button type="button" class="icon-act danger" data-act="week-menu-del" data-date="' + date + '" data-idx="' + idx + '" title="Hapus pilihan">×</button>' +
     '</div>';
@@ -1376,8 +1438,16 @@ function applyMenuEdit(t, quiet) {
     items[idx].type = ['snack', 'lunch', 'po'].includes(t.value) ? t.value : 'snack';
     if (items[idx].type === 'po') items[idx].pkg = '';
     else if (!pkgList(items[idx].type).some(p => p.id === items[idx].pkg)) items[idx].pkg = firstPkgId(items[idx].type);
+    items[idx].price = '';
   } else if (t.classList.contains('wm-pkg')) {
     items[idx].pkg = t.value;
+    items[idx].price = '';
+  } else if (t.classList.contains('wm-price')) {
+    /* harga = default paket selama kolom dibiarkan sama dengan harga paket atau dikosongkan */
+    const p = pkgById(items[idx].pkg);
+    const def = p ? +p.price || 0 : 0;
+    const v = t.value === '' ? null : Math.max(0, +t.value || 0);
+    items[idx].price = (v === null || v === def) ? '' : v;
   }
   writeMenuPlan(date, items);
   save();
@@ -1416,7 +1486,7 @@ function menuShareImage() {
         type: it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack',
         title: parts[0] || it.name,
         comps: parts.slice(1).join(' · '),
-        pkg: p ? p.name + ' · ' + fmtIDR(p.price) : (it.type === 'po' ? 'Pre-Order' : '')
+        pkg: p ? p.name + ' · ' + fmtIDR(+it.price > 0 ? +it.price : p.price) : (it.type === 'po' ? 'Pre-Order' : '')
       };
     })
   }));
@@ -1714,11 +1784,11 @@ function buildDailyMergedPage() {
       '<div class="table-wrap"><table class="table table-daily">' +
         '<thead>' +
           '<tr><th class="sticky-col" rowspan="2">Nama · kelas</th>' +
-            '<th colspan="2" class="grp grp-snack">Snack</th>' +
-            '<th colspan="2" class="grp grp-lunch">Lunch</th>' +
+            '<th class="grp grp-snack">Snack</th>' +
+            '<th class="grp grp-lunch">Lunch</th>' +
             '<th colspan="2" class="grp grp-day">Hari ini</th></tr>' +
-          '<tr><th>Paket</th><th>Makanan / pesan</th>' +
-            '<th>Paket</th><th>Makanan / pesan</th>' +
+          '<tr><th>Makanan &amp; paket</th>' +
+            '<th>Makanan &amp; paket</th>' +
             '<th>Catatan</th><th class="num">Total &amp; bayar</th></tr>' +
         '</thead>' +
         '<tbody id="hariList"></tbody>' +
@@ -1733,23 +1803,56 @@ function dailyMatch(c, f) {
   if (f.cls && (c.className || '').trim() !== f.cls) return false;
   return true;
 }
-/* Chip makanan anak pada tanggal tsb. Dengan cid → jadi tombol pilihan (halaman harian & Pesanan Seminggu). */
+/* Chip makanan anak pada tanggal tsb. Dengan cid → jadi tombol pilihan (halaman harian & Pesanan Seminggu).
+   data-tip = isi lengkap menu, ditampilkan sebagai dialog kecil saat chip disorot/difokus. */
 function foodChips(type, date, rec, cid) {
   const items = menuItemsFor(type, date);
   if (!items.length) return '<span class="muted tiny" title="Belum ada menu ' + type + ' pada tanggal ini — atur di Beranda › Menu Mingguan">tidak ada menu</span>';
   const picks = rec && rec.ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
   const label = it => shortTxt(menuLines(it.name)[0] || it.name, 16);
+  const tip = (k, it) => escapeHtml(LETTERS[k] + ' · ' + (menuLines(it.name)[0] || it.name) + '\n' + menuLines(it.name).slice(1).join('\n'));
   if (!cid) {
     if (!picks.length) return '<span class="muted tiny">' + (rec && rec.ordered ? 'belum dipilih' : '—') + '</span>';
-    return picks.map(k => '<span class="food-chip is-on" title="' + escapeHtml(menuLines(items[k].name).join(' · ')) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(label(items[k])) + '</span>').join('');
+    return picks.map(k => '<span class="food-chip is-on" data-tip="' + tip(k, items[k]) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(label(items[k])) + '</span>').join('');
   }
   return items.slice(0, LETTERS.length).map((it, k) => {
     const on = picks.indexOf(k) >= 0;
     return '<button type="button" class="food-chip ' + (on ? 'is-on' : 'is-off') + '" data-act="daily-food" data-type="' + type +
-      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" title="' +
-      escapeHtml(LETTERS[k] + ' · ' + (menuLines(it.name)[0] || it.name) + (on ? ' — klik untuk membatalkan' : ' — klik untuk memilih')) + '">' +
+      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + tip(k, it) + '">' +
       '<b>' + LETTERS[k] + '</b>' + escapeHtml(label(it)) + '</button>';
   }).join('');
+}
+
+/* Dialog kecil saat chip makanan disorot/difokus — baris pertama = nama makanan, sisanya isi paket */
+let foodTipEl = null;
+function showFoodTip(chip) {
+  const lines = String(chip.dataset.tip || '').split('\n').filter(Boolean);
+  if (!lines.length) return;
+  if (!foodTipEl) {
+    foodTipEl = document.createElement('div');
+    foodTipEl.className = 'food-tip';
+    document.body.appendChild(foodTipEl);
+  }
+  foodTipEl.innerHTML = '<strong>' + escapeHtml(lines[0]) + '</strong>' +
+    (lines.length > 1 ? '<span>' + lines.slice(1).map(escapeHtml).join('<br>') + '</span>' : '');
+  const r = chip.getBoundingClientRect();
+  const w = foodTipEl.offsetWidth, h = foodTipEl.offsetHeight;
+  const viewW = document.documentElement.clientWidth;
+  let x = r.left + window.scrollX + r.width / 2 - w / 2;
+  x = Math.max(window.scrollX + 8, Math.min(x, window.scrollX + viewW - w - 8));
+  const below = r.bottom + h + 10 <= window.innerHeight;
+  const y = (below ? r.bottom + 6 : r.top - h - 6) + window.scrollY;
+  foodTipEl.style.left = Math.round(x) + 'px';
+  foodTipEl.style.top = Math.round(y) + 'px';
+  foodTipEl.classList.add('is-on');
+}
+function hideFoodTip() { if (foodTipEl) foodTipEl.classList.remove('is-on'); }
+function chipFromEvent(e) {
+  const el = e.target && e.target.closest ? e.target.closest('.food-chip[data-tip]') : null;
+  if (!el) return null;
+  const to = e.relatedTarget;
+  if (to && el.contains && to.nodeType === 1 && el.contains(to)) return null;
+  return el;
 }
 
 function fillFilterSelect(id, pairs, allLabel, cur) {
@@ -1794,24 +1897,16 @@ function daySummary(cid, date) {
     ordered++;
     const free = r.method === 'Gratis';
     if (free) gratis++;
-    const v = effPrice(t, r, c);
+    const v = effPrice(t, r, c, date);
     value += v;
     if (!(r.paid || free)) unpaid += v;
     if (!method && r.method) method = r.method;
     if (!note && r.note) note = r.note;
   });
-  const cls = ordered === 0 ? '' : (unpaid === 0 ? (gratis === ordered ? 'is-gratis' : 'is-lunas') : 'is-belum');
-  return { name: c ? c.name : '', recs: recs, value: value, unpaid: unpaid, ordered: ordered, gratis: gratis, method: method, note: note, cls: cls };
+  return { name: c ? c.name : '', recs: recs, value: value, unpaid: unpaid, ordered: ordered, gratis: gratis, method: method, note: note };
 }
-function dailyPkgCell(type, c, r) {
-  const pkgs = pkgList(type);
-  const cur = pkgFor(type, r, c);
-  if (!pkgs.length) return '<td><select class="sel-pkg input input-sm" data-type="' + type + '" disabled><option>tidak ada paket</option></select></td>';
-  return '<td><select class="sel-pkg input input-sm" data-type="' + type + '" title="Paket / harga porsi ' + TYPE_LABEL[type].toLowerCase() + '">' +
-    pkgs.map(x => '<option value="' + escapeHtml(x.id) + '"' + (cur && x.id === cur.id ? ' selected' : '') + '>' + escapeHtml(pkgLabel(x)) + '</option>').join('') + '</select></td>';
-}
-/* Sel makanan: kalau sudah ada pilihan cukup chip; kalau belum (hari tanpa menu, atau
-   pesanan tanpa pilihan) satu tombol "pesan" jadi saklar pesanan. */
+/* Sel makanan: chip pilihan (hover = isi lengkap) + nama paket di bawahnya.
+   Ganti paket dilakukan di Pesanan Seminggu, bukan di tabel harian. */
 function dailyFoodCell(type, date, c, r) {
   const items = menuItemsFor(type, date);
   const picks = r.ordered ? customPicks(type, r).filter(k => k < items.length) : [];
@@ -1822,12 +1917,12 @@ function dailyFoodCell(type, date, c, r) {
       (r.ordered ? 'Batalkan pesanan ' + type + ' hari ini' : 'Tandai pesan ' + type + ' hari ini — paket mengikuti default pelanggan') + '">' +
       (r.ordered ? '✓ pesan' : 'pesan') + '</button>'
     : '';
-  return '<td class="food-cell' + (items.length ? '' : ' food-none') + '" data-type="' + type + '">' + chips + btn + '</td>';
+  const pk = r.ordered ? pkgFor(type, r, c) : null;
+  const pkgLine = pk ? '<span class="pkg-under">' + escapeHtml(pk.name) + ' · ' + fmtIDR(effPrice(type, r, c, date)) + '</span>' : '';
+  return '<td class="food-cell' + (items.length ? '' : ' food-none') + '" data-type="' + type + '">' + chips + btn + pkgLine + '</td>';
 }
 function dayTotalHTML(s) {
-  return '<strong>' + fmtIDR(s.value) + '</strong>' +
-    (s.unpaid > 0 ? '<button type="button" class="pay-day" data-act="daily-pay-day" title="Tandai lunas semua pesanan hari ini">' + fmtIDR(s.unpaid) + ' lunasi</button>' : '') +
-    '<button type="button" class="pay-cfg" data-act="daily-pay-cfg" title="Atur metode & lunas ' + escapeHtml(s.name) + '">' + ICO_EDIT + '</button>';
+  return '<button type="button" class="pay-total" data-act="daily-pay-cfg" title="Atur metode pembayaran dan lunasi ' + escapeHtml(s.name) + '">' + fmtIDR(s.value) + '</button>';
 }
 
 /* Pembayaran satu anak satu hari — kolom lunas/metode tidak lagi di tabel */
@@ -1841,7 +1936,7 @@ function openDayPayModal(cid, date) {
     const r = s.recs[t];
     if (!r.ordered) return '<p class="muted tiny">' + TYPE_LABEL[t] + ': tidak pesan</p>';
     return '<label class="check"><input type="checkbox" id="' + id + '"' + ((r.paid || r.method === 'Gratis') ? ' checked' : '') + '> ' +
-      TYPE_LABEL[t] + ' — <strong>' + fmtIDR(effPrice(t, r, c)) + '</strong> ' +
+      TYPE_LABEL[t] + ' — <strong>' + fmtIDR(effPrice(t, r, c, date)) + '</strong> ' +
       (r.method === 'Gratis' ? '<span class="badge gold">Gratis</span>' : '<span class="muted tiny">sudah lunas</span>') + '</label>';
   };
   openModal('<h3>Pembayaran — ' + escapeHtml(c.name) + '</h3>' +
@@ -1896,9 +1991,9 @@ function renderDailyMerged() {
       const s = daySummary(c.id, date);
       const leave = isOnLeave(c, date);
       const clsCell = escapeHtml(c.className) + (leave ? ' <span class="badge red" title="Sedang libur">Libur</span>' : '');
-      return '<tr data-cid="' + c.id + '" class="' + s.cls + '">' +
+      return '<tr data-cid="' + c.id + '">' +
         '<td class="sticky-col">' + escapeHtml(c.name) + ' <span class="d-cls">' + clsCell + '</span>' + allergyBadge(c) + '</td>' +
-        DAY_TYPES.map(t => dailyPkgCell(t, c, s.recs[t]) + dailyFoodCell(t, date, c, s.recs[t])).join('') +
+        DAY_TYPES.map(t => dailyFoodCell(t, date, c, s.recs[t])).join('') +
         '<td><input type="text" class="inp-note input input-sm" value="' + escapeHtml(s.note) + '" placeholder="' + (s.ordered ? 'Catatan hari ini…' : '—') + '"></td>' +
         '<td class="num day-total">' + dayTotalHTML(s) + '</td>' +
         '</tr>';
@@ -1912,13 +2007,10 @@ function syncMergedRow(tr) {
   if (!tr) return;
   const cid = tr.dataset.cid, date = state.currentDate;
   const s = daySummary(cid, date);
-  tr.className = s.cls;
   DAY_TYPES.forEach(t => {
     const r = s.recs[t];
     const fc = tr.querySelector('.food-cell[data-type="' + t + '"]');
     if (fc) fc.outerHTML = dailyFoodCell(t, date, customerById(cid), r);
-    const pk = tr.querySelector('.sel-pkg[data-type="' + t + '"]');
-    if (pk && pk.options.length > 1) { const cur = pkgFor(t, r, customerById(cid)); if (cur) pk.value = cur.id; }
   });
   const tot = tr.querySelector('.day-total');
   if (tot) tot.innerHTML = dayTotalHTML(s);
@@ -1939,7 +2031,7 @@ function renderDailyStats() {
       if (filtered && (!c || !dailyMatch(c, f))) continue;
       pesan++; perType[type]++;
       if (r.method === 'Gratis') { gratis++; lunas++; continue; }
-      if (r.paid) { lunas++; revenue += effPrice(type, r, c); } else { belum++; belumValue += effPrice(type, r, c); }
+      if (r.paid) { lunas++; revenue += effPrice(type, r, c, date); } else { belum++; belumValue += effPrice(type, r, c, date); }
     }
   });
   document.getElementById('hariStats').innerHTML =
@@ -1955,25 +2047,23 @@ function renderDailyStats() {
 }
 
 /* Lunasi seluruh pesanan hari ini (satu klik untuk semua anak) */
-function payAllToday(onlyCid) {
+function payAllToday() {
   const date = state.currentDate;
   let n = 0;
   DAY_TYPES.forEach(type => {
     const recs = db[type][date] || {};
     for (const id in recs) {
-      if (onlyCid && id !== onlyCid) continue;
       const r = recs[id];
       if (!r.ordered || r.paid || r.method === 'Gratis') continue;
       r.paid = true; n++;
     }
   });
-  if (!n) { toast(onlyCid ? 'Tidak ada yang perlu dilunasi' : 'Semua pesanan hari ini sudah lunas'); return; }
-  logAction('bayar', 'Lunasi ' + n + ' pesanan ' + (onlyCid ? customerName(onlyCid) : 'semua anak') + ' @ ' + date);
+  if (!n) { toast('Semua pesanan hari ini sudah lunas'); return; }
+  logAction('bayar', 'Lunasi ' + n + ' pesanan semua anak @ ' + date);
   save();
   renderDailyMerged(); renderDashboard();
   toast(n + ' pesanan ditandai lunas');
 }
-function customerName(cid) { const c = customerById(cid); return c ? c.name : cid; }
 
 /* ---------- Render: Kustomisasi (edit pesanan seminggu) ---------- */
 function buildCustomPage() {
@@ -2159,7 +2249,7 @@ function renderCustom() {
       const d = col.date, items = col.items;
       const rec = (db[type][d] || {})[c.id];
       const ordered = !!(rec && rec.ordered);
-      if (ordered) { n++; const p = effPrice(type, rec, c); rowValue += p; portions++; value += p; if (!rec.paid && rec.method !== 'Gratis') unpaid++; }
+      if (ordered) { n++; const p = effPrice(type, rec, c, d); rowValue += p; portions++; value += p; if (!rec.paid && rec.method !== 'Gratis') unpaid++; }
       const leave = isOnLeave(c, d);
       if (!items.length) {
         return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
@@ -2922,14 +3012,14 @@ function computeCustomerReport(c, mode) {
     const r = db.snack[date][c.id];
     if (r && r.ordered && inScope(date)) {
       if (r.method === 'Gratis') snackFree++;
-      else { const v = effPrice('snack', r, c); snackDays++; snackValue += v; if (r.paid) { snackPaid++; snackPaidValue += v; } }
+      else { const v = effPrice('snack', r, c, date); snackDays++; snackValue += v; if (r.paid) { snackPaid++; snackPaidValue += v; } }
     }
   }
   for (const date in db.lunch) {
     const r = db.lunch[date][c.id];
     if (r && r.ordered && inScope(date)) {
       if (r.method === 'Gratis') lunchFree++;
-      else { const v = effPrice('lunch', r, c); lunchDays++; lunchValue += v; if (r.paid) { lunchPaid++; lunchPaidValue += v; } }
+      else { const v = effPrice('lunch', r, c, date); lunchDays++; lunchValue += v; if (r.paid) { lunchPaid++; lunchPaidValue += v; } }
     }
   }
   const key = (c.name || '').trim().toLowerCase();
@@ -2954,7 +3044,7 @@ function unpaidLines(c, mode) {
       const r = db[type][date][c.id];
       if (!r || !r.ordered || r.paid || r.method === 'Gratis') continue;
       if (!mode.allTime && monthKey(date) !== mode.month) continue;
-      out.push({ date, type, label: type === 'snack' ? 'Snack' : 'Lunch', amount: effPrice(type, r, c) });
+      out.push({ date, type, label: type === 'snack' ? 'Snack' : 'Lunch', amount: effPrice(type, r, c, date) });
     }
   }
   poUnpaidFor(c.name, mode).forEach(l => out.push(l));
@@ -3340,7 +3430,7 @@ function billLinesFor(c, mode) {
       const free = r.method === 'Gratis';
       out.push({
         date: date, type: type, label: (type === 'snack' ? 'Snack' : 'Lunch') + (free ? ' (gratis)' : ''),
-        amount: free ? 0 : effPrice(type, r, c), paid: free || !!r.paid
+        amount: free ? 0 : effPrice(type, r, c, date), paid: free || !!r.paid
       });
     }
   }
@@ -3553,7 +3643,7 @@ function renderStickerCalendar() {
       '<button type="button" class="cal-nav" data-act="sticker-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
     '</div>' +
     '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-    '<div class="cal-grid">' + buildDayGrid(y, mo, state.stickerDate || '', todayStr(), satpamDot, 'sticker-day') + '</div>';
+    '<div class="cal-grid">' + buildDayGrid(y, mo, state.stickerDate || '', todayStr(), satpamDot, 'sticker-day', '', isFullHoliday) + '</div>';
   setText('stickerDateLabel', fmtLong(state.stickerDate || todayStr()));
 }
 function shiftStickerMonth(delta) {
@@ -3595,25 +3685,33 @@ function renderStickerCustomers() {
     '</span><span class="cls">' + escapeHtml(ordered[c.id]) + '</span></label>'
   ).join('');
 }
+/* Area cetak A4 setelah dikurangi margin @page 5mm/6mm */
+const STICKER_SHEET_W = 198, STICKER_SHEET_H = 287;
 function stickerOptions() {
   const parts = document.getElementById('stickerSize').value.split('x').map(Number);
+  const style = db.settings.sticker;
+  const per = Math.max(1, parts[1] || 10);
+  /* tinggi baris 0 = otomatis: setinggi A4 dibagi jumlah baris ukuran terpilih */
+  const custom = +style.rowH > 0 ? Math.min(45, Math.max(12, +style.rowH)) : 0;
+  const rowH = custom || +(STICKER_SHEET_H / per).toFixed(2);
   return {
-    cols: parts[0], rows: parts[1],
+    cols: parts[0], rows: custom ? Math.max(1, Math.floor(STICKER_SHEET_H / custom)) : per, rowH: rowH,
     content: document.getElementById('stickerContent').value,
     brand: document.getElementById('stickerBrand').checked,
     lines: document.getElementById('stickerLines').checked,
-    style: db.settings.sticker
+    style: style
   };
 }
 function buildStickerHTML(customers, o) {
   const cols = o.cols, rows = o.rows, style = o.style || db.settings.sticker;
+  const rowH = o.rowH || +(STICKER_SHEET_H / rows).toFixed(2);
   const perPage = cols * rows;
   const pages = [];
   for (let i = 0; i < customers.length; i += perPage) pages.push(customers.slice(i, i + perPage));
   if (!pages.length) pages.push([]);
   const MM = 96 / 25.4;
-  const cellWpx = (198 / cols) * MM, cellHpx = (287 / rows) * MM;
-  const padMm = 2.6 * (style.cellPad / 100);
+  const cellWpx = (STICKER_SHEET_W / cols) * MM, cellHpx = rowH * MM;
+  const padMm = 2.6;
   const padPx = padMm * MM;
   const innerW = Math.max(20, cellWpx - padPx * 2), innerH = Math.max(20, cellHpx - padPx * 2);
   const autoName = Math.max(12, Math.min(40, innerW / 4.2, innerH / 3.8));
@@ -3630,9 +3728,9 @@ function buildStickerHTML(customers, o) {
   const brandName = db.settings.businessName;
   const frame = document.getElementById('stickerFrame');
   const fit = frame && frame.clientWidth ? Math.min(1, (frame.clientWidth - 16) / 794).toFixed(3) : 1;
-  const flagMm = Math.max(3.2, Math.min(8, (198 / cols) * 0.17));
+  const flagMm = Math.max(3.2, Math.min(8, (STICKER_SHEET_W / cols) * 0.17));
   const flagPx = flagMm * MM * 0.66;
-  const rowHmm = 287 / rows;
+  const rowHmm = rowH;
   const sheets = pages.map(page => {
     const items = page.map(c => {
       let cls = '';
@@ -3665,7 +3763,7 @@ function buildStickerHTML(customers, o) {
     'html,body{margin:0;padding:0;background:#fff}' +
     'body{font-family:"Segoe UI",system-ui,sans-serif;color:#2B2020;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     '@media screen{body{zoom:' + fit + '}}' +
-    '.sheet{display:grid;gap:0;width:198mm;margin:0 auto;border-top:' + edge + ';border-left:' + edge + ';page-break-inside:avoid}' +
+    '.sheet{display:grid;gap:0;width:' + STICKER_SHEET_W + 'mm;margin:0 auto;border-top:' + edge + ';border-left:' + edge + ';page-break-inside:avoid}' +
     '.sheet + .sheet{margin-top:5mm;page-break-before:always}' +
     '.label{position:relative;border-right:' + edge + ';border-bottom:' + edge + ';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:' + padMm.toFixed(2) + 'mm ' + (padMm * 0.45).toFixed(2) + 'mm;overflow:hidden;min-height:0;line-height:1.02;gap:.25mm}' +
     '.flag{position:absolute;bottom:.6mm;right:.6mm;width:' + flagMm.toFixed(1) + 'mm;height:' + flagMm.toFixed(1) + 'mm;border-radius:50%;background:#C0272D;color:#fff;font-weight:800;font-size:' + flagPx.toFixed(1) + 'px;display:flex;align-items:center;justify-content:center;line-height:1}' +
@@ -3686,12 +3784,19 @@ function syncStickerControls() {
   set('stickerNameScale', String(st.nameScale));
   set('stickerClsScale', String(st.clsScale));
   set('stickerBrandScale', String(st.brandScale));
-  set('stickerCellPad', String(st.cellPad));
   setText('stickerNameScaleVal', st.nameScale + '%');
   setText('stickerClsScaleVal', st.clsScale + '%');
   setText('stickerBrandScaleVal', st.brandScale + '%');
-  setText('stickerCellPadVal', st.cellPad + '%');
   setText('stickerLineVal', st.lineW + ' px');
+  const o = stickerOptions();
+  set('stickerRowH', String(o.rowH));
+  setText('stickerRowHVal', mmLabel(o.rowH) + ' mm');
+  const rowNote = document.getElementById('stickerRowHNote');
+  if (rowNote) {
+    rowNote.textContent = (st.rowH > 0 ? '' : 'Otomatis mengikuti ukuran stiker. ') +
+      o.rows + ' baris muat di halaman A4 · ' + (o.cols * o.rows) + ' stiker per lembar' +
+      (st.rowH > 0 ? ' — geser ke nilai ukuran untuk kembali otomatis.' : '.');
+  }
   const brandChk = document.getElementById('stickerBrand');
   const linesChk = document.getElementById('stickerLines');
   const brandRow = document.getElementById('stickerBrandRow');
@@ -3711,7 +3816,11 @@ function saveStickerStyle() {
   st.nameScale = clampScale(val('stickerNameScale', 100), 70, 140);
   st.clsScale = clampScale(val('stickerClsScale', 100), 40, 160);
   st.brandScale = clampScale(val('stickerBrandScale', 100), 40, 200);
-  st.cellPad = clampScale(val('stickerCellPad', 25), 0, 100, 25);
+  /* nilai yang sama dengan tinggi otomatis disimpan sebagai 0 (ikut ukuran) */
+  const parts = (val('stickerSize', '4x10').split('x').map(Number));
+  const autoH = STICKER_SHEET_H / (parts[1] || 10);
+  const rh = +val('stickerRowH', autoH);
+  st.rowH = (!rh || Math.abs(rh - autoH) < 0.26) ? 0 : Math.min(45, Math.max(12, rh));
   save({ noUndo: true });
 }
 function stickerPreview() {
@@ -3859,6 +3968,74 @@ function updateReminderBadge() {
   const n = reminderDue().length;
   el.hidden = !n;
   el.textContent = n > 9 ? '9+' : String(n);
+}
+
+/* ---------- Notifikasi top bar — rangkuman hal yang menunggu perhatian ---------- */
+function notifItems() {
+  const out = [];
+  const today = todayStr();
+  const due = reminderDue();
+  if (due.length) {
+    const late = due.filter(v => v.overdue).length;
+    out.push({ nav: 'pengingat', tone: late ? 'red' : 'amber',
+      title: due.length + ' pengingat jatuh tempo' + (late ? ' (' + late + ' terlambat)' : ''),
+      sub: due.slice(0, 3).map(v => (v.overdue ? 'terlambat · ' : v.date === today ? 'hari ini · ' : fmtShortDate(v.date) + ' · ') + v.r.text).join(' · ') });
+  }
+  const ds = debtors();
+  if (ds.length) {
+    out.push({ nav: 'pengingat', tone: 'red', title: ds.length + ' penunggak tagihan',
+      sub: 'total sisa ' + fmtIDR(ds.reduce((s, g) => s + g.total, 0)) });
+  }
+  let pending = 0;
+  db.customers.filter(c => c.active).forEach(c => {
+    DAY_TYPES.forEach(t => {
+      const r = (db[t][today] || {})[c.id];
+      if (r && r.ordered && !customPicks(t, r).length && menuItemsFor(t, today).length) pending++;
+    });
+  });
+  if (pending) out.push({ nav: 'hari', tone: 'amber', title: pending + ' pesanan hari ini belum dipilih makanannya', sub: 'buka Hari Ini' });
+  DAY_TYPES.forEach(t => {
+    if (!menuItemsFor(t, today).length) out.push({ nav: 'dashboard', tone: 'gray', title: 'Menu ' + TYPE_LABEL[t] + ' hari ini belum diisi', sub: 'atur di kartu Menu pada Beranda' });
+  });
+  return out;
+}
+function renderNotif() {
+  const items = notifItems();
+  const badge = document.getElementById('notifBadge');
+  if (badge) {
+    badge.hidden = !items.length;
+    badge.textContent = items.length > 9 ? '9+' : String(items.length);
+  }
+  const btn = document.getElementById('notifBtn');
+  if (btn) btn.title = items.length ? items.length + ' hal perlu perhatian' : 'Tidak ada yang perlu perhatian';
+  setText('notifCount', items.length ? items.length + ' hal' : 'semua beres');
+  const list = document.getElementById('notifList');
+  if (list) {
+    list.innerHTML = items.length
+      ? items.map(it => '<button type="button" class="notif-row is-' + it.tone + '" data-nav="' + it.nav + '">' +
+          '<span class="nr-dot" aria-hidden="true"></span><span class="nr-body"><span class="nr-title">' + escapeHtml(it.title) + '</span>' +
+          (it.sub ? '<span class="nr-sub">' + escapeHtml(it.sub) + '</span>' : '') + '</span></button>').join('')
+      : '<p class="notif-none">Semua beres — tidak ada pengingat, tagihan, atau pesanan yang menunggu.</p>';
+  }
+  if (!items.length) closeNotif();
+}
+function openNotif() {
+  const p = document.getElementById('notifPanel');
+  if (!p) return;
+  renderNotif();
+  p.hidden = false;
+  const btn = document.getElementById('notifBtn');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
+}
+function closeNotif() {
+  const p = document.getElementById('notifPanel');
+  if (p) p.hidden = true;
+  const btn = document.getElementById('notifBtn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+function toggleNotif() {
+  const p = document.getElementById('notifPanel');
+  if (p && p.hidden) openNotif(); else closeNotif();
 }
 function addReminder() {
   const text = (document.getElementById('remText').value || '').trim();
@@ -4074,7 +4251,29 @@ function saveWaSettings() {
 
 /* ---------- Libur (dikelola dari Beranda) ---------- */
 const SCOPE_LABEL = { all: 'Semua orang', cohort: 'Angkatan', class: 'Kelas', person: 'Orang' };
-function holidayOn(ymd) { return db.holidays.some(h => h.date === ymd); }
+/* kotak merah hanya untuk libur seluruhnya — libur sebagian cukup ditandai titik merah */
+function isFullHoliday(ymd) { return holidayKind(ymd) === 'all'; }
+/* 'all' = seluruhnya libur · 'some' = hanya orang / kelas / angkatan tertentu */
+function holidayKind(ymd) {
+  let some = false;
+  for (const h of db.holidays) {
+    if (h.date !== ymd) continue;
+    if (h.scope === 'all') return 'all';
+    some = true;
+  }
+  return some ? 'some' : '';
+}
+/* daftar titik sebuah tanggal: g = ada snack/lunch · r = hanya sebagian orang libur · y = ada PO.
+   Libur semua tidak memakai titik sama sekali. menuIkut = tanggal yang baru punya menu pun ikut bertitik. */
+function dayDots(ymd, menuIkut) {
+  const k = holidayKind(ymd);
+  if (k === 'all') return [];
+  const out = [];
+  if (countOrdered('snack', ymd) || countOrdered('lunch', ymd) || (menuIkut && menuFor(ymd).length)) out.push('g');
+  if (k === 'some') out.push('r');
+  if (db.po.some(p => p.date === ymd)) out.push('y');
+  return out;
+}
 function holidayDates(mode) {
   const base = state.menuDate || todayStr();
   if (mode !== 'week') return [base];
@@ -4083,17 +4282,32 @@ function holidayDates(mode) {
   for (let i = 0; i < 7; i++) out.push(shiftDate(mon, i));
   return out;
 }
+/* Tombol libur mengikuti tab Menu: "Mingguan" saat Menu Mingguan, "Harian" saat Menu Harian */
+function syncLiburBtn() {
+  const btn = document.getElementById('liburBtn');
+  if (!btn) return;
+  const daily = state.menuTab === 'daily';
+  btn.dataset.act = daily ? 'holiday-day' : 'holiday-week';
+  btn.textContent = daily ? 'Libur Harian' : 'Libur Mingguan';
+  btn.title = daily ? 'Tandai tanggal terpilih di kalender sebagai libur' : 'Tandai seluruh minggu dari tanggal terpilih sebagai libur';
+}
 function renderHomeHoliday() {
+  syncLiburBtn();
   const sum = document.getElementById('liburSummary');
   if (!sum) return;
   const chips = document.getElementById('liburChips');
-  const mk = monthKey(state.menuDate || todayStr());
-  const n = db.holidays.filter(h => monthKey(h.date) === mk).length;
-  sum.textContent = n ? n + ' tanggal libur bulan ini' : 'Belum ada libur bulan ini';
-  const soon = db.holidays.filter(h => h.date >= todayStr()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+  /* hanya minggu / hari yang sedang dibuka yang diberitakan */
+  const daily = state.menuTab === 'daily';
+  const base = state.menuDate || todayStr();
+  const mon = mondayOf(base);
+  const dalam = daily ? (h => h.date === base) : (h => h.date >= mon && h.date <= shiftDate(mon, 6));
+  const daftar = db.holidays.filter(dalam).sort((a, b) => a.date.localeCompare(b.date));
+  sum.textContent = daftar.length
+    ? daftar.length + ' tanggal libur ' + (daily ? 'hari ini' : 'minggu ini')
+    : 'Tidak ada libur ' + (daily ? 'hari ini' : 'minggu ini');
   if (!chips) return;
-  chips.innerHTML = soon.length
-    ? soon.map(h => {
+  chips.innerHTML = daftar.length
+    ? daftar.map(h => {
         let who = '';
         if (h.scope === 'person') { const c = customerById(h.value); who = c ? c.name : ''; }
         else if (h.value) who = h.value;
@@ -4101,7 +4315,7 @@ function renderHomeHoliday() {
           (who ? ' · ' + escapeHtml(who) : '') + (h.note ? ' <em>' + escapeHtml(h.note) + '</em>' : '') +
           '<button type="button" class="chip-x" data-act="holiday-remove" data-id="' + escapeHtml(h.id) + '" title="Hapus libur ini">&times;</button></span>';
       }).join('')
-    : '<span class="muted tiny">Tandai libur supaya pesanan anak tidak terisi otomatis pada tanggal itu.</span>';
+    : '<span class="muted tiny">Tekan ' + (daily ? 'Libur Harian' : 'Libur Mingguan') + ' supaya pesanan anak tidak terisi otomatis pada tanggal itu.</span>';
 }
 function openHolidayModal(mode) {
   const dates = holidayDates(mode);
@@ -4350,6 +4564,7 @@ function renderCustomers() {
       '<td>' + (c.lunchDefault ? '✓' : '—') + '</td>' +
       '<td><span class="badge ' + (STATUS_BADGE[c.status] || 'red') + '" title="' + escapeHtml(STATUS_HINT[c.status] || '') + '">' + (STATUS_LABEL[c.status] || 'Aktif') + '</span></td>' +
       '<td class="end"><div class="row-actions">' +
+        '<button class="icon-act" data-act="cust-report" data-id="' + c.id + '" title="Buka laporan anak ini">' + ICO_CHART + '</button>' +
         '<button class="icon-act" data-act="customer-edit" data-id="' + c.id + '" title="Ubah">' + ICO_EDIT + '</button>' +
         '<button class="icon-act danger" data-act="customer-delete" data-id="' + c.id + '" title="Hapus">' + ICO_TRASH + '</button>' +
       '</div></td>' +
@@ -4642,11 +4857,14 @@ function toggleTheme() {
 
 /* ---------- Event delegation ---------- */
 function onDocClick(e) {
+  const panel = document.getElementById('notifPanel');
+  if (panel && !panel.hidden && !(e.target.closest && e.target.closest('.notif-wrap'))) closeNotif();
   const nav = e.target.closest('[data-nav]');
-  if (nav) { showPage(nav.dataset.nav); return; }
+  if (nav) { closeNotif(); showPage(nav.dataset.nav); return; }
   if (e.target.closest('#menuBtn')) { openSidebar(); return; }
   if (e.target.closest('#sideToggle')) { toggleSidebar(); return; }
   if (e.target.closest('#themeBtn')) { toggleTheme(); return; }
+  if (e.target.closest('#notifBtn')) { toggleNotif(); return; }
   if (e.target.id === 'modalBackdrop') { closeModal(); return; }
   if (e.target.id === 'calOverlay') { closeCalendar(); return; }
 
@@ -4662,8 +4880,7 @@ function onDocClick(e) {
       state.daily.hari = { level: '', cohort: '', cls: '', q: '' };
       renderDailyMerged();
       break;
-    case 'daily-pay-day': payAllToday(act.closest('tr') ? act.closest('tr').dataset.cid : null); break;
-    case 'daily-pay-all': payAllToday(null); break;
+    case 'daily-pay-all': payAllToday(); break;
     case 'daily-pay-cfg': openDayPayModal(act.closest('tr').dataset.cid, state.currentDate); break;
     case 'daily-pay-save': saveDayPay(act.dataset.cid, act.dataset.date); break;
     case 'week-menu-add': {
@@ -4694,12 +4911,13 @@ function onDocClick(e) {
       state.menuTab = act.dataset.tab === 'daily' ? 'daily' : 'week';
       if (state.menuTab === 'daily') state.menuDay = weekdayOf(state.menuDate || todayStr()) - 1;
       renderWeekMenu();
+      renderHomeHoliday();
       break;
     case 'menu-day': {
       state.menuDate = act.dataset.ymd;
       state.menuMonth = monthKey(state.menuDate);
       state.menuDay = weekdayOf(state.menuDate) - 1;
-      renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase();
+      renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase(); renderHomeHoliday();
       break;
     }
     case 'menu-share': menuShareImage(); break;
@@ -4842,6 +5060,15 @@ function onDocClick(e) {
     case 'log-clear': if (db.log.length && confirm('Bersihkan seluruh log aktivitas?')) { db.log = []; logAction('log', 'Log dibersihkan'); save(); renderLog(); toast('Log dibersihkan', { undo: true }); } break;
     case 'customer-add': openCustomerModal(null); break;
     case 'customer-edit': { const c = customerById(id); if (c) openCustomerModal(c); break; }
+    case 'cust-report': {
+      const c = customerById(id);
+      if (!c) break;
+      const rs = document.getElementById('rptSearch');
+      if (rs) rs.value = c.name;
+      showPage('report');
+      toast('Laporan ' + c.name + (c.className ? ' · ' + c.className : ''));
+      break;
+    }
     case 'customer-delete': { const c = customerById(id); if (c && confirm('Hapus pelanggan "' + c.name + '"? Catatan absensi lama tetap tersimpan.')) { db.customers = db.customers.filter(x => x.id !== id); save(); logAction('pelanggan', 'Hapus ' + c.name); renderSettings(); toast('Pelanggan dihapus', { undo: true }); } break; }
     case 'method-remove': { const m = act.dataset.method; db.settings.paymentMethods = db.settings.paymentMethods.filter(x => x !== m); save(); renderMethods(); break; }
     case 'method-add': {
@@ -4970,7 +5197,7 @@ function onDocClick(e) {
     case 'hub-nav': showPage(act.dataset.page); toast(act.dataset.t + ' — ' + act.dataset.h); break;
     case 'open-cal': {
       const field = act.dataset.field;
-      if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDot('snack')(ymd) || dayDot('lunch')(ymd) });
+      if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDots(ymd, false) });
       else if (field === 'satpam') openCalendar({ mode: 'day', field, value: state.satpamDate || todayStr(), dotFn: satpamDot });
       else if (field === 'poMonth') openCalendar({ mode: 'month', field, value: state.poMonth });
       else if (field === 'rptMonth') openCalendar({ mode: 'month', field, value: state.rptMonth });
@@ -5019,7 +5246,7 @@ function onDocChange(e) {
   if (t.id === 'setUiFont' || t.id === 'setUiZoom') { saveUiStyle(); return; }
   if (t.id === 'stickerNameFont' || t.id === 'stickerClsFont' || t.id === 'stickerBrandFont' ||
       t.id === 'stickerNameScale' || t.id === 'stickerClsScale' || t.id === 'stickerBrandScale' ||
-      t.id === 'stickerCellPad' || t.id === 'stickerLineW') {
+      t.id === 'stickerRowH' || t.id === 'stickerLineW') {
     saveStickerStyle(); stickerPreview(); return;
   }
   if (t.id === 'satpamType' || t.id === 'satpamShowClass') { satpamPreview(); return; }
@@ -5071,7 +5298,7 @@ function onDocChange(e) {
     return;
   }
   if (t.id === 'holidayScope') { renderHolidayValueOptions(); return; }
-  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-pkg')) {
+  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-pkg') || t.classList.contains('wm-price')) {
     applyMenuEdit(t, false);
     return;
   }
@@ -5082,10 +5309,7 @@ function onDocChange(e) {
   if (pageEl && t.closest('tr')) {
     const tr = t.closest('tr');
     const cid = tr.dataset.cid;
-    const c = customerById(cid);
-    const who = c ? c.name : cid;
     const date = state.currentDate;
-    const type = t.dataset.type;
     if (t.classList.contains('inp-note')) {
       /* satu catatan untuk seluruh hari — ditulis ke semua pesanan yang aktif */
       let touched = 0;
@@ -5097,19 +5321,7 @@ function onDocChange(e) {
       if (touched) save();
       syncMergedRow(tr);
       renderDailyStats();
-      return;
     }
-    if (type !== 'snack' && type !== 'lunch') return;
-    const rec = ensureRecord(type, date, cid);
-    if (t.classList.contains('sel-pkg')) {
-      rec.pkg = t.value;
-      const pk = pkgById(t.value);
-      logAction('paket', who + ' ' + type + ' → ' + (pk ? pk.name : '—') + ' @ ' + date);
-    }
-    else return;
-    save();
-    syncMergedRow(tr);
-    renderDailyStats();
   }
 }
 
@@ -5121,17 +5333,7 @@ function setText(id, txt) { const el = document.getElementById(id); if (el) el.t
 
 function monthTitle(ym) { const p = ym.split('-').map(Number); return MONTHS_FULL[p[1] - 1] + ' ' + p[0]; }
 
-function dayDot(type) {
-  return function (ymd) {
-    const r = db[type][ymd];
-    return !!r && Object.keys(r).some(id => r[id].ordered);
-  };
-}
-function satpamDot(ymd) {
-  const s = db.snack[ymd], l = db.lunch[ymd];
-  const has = rec => !!rec && Object.keys(rec).some(id => rec[id].ordered);
-  return has(s) || has(l);
-}
+function satpamDot(ymd) { return dayDots(ymd, false); }
 
 function openCalendar(opts) {
   const p = String(opts.value).split('-').map(Number);
@@ -5161,7 +5363,7 @@ function renderCalendar() {
         '<button type="button" class="cal-nav" data-act="cal-next" aria-label="Berikutnya">' + ICO_NEXT + '</button>' +
       '</div>' +
       '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-      '<div class="cal-grid">' + buildDayGrid(cal.year, cal.month, cal.selected, todayStr(), cal.dotFn) + '</div>' +
+      '<div class="cal-grid">' + buildDayGrid(cal.year, cal.month, cal.selected, todayStr(), cal.dotFn, 'cal-pick', '', isFullHoliday) + '</div>' +
       '<div class="cal-foot">' +
         '<button type="button" class="btn btn-primary" data-act="cal-today">Hari ini</button>' +
         '<button type="button" class="btn btn-ghost" data-act="cal-cancel">Batal</button>' +
@@ -5189,13 +5391,13 @@ function buildDayGrid(year, month, selectedYmd, todayYmd, dotFn, act, markCls, f
   for (let i = 0; i < startIdx; i++) html += '<div class="cal-empty"></div>';
   for (let d = 1; d <= days; d++) {
     const ymd = year + '-' + pad(month) + '-' + pad(d);
-    const marked = !!(dotFn && dotFn(ymd));
+    const dots = dotFn ? dotFn(ymd) : [];
     const cls = 'cal-day' +
       (ymd === selectedYmd ? ' is-selected' : '') +
       (ymd === todayYmd ? ' is-today' : '') +
       (flagFn && flagFn(ymd) ? ' is-holiday' : '') +
-      (marked && markCls ? ' ' + markCls : '');
-    const dot = marked && !markCls ? '<span class="cal-dot"></span>' : '';
+      (dots.length && markCls ? ' ' + markCls : '');
+    const dot = dots.length && !markCls ? '<span class="cal-dots">' + dots.map(k => '<i class="cal-dot ' + k + '"></i>').join('') + '</span>' : '';
     html += '<button type="button" class="' + cls + '" data-act="' + act + '" data-ymd="' + ymd + '">' + d + dot + '</button>';
   }
   return html;
@@ -5244,6 +5446,7 @@ function init() {
   applyBrand();
   applyUiStyle();
   setTodayBadge();
+  setSaveStatus();
   state.currentDate = todayStr();
   state.satpamDate = todayStr();
   state.poMonth = monthKey(todayStr());
@@ -5257,12 +5460,19 @@ function init() {
 
   document.addEventListener('click', onDocClick);
   document.addEventListener('change', onDocChange);
+  document.addEventListener('mouseover', e => { const c = chipFromEvent(e); if (c) showFoodTip(c); });
+  document.addEventListener('mouseout', e => { if (chipFromEvent(e)) hideFoodTip(); });
+  document.addEventListener('focusin', e => { const c = chipFromEvent(e); if (c) showFoodTip(c); });
+  document.addEventListener('focusout', e => { if (chipFromEvent(e)) hideFoodTip(); });
+  window.addEventListener('scroll', hideFoodTip, true);
+  window.addEventListener('resize', hideFoodTip);
   document.getElementById('undoBtn').addEventListener('click', undoLast);
   document.getElementById('redoBtn').addEventListener('click', redoLast);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (!document.getElementById('modalBackdrop').hidden) closeModal();
       else if (cal.open) closeCalendar();
+      else closeNotif();
       return;
     }
     if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
@@ -5284,7 +5494,7 @@ function init() {
     if (t.id === 'stickerNameScale') setText('stickerNameScaleVal', t.value + '%');
     if (t.id === 'stickerClsScale') setText('stickerClsScaleVal', t.value + '%');
     if (t.id === 'stickerBrandScale') setText('stickerBrandScaleVal', t.value + '%');
-    if (t.id === 'stickerCellPad') setText('stickerCellPadVal', t.value + '%');
+    if (t.id === 'stickerRowH') setText('stickerRowHVal', mmLabel(t.value) + ' mm');
     if (t.id === 'setUiZoom') { db.settings.uiZoom = clampScale(t.value, UI_ZOOM_MIN, UI_ZOOM_MAX); applyUiStyle(); }
     if (t.closest && t.closest('#poGroupForm')) updatePoGroupTotal();
   });
@@ -5305,6 +5515,7 @@ function init() {
   });
 
   showPage('dashboard');
+  renderNotif();
   setTimeout(backupReminder, 1400);
   setTimeout(reminderNudge, 2600);
 }

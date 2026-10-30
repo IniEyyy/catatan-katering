@@ -78,9 +78,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button class="btn btn-ghost btn-sm" data-act="export" title="Ekspor Backup">
+      <button class="foot-icon" id="exportBtn" type="button" data-act="export" aria-label="Ekspor Backup" title="Ekspor Backup — unduh cadangan JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-        <span>Ekspor Backup</span>
       </button>
       <span class="muted tiny" id="saveStatus">Tersimpan otomatis</span>
     </div>
@@ -93,6 +92,16 @@
       </button>
       <h1 class="topbar-title" id="topbarTitle">Beranda</h1>
       <div class="topbar-right">
+        <div class="notif-wrap">
+          <button class="icon-btn notif-btn" id="notifBtn" type="button" aria-label="Hal yang perlu perhatian" aria-expanded="false" title="Hal yang perlu perhatian">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6.5-2.5 7.5-2.5 7.5h17S18 15 18 8.5"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></svg>
+            <span class="notif-badge" id="notifBadge" hidden>0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel" hidden>
+            <div class="notif-head">Perlu perhatian <span class="muted tiny" id="notifCount"></span></div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
         <button class="icon-btn undo-btn" id="undoBtn" type="button" disabled aria-label="Urungkan perubahan terakhir" title="Belum ada yang bisa diurutkan balik">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>
         </button>
@@ -117,21 +126,25 @@
           <div class="card panel">
             <div class="card-head"><h3>Kalender</h3><span class="muted tiny">pilih tanggal</span></div>
             <div class="cal-inline" id="homeCal"></div>
+            <div class="cal-keys">
+              <span><i class="cal-dot g"></i> snack / lunch</span>
+              <span><i class="cal-dot y"></i> pre-order</span>
+              <span><i class="cal-dot r"></i> hanya sebagian orang libur</span>
+            </div>
             <div class="card-head pkg-head"><h3>Paket</h3><span class="muted tiny" id="pkgShowcaseDate"></span></div>
             <div class="pkg-showcase" id="pkgShowcase"></div>
           </div>
           <div class="card panel">
             <div class="card-head"><h3>Menu</h3><span class="head-tools"><span class="muted tiny" id="menuWeekLabel"></span><button type="button" class="btn btn-ghost btn-sm" data-act="menu-share" title="Simpan atau bagikan menu sebagai foto">Bagikan Foto</button></span></div>
-            <div class="libur-bar">
-              <button type="button" class="btn btn-ghost btn-sm" data-act="holiday-day" title="Tandai tanggal terpilih di kalender sebagai libur">Libur Harian</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-act="holiday-week" title="Tandai seluruh minggu dari tanggal terpilih sebagai libur">Libur Mingguan</button>
-              <span class="muted tiny" id="liburSummary"></span>
+            <div class="menu-tabrow">
+              <div class="seg seg-sm">
+                <button class="seg-btn is-on" data-act="menu-tab" data-tab="week">Menu Mingguan</button>
+                <button class="seg-btn" data-act="menu-tab" data-tab="daily">Menu Harian</button>
+              </div>
+              <span class="muted tiny libur-sum" id="liburSummary"></span>
+              <button type="button" class="btn btn-ghost btn-sm libur-btn" id="liburBtn" data-act="holiday-week" title="Tandai seluruh minggu dari tanggal terpilih sebagai libur">Libur Mingguan</button>
             </div>
             <div class="libur-chips" id="liburChips"></div>
-            <div class="seg seg-sm" style="margin-bottom:12px">
-              <button class="seg-btn is-on" data-act="menu-tab" data-tab="week">Menu Mingguan</button>
-              <button class="seg-btn" data-act="menu-tab" data-tab="daily">Menu Harian</button>
-            </div>
             <div class="week-menu" id="weekMenuEditor"></div>
             <p class="muted tiny" id="menuTabHint">Menu per tanggal — isi paket ditulis satu baris per komponen.</p>
           </div>
@@ -432,8 +445,8 @@
               <select id="stickerSize" class="input">
                 <option value="2x7">Besar — 2 kolom × 7 baris</option>
                 <option value="3x8">Sedang — 3 kolom × 8 baris</option>
-                <option value="4x10">Kecil — 4 kolom × 10 baris</option>
-                <option value="5x12" selected>Rapat — 5 kolom × 12 baris</option>
+                <option value="4x10" selected>Kecil — 4 kolom × 10 baris</option>
+                <option value="5x12">Rapat — 5 kolom × 12 baris</option>
               </select>
               <span class="muted tiny">Font dibuat mengisi kotak; jarak antar stiker nihil agar hemat dan mudah digunting.</span>
             </label>
@@ -468,11 +481,11 @@
                 <span class="stk-font-val" id="stickerClsScaleVal">100%</span>
               </div>
               <div class="stk-font-row">
-                <span class="stk-font-tag">Isi sel</span>
-                <input type="range" id="stickerCellPad" min="0" max="100" step="5" value="25" title="Jarak kosong di dalam kotak stiker antara tulisan dan garis potong" style="grid-column:2/4">
-                <span class="stk-font-val" id="stickerCellPadVal">25%</span>
+                <span class="stk-font-tag">Tinggi baris</span>
+                <input type="range" id="stickerRowH" min="12" max="45" step="0.5" value="28.7" title="Tinggi satu baris stiker dalam milimeter — jumlah baris per halaman menyesuaikan" style="grid-column:2/4">
+                <span class="stk-font-val" id="stickerRowHVal">28,7 mm</span>
               </div>
-              <p class="muted tiny">"Isi sel" = ruang kosong di dalam kotak antara tulisan dan garis potong; font otomatis mengecil mengikuti ruang ini. 100% = font mengisi kotak.</p>
+              <p class="muted tiny" id="stickerRowHNote">Tinggi satu baris stiker; font menyesuaikan ruang ini.</p>
             </div>
             <label class="check">
               <input type="checkbox" id="stickerBrand"> Tampilkan nama usaha

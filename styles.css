@@ -215,9 +215,13 @@ body.theme-dark .nav-item.is-active{box-shadow:0 0 0 1px rgba(255,255,255,.10) i
 }
 .nav-item.is-active .nav-badge{background:#fff;color:var(--primary-dark);box-shadow:none}
 
-.sidebar-footer{padding:14px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
-.sidebar-footer .btn svg{width:16px;height:16px;flex:none}
-.sidebar-footer .muted{opacity:.85;text-align:center;letter-spacing:.3px}
+.sidebar-footer{padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.foot-icon{flex:none;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;
+  background:var(--surface);color:var(--text);cursor:pointer;transition:.16s;font-family:inherit}
+.foot-icon:hover{color:var(--primary);border-color:var(--primary);background:var(--surface-2)}
+.foot-icon svg{width:17px;height:17px}
+body.theme-dark .foot-icon{background:rgba(255,255,255,.04)}
+.sidebar-footer .muted{opacity:.85;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 
 .main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-width:0;transition:margin-left .26s cubic-bezier(.4,0,.2,1)}
 .topbar{
@@ -244,6 +248,28 @@ body.theme-dark .date-badge{background:rgba(255,255,255,.04)}
 }
 .icon-btn:hover{background:var(--surface-2);color:var(--primary);border-color:var(--border-strong)}
 .icon-btn svg{width:21px;height:21px}
+/* Lonceng notifikasi di top bar */
+.notif-wrap{position:relative}
+.notif-btn{display:grid}
+.notif-badge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+  background:var(--primary);color:#fff;font-size:10.5px;font-weight:800;display:grid;place-items:center;line-height:1;
+  border:2px solid var(--surface)}
+.notif-panel{position:absolute;top:calc(100% + 10px);right:0;width:320px;max-width:calc(100vw - 28px);z-index:70;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 18px 40px rgba(18,22,48,.22);overflow:hidden}
+.notif-head{display:flex;align-items:baseline;gap:8px;padding:11px 14px;font-size:12.5px;font-weight:800;border-bottom:1px solid var(--border)}
+.notif-head .muted{margin-left:auto;font-weight:600}
+.notif-list{max-height:min(60vh,420px);overflow:auto;padding:6px}
+.notif-row{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;padding:9px 10px;border:0;border-radius:10px;
+  background:transparent;color:inherit;cursor:pointer;font-family:inherit;transition:.14s}
+.notif-row:hover{background:var(--surface-2)}
+.nr-dot{flex:0 0 auto;width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--muted)}
+.notif-row.is-red .nr-dot{background:var(--danger)}
+.notif-row.is-amber .nr-dot{background:var(--gold)}
+.nr-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nr-title{font-size:12.5px;font-weight:700}
+.nr-sub{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.notif-none{margin:0;padding:14px 10px;font-size:12px;color:var(--muted)}
+body.theme-dark .notif-badge{border-color:var(--bg)}
 .theme-btn{display:grid}
 body.theme-dark .theme-btn{background:rgba(255,255,255,.04)}
 
@@ -329,7 +355,7 @@ body.theme-dark .stat-card{background:linear-gradient(160deg,rgba(255,255,255,.0
 .stat-card.danger::before{background:linear-gradient(var(--danger),#FF8A7A)}
 
 /* ===== Charts ===== */
-.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .chart-card canvas{width:100%;display:block;margin-top:4px}
 .donut-wrap{display:flex;flex-direction:column;align-items:center}
 .donut-legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:10px}
@@ -487,15 +513,31 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 }
 .cal-day:hover{background:var(--primary-soft);border-color:var(--primary);transform:translateY(-1px)}
 .cal-day:active{transform:scale(.95)}
-.cal-day.is-today{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+.cal-day.is-today{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);font-weight:800;box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cal-day.is-today:hover{background:var(--accent-soft);border-color:var(--accent)}
 .cal-day.is-holiday{border-color:var(--danger);background:var(--danger-soft);color:var(--danger);font-weight:800}
 .cal-day.is-holiday:hover{background:var(--danger-soft);border-color:var(--danger)}
 .cal-day.is-selected{
   background:var(--grad);color:#fff;border-color:transparent;
   box-shadow:0 8px 20px rgba(216,38,47,.35);
 }
-.cal-dot{position:absolute;bottom:8px;width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.cal-day.is-today.is-selected{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);box-shadow:0 8px 20px rgba(56,211,159,.3), inset 0 0 0 2px var(--accent)}
+.cal-day.is-today.is-selected:hover{background:var(--accent-soft);border-color:var(--accent)}
+.cal-dots{position:absolute;bottom:7px;left:0;right:0;display:flex;justify-content:center;gap:3px}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
+/* hijau = ada snack/lunch · merah = hanya sebagian orang libur · kuning = ada pre-order */
+.cal-dot.r{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.cal-dot.y{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.cal-month.is-today.is-selected{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);box-shadow:0 8px 20px rgba(56,211,159,.3), inset 0 0 0 2px var(--accent)}
 .cal-day.is-selected .cal-dot{background:#fff;box-shadow:none}
+.cal-day.is-selected .cal-dot.r{background:#FF8A7A;box-shadow:none}
+.cal-day.is-selected .cal-dot.y{background:#F0D089;box-shadow:none}
+.cal-day.is-today.is-selected .cal-dot{background:var(--accent-dark);box-shadow:0 0 6px var(--accent)}
+.cal-day.is-today.is-selected .cal-dot.r{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.cal-day.is-today.is-selected .cal-dot.y{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.cal-keys{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:11px;font-size:11px;font-weight:600;color:var(--muted)}
+.cal-keys span{display:inline-flex;align-items:center;gap:6px}
+.cal-keys .cal-dot{display:inline-block;box-shadow:none}
 .cal-grid-month{grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
 .cal-month{
   height:60px;border:1px solid var(--border);background:var(--cal-day-bg);border-radius:14px;
@@ -503,7 +545,8 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 }
 .cal-month:hover{background:var(--primary-soft);border-color:var(--primary);transform:translateY(-1px)}
 .cal-month:active{transform:scale(.96)}
-.cal-month.is-today{border-color:var(--primary)}
+.cal-month.is-today{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cal-month.is-today:hover{background:var(--accent-soft);border-color:var(--accent)}
 .cal-month.is-selected{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 8px 20px rgba(216,38,47,.35)}
 .cal-foot{display:flex;gap:10px;margin-top:16px}
 .cal-foot .btn{flex:1;min-height:46px}
@@ -514,10 +557,12 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .cal-inline .cal-nav svg{width:20px;height:20px}
 .cal-inline .cal-day,.cal-inline .cal-empty{height:42px}
 .cal-inline .cal-day{border-radius:11px;font-size:14px}
-.cal-inline .cal-dot{bottom:6px;width:4px;height:4px}
+.cal-inline .cal-dots{bottom:5px;gap:2px}
+.cal-inline .cal-dot{width:4px;height:4px}
 
 /* ===== Split & pratinjau ===== */
-.split{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+.split{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px;align-items:start}
+.split>*{min-width:0}
 .panel h3{margin-bottom:16px}
 .preview-panel{min-width:0;display:flex;flex-direction:column}
 .preview-frame{
@@ -572,13 +617,14 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 
 /* ===== Menu mingguan / harian ===== */
 .week-menu{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
-.wm-row{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:start}
+.wm-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start}
 .wm-day{display:flex;flex-direction:column;font-size:12.5px;font-weight:600;padding-top:9px}
 .wm-day small{font-weight:500;color:var(--muted);font-size:11px}
-.wm-items{display:flex;flex-direction:column;gap:6px}
-.wm-item{display:grid;grid-template-columns:82px 172px 1fr 32px;gap:6px;align-items:start}
-.wm-item .wm-name{min-height:34px;line-height:1.35;padding:7px 10px;resize:vertical;overflow:hidden;font-family:inherit}
-.wm-item .wm-type,.wm-item .wm-pkg{margin-top:1px}
+.wm-items{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wm-item{display:grid;grid-template-columns:82px 148px 84px minmax(120px,1fr) 32px;gap:6px;align-items:start;min-width:0}
+.wm-item .wm-name{min-width:0;min-height:34px;line-height:1.35;padding:7px 10px;resize:vertical;overflow:hidden;font-family:inherit}
+.wm-item .wm-type,.wm-item .wm-pkg,.wm-item .wm-price,.wm-item .icon-act{margin-top:1px}
+.wm-item .wm-price{width:100%;text-align:right;font-variant-numeric:tabular-nums}
 .wm-item .icon-act{width:32px;height:32px;margin-top:1px}
 .wm-items .btn-sm{align-self:flex-start}
 .wm-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
@@ -592,10 +638,11 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .day-chip:hover{border-color:var(--primary);color:var(--primary-dark)}
 .day-chip.is-on{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(216,38,47,.3)}
 .day-chip.is-on small{color:rgba(255,255,255,.82)}
+/* satu baris menu butuh ±500px; di layar sempit nama makanan turun ke baris kedua */
 @media (max-width:640px){
-  .wm-item{grid-template-columns:74px 1fr 30px}
+  .wm-item{grid-template-columns:74px minmax(0,1fr) 82px 32px}
   .wm-item .wm-name{grid-column:1 / -1}
-  .wm-item .icon-act{grid-column:3;grid-row:1}
+  .wm-item .icon-act{grid-column:4;grid-row:1}
 }
 
 /* ===== Segmen / tab kecil ===== */
@@ -641,8 +688,8 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .custom-table tbody td.cell.is-leave{background:var(--gold-soft)}
 .custom-table tbody td.cell.is-leave:hover{background:var(--gold-soft)}
 /* ===== Halaman "Hari Ini": snack + lunch dalam satu tabel ===== */
-.table-daily{min-width:900px}
-.table-daily th,.table-daily td{padding:6px 5px}
+.table-daily{min-width:760px}
+.table-daily th,.table-daily td{padding:6px 6px 6px 11px}
 .table-daily .sticky-col{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:1px 0 0 var(--border);min-width:170px;width:170px}
 .table-daily thead .sticky-col{z-index:3}
 .table-daily tbody tr:nth-child(even) .sticky-col{background:var(--surface-2)}
@@ -652,19 +699,21 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .table-daily th.grp-snack{color:var(--primary-dark);background:var(--primary-soft)}
 .table-daily th.grp-lunch{color:var(--accent-dark);background:var(--accent-soft)}
 .table-daily th.grp-day{color:var(--muted);background:var(--surface-2)}
-.table-daily .sel-pkg{width:100px}
 .table-daily .inp-note{width:170px}
-.table-daily .food-cell{width:190px;max-width:190px}
+.table-daily .food-cell{width:240px;max-width:240px}
 .table-daily .food-cell .food-chip{max-width:100%;padding:2px 5px;font-size:10.5px;overflow:hidden;white-space:nowrap;display:flex}
-.table-daily tr.is-lunas .sticky-col,.table-daily tr.is-gratis .sticky-col{box-shadow:inset 3px 0 0 var(--accent),1px 0 0 var(--border)}
+.pkg-under{display:block;margin-top:4px;color:var(--muted);font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .table-daily td.day-total{width:150px}
-.pay-day{display:block;margin:3px auto 0;border:1px solid var(--danger);color:var(--danger);background:transparent;
-  border-radius:999px;font-size:10.5px;font-weight:700;padding:2px 8px;cursor:pointer;font-variant-numeric:tabular-nums;font-family:inherit;transition:.14s}
-.pay-day:hover{background:var(--danger);color:#fff}
-.pay-cfg{display:inline-grid;place-items:center;width:22px;height:22px;margin:4px auto 0;padding:0;border:1px solid var(--border);
-  border-radius:7px;background:var(--surface-2);color:var(--muted);cursor:pointer;transition:.14s}
-.pay-cfg:hover{color:var(--primary);border-color:var(--primary)}
-.pay-cfg svg{width:12px;height:12px}
+.pay-total{display:block;margin:0 auto;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;
+  font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px dashed var(--border-strong);transition:.14s}
+.pay-total:hover{color:var(--primary);border-bottom-color:var(--primary)}
+/* Dialog kecil isi menu saat chip makanan disorot */
+.food-tip{position:absolute;z-index:80;max-width:250px;padding:8px 10px;border-radius:10px;border:1px solid var(--border-strong);
+  background:var(--surface);box-shadow:0 10px 26px rgba(18,22,48,.18);font-size:11.5px;line-height:1.45;pointer-events:none;
+  opacity:0;visibility:hidden;transition:opacity .12s}
+.food-tip.is-on{opacity:1;visibility:visible}
+.food-tip strong{display:block;font-size:12px;margin-bottom:3px}
+.food-tip span{color:var(--muted)}
 .custom-table td.is-leave select{border-color:var(--gold)}
 
 /* ===== Display paket ===== */
@@ -771,10 +820,6 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 .redo-btn.is-ready{opacity:1;border-color:var(--primary);color:var(--primary-dark);background:var(--primary-soft)}
 .redo-btn.is-ready:hover{background:var(--primary);color:#fff;border-color:transparent}
 
-/* ===== Baris lunas / belum pada tabel harian ===== */
-.table tr.is-lunas td:first-child,.table tr.is-gratis td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
-.table tr.is-belum td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
-
 /* ===== Segmen kecil (pilihan tampilan sel) ===== */
 .seg-xs{padding:2px;gap:2px;border-radius:10px;align-self:auto}
 .seg-xs .seg-btn{padding:5px 10px;font-size:11.5px;border-radius:7px}
@@ -816,20 +861,22 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
   .app.nav-collapsed .brand{justify-content:center;padding:22px 6px 16px}
   .app.nav-collapsed .brand-text,
   .app.nav-collapsed .nav-item span,
-  .app.nav-collapsed .sidebar-footer>span,
-  .app.nav-collapsed .sidebar-footer .btn span{display:none}
+  .app.nav-collapsed .sidebar-footer>span{display:none}
   .app.nav-collapsed .nav{padding:10px}
   .app.nav-collapsed .nav-item{justify-content:center;gap:0;padding:11px 0}
   .app.nav-collapsed .nav-group{font-size:0;height:1px;background:var(--border);margin:9px 6px 5px;padding:0;overflow:hidden}
   .app.nav-collapsed .nav-badge{top:4px;right:auto;left:calc(50% + 8px)}
   .app.nav-collapsed .nav-item:hover{transform:translateX(0) scale(1.06)}
-  .app.nav-collapsed .sidebar-footer{padding:14px 10px;align-items:center}
-  .app.nav-collapsed .sidebar-footer .btn{padding:0;width:42px;height:40px}
-  .app.nav-collapsed .sidebar-footer .btn svg{width:18px;height:18px}
+  .app.nav-collapsed .sidebar-footer{padding:12px 0;justify-content:center}
+  .app.nav-collapsed .sidebar-footer>span{display:none}
   .preview-panel{position:sticky;top:78px}
 }
 
 /* ===== Responsive ===== */
+/* kalender di atas menu lebih awal — kolom menu tetap cukup lebar untuk baris paket + harga */
+@media (max-width:1200px){
+  .split:not(.split-stiker){grid-template-columns:1fr}
+}
 @media (max-width:960px){
   .sidebar{transform:translateX(-100%);width:264px}
   .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg)}
@@ -883,9 +930,11 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 .print-seg{width:max-content;margin-bottom:14px}
 .print-mode[hidden]{display:none}
 
-/* Blok libur di kartu Menu, Beranda */
-.libur-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 8px}
-.libur-bar .muted{margin-left:auto}
+/* Baris tab Menu + tombol libur (paling kanan) di kartu Menu, Beranda */
+.menu-tabrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 10px}
+.menu-tabrow .libur-sum{margin-left:auto;text-align:right}
+.libur-btn{color:var(--danger);border-color:var(--border-strong)}
+.libur-btn:hover{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
 .libur-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .libur-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;
   border:1px solid var(--border);background:var(--danger-soft);color:var(--danger);font-size:11px;font-weight:700}
