@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C0272D">
+<title>Lovely Kitchen — Catatan Usaha Catering</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <button class="side-toggle" id="sideToggle" type="button" aria-label="Perkecil sidebar" title="Perkecil sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12c0-2.5 2-3.5 2-5 0-1 1-2 2-2 0-1.5 1.5-3 3-3 .5 0 1 .2 1.4.6"/>
+          <path d="M12 2.6c.4-.4.9-.6 1.4-.6 1.5 0 3 1.5 3 3 1 0 2 1 2 2 0 1.5 2 2.5 2 5"/>
+          <path d="M3 14h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <path d="M12 14v6M8 20v-3M16 20v-3"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong id="brandName">Lovely Kitchen</strong>
+        <span id="brandTagline">Catering &amp; Snack</span>
+      </div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <p class="nav-group">Hari ini</p>
+      <button class="nav-item is-active" data-nav="dashboard" title="Beranda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Beranda</span>
+      </button>
+      <button class="nav-item" data-nav="hari" title="Hari Ini (absensi snack &amp; lunch)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5h6v3H9z"/><path d="M15 5h2.5A1.5 1.5 0 0 1 19 6.5v13A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-13A1.5 1.5 0 0 1 6.5 5H9"/><path d="M8.5 13.5l2.5 2.5 4.5-5"/></svg>
+        <span>Hari Ini</span>
+      </button>
+      <button class="nav-item" data-nav="custom" title="Pesanan Seminggu (Kustomisasi)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M9 9.5V19M15 9.5V19M3 14.5h18"/></svg>
+        <span>Pesanan Seminggu</span>
+      </button>
+
+      <p class="nav-group">Penjualan</p>
+      <button class="nav-item" data-nav="po" title="Pre-Order (PO)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a3 3 0 0 1 6 0"/><path d="M9 12h6M9 16h4"/></svg>
+        <span>Pre-Order (PO)</span>
+      </button>
+      <button class="nav-item" data-nav="report" title="Laporan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+        <span>Laporan</span>
+      </button>
+      <button class="nav-item" data-nav="pengingat" title="Pengingat & Tagihan WhatsApp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6.5-2.5 7.5-2.5 7.5h17S18 15 18 8.5"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></svg>
+        <span>Pengingat</span><em class="nav-badge" id="navReminderBadge" hidden>0</em>
+      </button>
+
+      <p class="nav-group">Cetak &amp; bagikan</p>
+      <button class="nav-item" data-nav="stiker" title="Stiker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg>
+        <span>Stiker</span>
+      </button>
+      <button class="nav-item" data-nav="satpam" title="Kertas Konfirmasi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <span>Kertas Konfirmasi</span>
+      </button>
+
+      <p class="nav-group">Data &amp; pengaturan</p>
+      <button class="nav-item" data-nav="libur" title="Hari Libur">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/><path d="M9 15l2 2 4-4"/></svg>
+        <span>Hari Libur</span>
+      </button>
+      <button class="nav-item" data-nav="log" title="Log Aktivitas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 12h16M4 19h10"/><circle cx="20" cy="19" r="1.4"/></svg>
+        <span>Log Aktivitas</span>
+      </button>
+      <button class="nav-item" data-nav="settings" title="Pengaturan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.2 5.2l1.8 1.8M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/></svg>
+        <span>Pengaturan</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost btn-sm" data-act="export" title="Ekspor Backup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <span>Ekspor Backup</span>
+      </button>
+      <span class="muted tiny" id="saveStatus">Tersimpan otomatis</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h1 class="topbar-title" id="topbarTitle">Beranda</h1>
+      <div class="topbar-right">
+        <button class="icon-btn undo-btn" id="undoBtn" type="button" disabled aria-label="Urungkan perubahan terakhir" title="Belum ada yang bisa diurutkan balik">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>
+        </button>
+        <button class="icon-btn redo-btn" id="redoBtn" type="button" disabled aria-label="Ulangi perubahan yang diurutkan" title="Tidak ada yang bisa diulang">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>
+        </button>
+        <button class="icon-btn theme-btn" id="themeBtn" type="button" aria-label="Ganti tema" title="Ganti tema terang/gelap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+        </button>
+        <span class="date-badge" id="todayBadge"></span>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+
+      <!-- ============ BERANDA ============ -->
+      <section class="page is-active" id="page-dashboard">
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="rem-strip" id="remStrip" hidden></div>
+
+        <div class="split">
+          <div class="card panel">
+            <div class="card-head"><h3>Kalender</h3><span class="muted tiny">pilih tanggal</span></div>
+            <div class="cal-inline" id="homeCal"></div>
+            <div class="card-head pkg-head"><h3>Paket</h3><span class="muted tiny" id="pkgShowcaseDate"></span></div>
+            <div class="pkg-showcase" id="pkgShowcase"></div>
+          </div>
+          <div class="card panel">
+            <div class="card-head"><h3>Menu</h3><span class="head-tools"><span class="muted tiny" id="menuWeekLabel"></span><button type="button" class="btn btn-ghost btn-sm" data-act="menu-share" title="Simpan atau bagikan menu sebagai foto">Bagikan Foto</button></span></div>
+            <div class="seg seg-sm" style="margin-bottom:12px">
+              <button class="seg-btn is-on" data-act="menu-tab" data-tab="week">Menu Mingguan</button>
+              <button class="seg-btn" data-act="menu-tab" data-tab="daily">Menu Harian</button>
+            </div>
+            <div class="week-menu" id="weekMenuEditor"></div>
+            <p class="muted tiny" id="menuTabHint">Menu per tanggal — isi paket ditulis satu baris per komponen.</p>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="card chart-card">
+            <div class="card-head"><h3>Omset per Bulan</h3><span class="muted tiny">6 bulan terakhir</span></div>
+            <canvas id="chartMonthly" height="220"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Omset Harian</h3><span class="muted tiny">14 hari terakhir</span></div>
+            <canvas id="chartDaily" height="220"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Omset per Jenis</h3><span class="muted tiny" id="splitNote">bulan ini · sudah dibayar</span></div>
+            <div class="donut-wrap"><canvas id="chartSplit" height="200"></canvas></div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Porsi Snack vs Lunch</h3><span class="muted tiny">bulan ini</span></div>
+            <div class="donut-wrap"><canvas id="chartDonut" height="200"></canvas></div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Status Pembayaran</h3><span class="muted tiny" id="paidNote">bulan ini</span></div>
+            <div class="donut-wrap"><canvas id="chartPaid" height="200"></canvas></div>
+          </div>
+          <div class="card chart-card">
+            <div class="card-head"><h3>Bagaimana membacanya</h3></div>
+            <p class="muted small" style="margin:2px 0 0">Persentase di legenda adalah bagian tiap segmen dari total lingkaran tersebut. <em>Omset per Jenis</em> membandingkan nilai uang snack vs lunch vs PO; <em>Status Pembayaran</em> membandingkan jumlah transaksi lunas / belum / gratis. Angka "belum lunas" pada halaman ini dihitung <strong>sepanjang waktu</strong> hanya untuk daftar di bawah, sedangkan kartu di atas mengikuti bulan berjalan.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Belum Lunas</h3><span class="head-tools"><span class="scope-chip" title="Semua periode, bukan hanya bulan ini">sepanjang waktu</span><span class="muted tiny" id="unpaidNote"></span><button class="btn btn-ghost btn-sm" id="unpaidSeeAll" data-act="unpaid-seeall">Buka semua</button></span></div>
+          <p class="muted tiny" style="margin:-6px 0 10px">Dikelompokkan per minggu — klik baris minggu untuk membuka rincian per tanggal.</p>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Nama</th><th>Kelas</th><th class="c">Jenis</th><th>Tanggal</th><th class="num">Nominal</th></tr></thead>
+            <tbody id="unpaidList"></tbody>
+          </table></div>
+          <p class="empty" id="unpaidEmpty" hidden>Semua sudah lunas. 👍</p>
+        </div>
+      </section>
+
+      <!-- ============ HARI INI (absensi snack + lunch) ============ -->
+      <section class="page" id="page-hari"></section>
+
+      <!-- ============ KUSTOMISASI MINGGUAN ============ -->
+      <section class="page" id="page-custom"></section>
+
+      <!-- ============ PO ============ -->
+      <section class="page" id="page-po">
+        <div class="toolbar">
+          <div class="ctl">
+            <span>Bulan</span>
+            <button type="button" class="date-field date-field-sm" id="poMonthBtn" data-act="open-cal" data-field="poMonth">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+              <span id="poMonthText"></span>
+            </button>
+          </div>
+          <label class="ctl"><span>Pembayaran</span>
+            <select id="poFilter" class="input input-sm">
+              <option value="all">Semua</option>
+              <option value="paid">Lunas</option>
+              <option value="unpaid">Belum Lunas</option>
+            </select>
+          </label>
+          <label class="ctl"><span>Proses</span>
+            <select id="poProcess" class="input input-sm">
+              <option value="all">Semua</option>
+              <option value="belum">Belum diproses</option>
+              <option value="siap">Siap diambil</option>
+              <option value="kirim">Dikirim</option>
+            </select>
+          </label>
+          <label class="ctl ctl-wide"><span>Cari</span>
+            <input type="text" id="poSearch" class="input input-sm" placeholder="Cari nama / menu…">
+          </label>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" data-act="po-print-month">Cetak Rekap PO</button>
+          <button class="btn btn-accent btn-sm" data-act="po-group-add">+ Pesanan Kelompok</button>
+          <button class="btn btn-primary" data-act="po-menu-add">+ Tambah Menu PO</button>
+        </div>
+
+        <div class="stat-grid" id="poStats"></div>
+
+        <div class="card">
+          <div class="card-head"><h3>Menu PO</h3><span class="muted tiny" id="poMenuCount"></span></div>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Tanggal</th><th>Menu</th><th class="num">Harga</th><th class="num">Pembeli</th><th class="num">Total</th><th class="end">Aksi</th></tr></thead>
+            <tbody id="poMenuList"></tbody>
+          </table></div>
+          <p class="empty" id="poMenuEmpty" hidden>Belum ada menu PO. Klik "Tambah Menu PO" untuk mulai.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Pembeli PO</h3><span class="muted tiny" id="poCount"></span></div>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Tanggal</th><th>Nama</th><th>Menu</th><th class="num">Jml</th><th class="num">Harga</th><th class="num">Total</th><th class="c">Bayar</th><th class="c">Status</th><th class="end"></th></tr></thead>
+            <tbody id="poList"></tbody>
+          </table></div>
+          <p class="empty" id="poEmpty" hidden>Belum ada pembeli PO.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span></div>
+          <p class="muted tiny" style="margin:-6px 0 10px">Satu organisasi yang memesan banyak porsi — dicatat per tanggal ambil; uang muka dipakai melunasi tanggal paling awal sampai habis.</p>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Kelompok / lembaga</th><th>Tanggal ambil</th><th class="num">Porsi</th><th class="num">Nilai</th><th class="c">Lunas</th><th class="end">Aksi</th></tr></thead>
+            <tbody id="poGroupList"></tbody>
+          </table></div>
+          <p class="empty" id="poGroupEmpty" hidden>Belum ada pesanan kelompok. Klik "Pesanan Kelompok" untuk mencatat sekolah, kantor, atau komunitas yang pesan banyak.</p>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-head"><h3>Nilai PO per Bulan</h3><span class="muted tiny">12 bulan terakhir</span></div>
+          <canvas id="chartPOMonth" height="200"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-head"><h3>Nilai PO per Tahun</h3><span class="muted tiny">5 tahun terakhir</span></div>
+          <canvas id="chartPO" height="200"></canvas>
+        </div>
+        <iframe class="offscreen" id="poFrame" title="Pratinjau cetak PO"></iframe>
+      </section>
+
+      <!-- ============ LAPORAN ============ -->
+      <section class="page" id="page-report">
+        <div class="toolbar toolbar-center">
+          <select id="rptClass" class="input input-sm"><option value="">Semua kelas</option></select>
+          <button type="button" class="date-field date-field-sm" id="rptMonthBtn" data-act="open-cal" data-field="rptMonth">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+            <span id="rptMonthText"></span>
+          </button>
+          <label class="check" style="margin:0"><input type="checkbox" id="rptAllTime" checked> Semua waktu</label>
+          <input type="text" id="rptSearch" class="input input-sm" placeholder="Cari nama / kelas…">
+          <select id="rptSort" class="input input-sm">
+            <option value="sisa">Urutkan: Belum bayar</option>
+            <option value="tagihan">Urutkan: Total tagihan</option>
+            <option value="nama">Urutkan: Nama</option>
+          </select>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" data-act="csv-report">Ekspor CSV</button>
+          <button class="btn btn-accent btn-sm" data-act="report-print">Cetak Rekap</button>
+        </div>
+
+        <div class="stat-grid" id="rptStats"></div>
+
+        <div class="card">
+          <div class="card-head"><h3>Rekap per Pelanggan</h3><span class="muted tiny" id="rptScope"></span></div>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Nama</th><th>Kelas</th><th class="num">Snack</th><th class="num">Lunch</th><th class="num">PO</th><th class="num">Tagihan</th><th class="num">Dibayar</th><th class="num">Sisa</th><th class="end">Rinci</th></tr></thead>
+            <tbody id="rptList"></tbody>
+          </table></div>
+          <p class="empty" id="rptEmpty" hidden>Belum ada pesanan pada periode ini.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Tagihan per Orang Tua / Pengenal</h3><span class="muted tiny" id="rptParentCount"></span>
+            <button class="btn btn-ghost btn-sm" data-act="csv-parents">Ekspor CSV</button>
+          </div>
+          <p class="muted small">Centang nama pengenal untuk memilih semua anaknya sekaligus, atau centang anak tertentu — tagihan yang <strong>belum dibayar</strong> bisa disalin sebagai teks atau disimpan sebagai gambar.</p>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Nama orang tua / pengenal</th><th>Rincian anak (centang)</th><th class="num">Tagihan</th><th class="num">Dibayar</th><th class="num">Sisa</th></tr></thead>
+            <tbody id="rptParentList"></tbody>
+          </table></div>
+          <p class="empty" id="rptParentEmpty" hidden>Belum ada tagihan pada periode ini.</p>
+          <div class="bill-panel" id="billPanel" hidden></div>
+          <div class="card-head" style="margin-top:18px"><h3>Grafik Tagihan vs Dibayar</h3><span class="muted tiny">merah: tagihan • hijau: dibayar • 8 teratas</span></div>
+          <canvas id="chartParent" height="200"></canvas>
+        </div>
+
+        <iframe class="offscreen" id="reportFrame" title="Pratinjau cetak laporan"></iframe>
+      </section>
+
+      <section class="page" id="page-pengingat">
+        <div class="stat-grid" id="remStats"></div>
+
+        <div class="card">
+          <div class="card-head"><h3>Pengingat Saya</h3><span class="muted tiny" id="remCount"></span></div>
+          <p class="muted tiny">Buat pengingat sekali, mingguan, atau bulanan — mis. "belanja bahan tiap Jumat", "tagih langganan bulanan tanggal 5", "cek pesanan PO".</p>
+          <div class="rem-form">
+            <input type="text" id="remText" class="input" placeholder="Isi pengingat…" maxlength="120">
+            <label class="ctl"><span>Tanggal</span><input type="date" id="remDate" class="input input-sm"></label>
+            <label class="ctl"><span>Jam (opsional)</span><input type="time" id="remTime" class="input input-sm"></label>
+            <label class="ctl"><span>Ulangi</span>
+              <select id="remRepeat" class="input input-sm">
+                <option value="once">Sekali</option>
+                <option value="weekly">Tiap minggu</option>
+                <option value="monthly">Tiap bulan</option>
+              </select>
+            </label>
+            <button type="button" class="btn btn-primary btn-sm" data-act="rem-add">Tambah</button>
+          </div>
+          <div class="rem-list" id="remList"></div>
+          <p class="empty" id="remEmpty" hidden>Belum ada pengingat. Tambahkan satu di atas.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Tagihan Menunggak → WhatsApp</h3><span class="head-tools"><span class="scope-chip" title="Daftar ini menghitung semua periode, bukan hanya bulan terpilih seperti di Laporan">sepanjang waktu</span><span class="muted tiny" id="waCount"></span><button class="btn btn-ghost btn-sm" data-act="wa-copy-all">Salin Semua</button></span></div>
+          <p class="muted tiny">Dihitung dari <strong>sepanjang waktu</strong> (berbeda dari Laporan yang bisa difilter per bulan), digabung per orang tua — pesanan kelompok / lembaga juga ikut ditagih di sini. Tombol Kirim WA membuka WhatsApp dengan pesan siap kirim; kalau No. HP belum diisi, pesan otomatis disalin.</p>
+          <div class="table-wrap"><table class="table wa-table">
+            <thead><tr><th>Penunggak</th><th>No. HP</th><th>Periode tunggakan</th><th class="num">Sisa</th><th class="end">Aksi</th></tr></thead>
+            <tbody id="waList"></tbody>
+          </table></div>
+          <p class="empty" id="waEmpty" hidden>Semua tagihan sudah lunas.</p>
+        </div>
+      </section>
+
+      <!-- ============ STIKER ============ -->
+      <section class="page" id="page-stiker">
+        <div class="split split-stiker">
+          <div class="card panel preview-panel">
+            <div class="card-head"><h3>Pratinjau (A4)</h3><span class="muted tiny" id="stickerCount"></span></div>
+            <iframe class="preview-frame" id="stickerFrame" title="Pratinjau stiker"></iframe>
+            <div class="sticker-actions">
+              <button class="btn btn-primary" data-act="sticker-preview">Perbarui Pratinjau</button>
+              <button class="btn btn-accent" data-act="sticker-print">Cetak / Simpan PDF</button>
+            </div>
+          </div>
+          <div class="card panel sticker-controls">
+            <h3>Buat Stiker Nama</h3>
+            <div class="field">
+              <span>Tanggal stiker — <strong id="stickerDateLabel"></strong></span>
+            </div>
+            <div class="cal-inline" id="stickerCal"></div>
+            <p class="muted tiny" style="margin:6px 0 12px">Pilih tanggal untuk memuat daftar pelanggan yang memesan snack / lunch pada hari itu.</p>
+            <div class="sticker-actions">
+              <button class="btn btn-ghost btn-sm" data-act="sticker-select-all">Pilih semua</button>
+              <button class="btn btn-ghost btn-sm" data-act="sticker-clear">Kosongkan</button>
+            </div>
+            <label class="field">
+              <span>Filter pesanan</span>
+              <select id="stickerType" class="input">
+                <option value="all">Semua — snack &amp; lunch</option>
+                <option value="snack">Hanya Snack</option>
+                <option value="lunch">Hanya Lunch</option>
+              </select>
+            </label>
+            <div class="customer-check-list" id="stickerCustomerList"></div>
+
+            <label class="field">
+              <span>Ukuran stiker</span>
+              <select id="stickerSize" class="input">
+                <option value="2x7">Besar — 2 kolom × 7 baris</option>
+                <option value="3x8">Sedang — 3 kolom × 8 baris</option>
+                <option value="4x10">Kecil — 4 kolom × 10 baris</option>
+                <option value="5x12" selected>Rapat — 5 kolom × 12 baris</option>
+              </select>
+              <span class="muted tiny">Font dibuat mengisi kotak; jarak antar stiker nihil agar hemat dan mudah digunting.</span>
+            </label>
+            <label class="field">
+              <span>Konten stiker</span>
+              <select id="stickerContent" class="input">
+                <option value="nameclass">Nama + Kelas</option>
+                <option value="name">Nama saja</option>
+                <option value="namamark">Nama + Kelas + penanda alergi</option>
+                <option value="namealg">Nama + tulisan alergi</option>
+              </select>
+              <span class="muted tiny" id="stickerMarkNote">Penanda alergi = lingkaran merah bertanda "!" di pojok kanan bawah kotak, tanpa tulisan — isinya tetap bisa dilihat di aplikasi.</span>
+            </label>
+            <div class="stk-font">
+              <div class="stk-font-title">Font stiker</div>
+              <div class="stk-font-row">
+                <span class="stk-font-tag">Nama</span>
+                <select id="stickerNameFont" class="input input-sm">
+                  <option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option>
+                  <option value="round">Rounded</option><option value="narrow">Narrow</option>
+                </select>
+                <input type="range" id="stickerNameScale" min="70" max="140" step="5" value="100" title="Skala ukuran font nama">
+                <span class="stk-font-val" id="stickerNameScaleVal">100%</span>
+              </div>
+              <div class="stk-font-row">
+                <span class="stk-font-tag">Kelas</span>
+                <select id="stickerClsFont" class="input input-sm">
+                  <option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option>
+                  <option value="round">Rounded</option><option value="narrow">Narrow</option>
+                </select>
+                <input type="range" id="stickerClsScale" min="40" max="160" step="5" value="100" title="Skala ukuran font kelas">
+                <span class="stk-font-val" id="stickerClsScaleVal">100%</span>
+              </div>
+              <div class="stk-font-row">
+                <span class="stk-font-tag">Isi sel</span>
+                <input type="range" id="stickerCellPad" min="0" max="100" step="5" value="25" title="Jarak kosong di dalam kotak stiker antara tulisan dan garis potong" style="grid-column:2/4">
+                <span class="stk-font-val" id="stickerCellPadVal">25%</span>
+              </div>
+              <p class="muted tiny">"Isi sel" = ruang kosong di dalam kotak antara tulisan dan garis potong; font otomatis mengecil mengikuti ruang ini. 100% = font mengisi kotak.</p>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="stickerBrand"> Tampilkan nama usaha
+            </label>
+            <div class="stk-font-row" id="stickerBrandRow">
+              <span class="stk-font-tag">Usaha</span>
+              <select id="stickerBrandFont" class="input input-sm">
+                <option value="sans">Sans</option><option value="serif">Serif</option><option value="mono">Mono</option>
+                <option value="round">Rounded</option><option value="narrow">Narrow</option>
+              </select>
+              <input type="range" id="stickerBrandScale" min="40" max="200" step="5" value="100" title="Ukuran font nama usaha">
+              <span class="stk-font-val" id="stickerBrandScaleVal">100%</span>
+            </div>
+            <label class="check">
+              <input type="checkbox" id="stickerLines"> Tampilkan garis potong
+            </label>
+            <div class="stk-font-row" id="stickerLineRow">
+              <span class="stk-font-tag">Garis</span>
+              <select id="stickerLineW" class="input input-sm">
+                <option value="1">Halus</option>
+                <option value="2" selected>Sedang</option>
+                <option value="3">Tebal</option>
+                <option value="5">Sangat tebal</option>
+              </select>
+              <span class="stk-font-val" id="stickerLineVal">2 px</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ SATPAM ============ -->
+      <section class="page" id="page-satpam">
+        <div class="split">
+          <div class="card panel">
+            <h3>Kertas Konfirmasi / Penerimaan</h3>
+            <label class="field">
+              <span>Tanggal</span>
+              <button type="button" class="date-field" id="satpamDateBtn" data-act="open-cal" data-field="satpam">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+                <span id="satpamDateText"></span>
+              </button>
+            </label>
+            <label class="field">
+              <span>Jenis</span>
+              <select id="satpamType" class="input">
+                <option value="snack">Snack</option>
+                <option value="lunch">Lunch</option>
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="satpamShowClass" checked> Tampilkan kolom kelas
+            </label>
+            <div class="sticker-actions">
+              <button class="btn btn-primary" data-act="satpam-preview">Perbarui Pratinjau</button>
+              <button class="btn btn-accent" data-act="satpam-print">Cetak / Simpan PDF</button>
+            </div>
+            <p class="muted tiny">Hanya pelanggan yang terdata pesan pada tanggal tersebut yang muncul.</p>
+          </div>
+          <div class="card panel preview-panel">
+            <div class="card-head"><h3>Pratinjau (A4)</h3><span class="muted tiny" id="satpamCount"></span></div>
+            <iframe class="preview-frame" id="satpamFrame" title="Pratinjau kertas konfirmasi"></iframe>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ HARI LIBUR ============ -->
+      <section class="page" id="page-libur">
+        <div class="split">
+          <div class="card panel">
+            <h3>Tandai Hari Libur</h3>
+            <p class="muted small">Pelanggan yang sedang libur tidak akan ikut terisi saat <em>Isi Default</em> dan ditandai <em>Libur</em> di halaman harian.</p>
+            <div class="cal-inline" id="liburCal"></div>
+            <p class="muted tiny" style="margin:8px 0 14px">Tanggal terpilih: <strong id="liburDateLabel"></strong></p>
+            <label class="field"><span>Berlaku untuk</span>
+              <select id="holidayScope" class="input">
+                <option value="all">Semua orang</option>
+                <option value="cohort">Angkatan (mis. P1, atau 11 untuk kelas 11B)</option>
+                <option value="class">Kelas tertentu</option>
+                <option value="person">Orang tertentu</option>
+              </select>
+            </label>
+            <label class="field" id="holidayValueField"><span>Pilih target</span>
+              <select id="holidayValue" class="input"></select>
+            </label>
+            <label class="field"><span>Catatan (opsional)</span><input type="text" id="holidayNote" class="input" placeholder="cth: libur nasional"></label>
+            <div class="sticker-actions"><button class="btn btn-primary" data-act="holiday-add">Tambah libur</button></div>
+          </div>
+          <div class="card panel">
+            <div class="card-head"><h3>Daftar Libur</h3><span class="muted tiny" id="holidayCount"></span></div>
+            <div class="table-wrap"><table class="table">
+              <thead><tr><th>Tanggal</th><th>Lingkup</th><th>Untuk</th><th>Catatan</th><th class="end"></th></tr></thead>
+              <tbody id="holidayList"></tbody>
+            </table></div>
+            <p class="empty" id="holidayEmpty" hidden>Belum ada hari libur.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ LOG AKTIVITAS ============ -->
+      <section class="page" id="page-log">
+        <div class="card">
+          <div class="card-head">
+            <h3>Log Aktivitas</h3>
+            <div class="log-filters">
+              <select id="logAction" class="input input-sm"><option value="">Semua aksi</option></select>
+              <input type="month" id="logMonth" class="input input-sm">
+              <input type="text" id="logSearch" class="input input-sm" placeholder="Cari di detail…">
+              <button class="btn btn-ghost btn-sm" data-act="log-clear">Bersihkan</button>
+            </div>
+          </div>
+          <span class="muted tiny" id="logCount"></span>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Waktu</th><th>Aksi</th><th>Detail</th><th class="end">Urungkan</th></tr></thead>
+            <tbody id="logList"></tbody>
+          </table></div>
+          <p class="empty" id="logEmpty" hidden>Belum ada aktivitas tercatat.</p>
+        </div>
+      </section>
+
+      <!-- ============ PENGATURAN ============ -->
+      <section class="page" id="page-settings">
+        <div class="card">
+          <div class="card-head">
+            <h3>Daftar Pelanggan</h3>
+            <span class="muted tiny" id="custNote"></span>
+            <button class="btn btn-primary btn-sm" data-act="customer-add">+ Tambah Pelanggan</button>
+          </div>
+          <div class="toolbar toolbar-sm">
+            <label class="ctl ctl-wide"><span>Cari</span>
+              <input type="text" id="custSearch" class="input input-sm" placeholder="Nama / kelas / orang tua…">
+            </label>
+            <label class="ctl"><span>Jenjang</span><select id="custLevelFilter" class="input input-sm"></select></label>
+            <label class="ctl"><span>Angkatan</span><select id="custCohortFilter" class="input input-sm"></select></label>
+            <label class="ctl ctl-wide"><span>Kelas</span><select id="custClassFilter" class="input input-sm"></select></label>
+            <label class="ctl"><span>Status</span>
+              <select id="custStatus" class="input input-sm">
+                <option value="all">Semua status</option>
+                <option value="aktif">Aktif — masih langganan</option>
+                <option value="selesai">Selesai — sudah tamat</option>
+                <option value="berhenti">Berhenti — tidak pesan dulu</option>
+              </select>
+            </label>
+            <label class="check" title="Pusatkan daftar pada anak yang masih berlangganan"><input type="checkbox" id="custOnlyActive" checked> Hanya yang aktif</label>
+            <button class="btn btn-ghost btn-sm" data-act="cust-filter-reset">Reset</button>
+          </div>
+          <p class="muted tiny">Status menentukan apakah anak ikut terisi otomatis pada pesanan berikutnya: <strong>Aktif</strong> masih berlangganan · <strong>Selesai</strong> sudah tamat / pindah (riwayat &amp; tagihan tetap tersimpan) · <strong>Berhenti</strong> sementara tidak pesan.</p>
+          <div class="bulk-bar" id="custBulk" hidden>
+            <span class="tiny" id="custSelCount"></span>
+            <span class="spacer"></span>
+            <button class="btn btn-ghost btn-sm" data-act="cust-bulk" data-to="aktif">Aktifkan</button>
+            <button class="btn btn-ghost btn-sm" data-act="cust-bulk" data-to="selesai">Tandai selesai</button>
+            <button class="btn btn-ghost btn-sm" data-act="cust-bulk" data-to="berhenti">Berhentikan</button>
+            <button class="btn btn-danger btn-sm" data-act="cust-bulk" data-to="delete">Hapus</button>
+            <button class="btn btn-ghost btn-sm" data-act="cust-clear-sel">Batal pilih</button>
+          </div>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th class="chk-col"><input type="checkbox" id="custCheckAll" title="Pilih semua yang tampil"></th><th>Nama</th><th>Kelas</th><th>Orang Tua</th><th>Alergi / Preferensi</th><th>Periode</th><th>Snack</th><th>Lunch</th><th>Status</th><th class="end"></th></tr></thead>
+            <tbody id="customerList"></tbody>
+          </table></div>
+          <p class="empty" id="customerEmpty" hidden>Belum ada pelanggan. Tambahkan untuk memulai.</p>
+        </div>
+
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-head"><h3>Informasi Usaha</h3></div>
+            <label class="field"><span>Nama usaha</span><input type="text" id="setName" class="input"></label>
+            <label class="field"><span>Tagline</span><input type="text" id="setTagline" class="input"></label>
+            <div class="pkg-pair">
+              <label class="field"><span>Bank / e-wallet</span><input type="text" id="setBankName" class="input" placeholder="mis. BCA" autocomplete="off"></label>
+              <label class="field"><span>No. rekening</span><input type="text" id="setBankNumber" class="input" placeholder="mis. 1234567890" autocomplete="off"></label>
+            </div>
+            <label class="field"><span>Atas nama</span><input type="text" id="setBankHolder" class="input" placeholder="nama pemilik rekening" autocomplete="off"></label>
+            <p class="muted tiny">Dipakai sebagai alamat pembayaran pada invoice pesanan kelompok. Nomor invoice terbit otomatis dan urut (INV/tahun/bulan/001).</p>
+            <label class="field"><span>Periode langganan default</span>
+              <select id="setPeriod" class="input">
+                <option value="weekly">Mingguan</option>
+                <option value="monthly">Bulanan</option>
+                <option value="semester">Semester</option>
+              </select>
+            </label>
+            <button class="btn btn-primary" data-act="settings-save">Simpan</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Pengingat WhatsApp</h3></div>
+            <label class="field"><span>Kode negara (untuk nomor 08…)</span><input type="text" id="setWaCountry" class="input" style="max-width:140px" placeholder="62"></label>
+            <label class="field"><span>Format pesan tagihan</span><textarea id="setWaTemplate" class="input" rows="6"></textarea></label>
+            <p class="muted tiny">Placeholder: {orang} {anak} {usaha} {rincian} {sisa} {terakhir} {umur}=lama menunggak dalam hari, {jatuh_tempo} dan {invoice} (hanya terisi untuk pesanan kelompok), {rekening}=rekening usaha di Pengaturan › Informasi Usaha.</p>
+            <button class="btn btn-primary btn-sm" data-act="wa-save">Simpan Format</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Metode Pembayaran</h3></div>
+            <div class="method-list" id="methodList"></div>
+            <div class="inline-add">
+              <input type="text" id="newMethod" class="input" placeholder="Metode baru…">
+              <button class="btn btn-ghost" data-act="method-add">Tambah</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Tampilan Aplikasi</h3></div>
+            <label class="field"><span>Jenis huruf</span>
+              <select id="setUiFont" class="input">
+                <option value="default">Bawaan</option>
+                <option value="sans">Sans — Segoe UI</option>
+                <option value="serif">Serif — Georgia</option>
+                <option value="mono">Mono — Consolas</option>
+                <option value="round">Rounded — Trebuchet</option>
+                <option value="narrow">Narrow — Arial Narrow</option>
+              </select>
+            </label>
+            <div class="stk-font">
+              <div class="stk-font-title">Ukuran teks</div>
+              <div class="stk-font-row">
+                <span class="stk-font-tag">Skala</span>
+                <input type="range" id="setUiZoom" min="85" max="130" step="5" value="100" title="Perbesar atau perkecil seluruh teks">
+                <span class="stk-font-val" id="setUiZoomVal">100%</span>
+              </div>
+              <p class="muted tiny">Langsur berlaku di semua halaman dan tersimpan. Hasil cetak (stiker, konfirmasi, laporan) tetap memakai ukurannya sendiri.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" data-act="ui-reset-style">Kembalikan ke bawaan</button>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head"><h3>Paket Harga</h3></div>
+            <p class="muted small">Paket hanya berisi <strong>nama tingkatan + harga</strong> — misalnya Snack Sedang Rp 6.000. Makanannya mengikuti menu harian, jadi satu paket bisa berisi makanan berbeda tiap hari.</p>
+            <div class="menu-cat">
+              <div class="cat-title">Paket Snack</div>
+              <div class="pkg-list" id="pkgSnackList"></div>
+              <div class="inline-add">
+                <input type="text" id="newPkgSnackName" class="input" placeholder="Nama paket…">
+                <input type="number" id="newPkgSnackPrice" class="input pkg-price" placeholder="Harga" min="0">
+                <button class="btn btn-ghost" data-act="pkg-add" data-which="snack">Tambah</button>
+              </div>
+            </div>
+            <div class="menu-cat">
+              <div class="cat-title">Paket Lunch</div>
+              <div class="pkg-list" id="pkgLunchList"></div>
+              <div class="inline-add">
+                <input type="text" id="newPkgLunchName" class="input" placeholder="Nama paket…">
+                <input type="number" id="newPkgLunchPrice" class="input pkg-price" placeholder="Harga" min="0">
+                <button class="btn btn-ghost" data-act="pkg-add" data-which="lunch">Tambah</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Backup Data</h3></div>
+            <p class="muted small">Simpan cadangan data ke file, atau pulihkan dari file. Disarankan rutin sebelum ganti perangkat.</p>
+            <div class="sticker-actions">
+              <button class="btn btn-primary" data-act="export">Unduh JSON</button>
+              <button class="btn btn-ghost" data-act="import">Pulihkan dari JSON</button>
+              <input type="file" id="importFile" accept="application/json" hidden>
+            </div>
+            <div class="card-head" style="margin-top:16px">
+              <h3>Cadangan harian di perangkat</h3>
+              <button class="btn btn-ghost btn-sm" data-act="backup-now">Cadangkan Sekarang</button>
+            </div>
+            <p class="muted tiny" id="backupNote"></p>
+            <div class="backup-list" id="backupList"></div>
+            <button class="btn btn-danger btn-sm" data-act="reset" style="margin-top:12px">Reset semua data</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Data Contoh (Demo)</h3></div>
+            <p class="muted small">Muat data palsu untuk mencoba semua fitur: pelanggan, absensi 3 minggu, menu mingguan, PO lintas tahun, libur. Data saat ini akan diganti.</p>
+            <button class="btn btn-ghost" data-act="demo-load">Muat Data Contoh</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden></div>
+<div class="cal-overlay" id="calOverlay" hidden><div class="cal-card" id="calCard"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
