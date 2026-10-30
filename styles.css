@@ -1,5 +1,5 @@
 /* =========================================================
-   Lovely Kitchen — tema futuristik (gelap default + mode terang)
+   Catatan Katering — tema (gelap default + mode terang)
    ========================================================= */
 :root{
   color-scheme:light;
@@ -641,9 +641,9 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .custom-table tbody td.cell.is-leave{background:var(--gold-soft)}
 .custom-table tbody td.cell.is-leave:hover{background:var(--gold-soft)}
 /* ===== Halaman "Hari Ini": snack + lunch dalam satu tabel ===== */
-.table-daily{min-width:1060px}
+.table-daily{min-width:900px}
 .table-daily th,.table-daily td{padding:6px 5px}
-.table-daily .sticky-col{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:1px 0 0 var(--border);min-width:154px;width:154px}
+.table-daily .sticky-col{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:1px 0 0 var(--border);min-width:170px;width:170px}
 .table-daily thead .sticky-col{z-index:3}
 .table-daily tbody tr:nth-child(even) .sticky-col{background:var(--surface-2)}
 .table-daily .d-cls{color:var(--muted);font-size:11.5px;font-weight:600;white-space:nowrap}
@@ -652,16 +652,19 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .table-daily th.grp-snack{color:var(--primary-dark);background:var(--primary-soft)}
 .table-daily th.grp-lunch{color:var(--accent-dark);background:var(--accent-soft)}
 .table-daily th.grp-day{color:var(--muted);background:var(--surface-2)}
-.table-daily .sel-pkg{width:96px}
-.table-daily .sel-method{width:94px}
-.table-daily .inp-note{width:112px}
-.table-daily .food-cell{width:132px;max-width:132px}
+.table-daily .sel-pkg{width:100px}
+.table-daily .inp-note{width:170px}
+.table-daily .food-cell{width:190px;max-width:190px}
 .table-daily .food-cell .food-chip{max-width:100%;padding:2px 5px;font-size:10.5px;overflow:hidden;white-space:nowrap;display:flex}
-.table-daily .state-pill{font-size:9.5px;padding:1px 6px}
 .table-daily tr.is-lunas .sticky-col,.table-daily tr.is-gratis .sticky-col{box-shadow:inset 3px 0 0 var(--accent),1px 0 0 var(--border)}
+.table-daily td.day-total{width:150px}
 .pay-day{display:block;margin:3px auto 0;border:1px solid var(--danger);color:var(--danger);background:transparent;
   border-radius:999px;font-size:10.5px;font-weight:700;padding:2px 8px;cursor:pointer;font-variant-numeric:tabular-nums;font-family:inherit;transition:.14s}
 .pay-day:hover{background:var(--danger);color:#fff}
+.pay-cfg{display:inline-grid;place-items:center;width:22px;height:22px;margin:4px auto 0;padding:0;border:1px solid var(--border);
+  border-radius:7px;background:var(--surface-2);color:var(--muted);cursor:pointer;transition:.14s}
+.pay-cfg:hover{color:var(--primary);border-color:var(--primary)}
+.pay-cfg svg{width:12px;height:12px}
 .custom-table td.is-leave select{border-color:var(--gold)}
 
 /* ===== Display paket ===== */
@@ -768,13 +771,7 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 .redo-btn.is-ready{opacity:1;border-color:var(--primary);color:var(--primary-dark);background:var(--primary-soft)}
 .redo-btn.is-ready:hover{background:var(--primary);color:#fff;border-color:transparent}
 
-/* ===== Status lunas / gratis ===== */
-.state-pill{display:block;width:max-content;max-width:100%;margin:5px auto 0;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;
-  background:var(--accent-soft);color:var(--accent-dark);letter-spacing:.3px;vertical-align:middle}
-.state-pill.is-belum{background:var(--danger-soft);color:var(--danger)}
-.state-pill.is-kosong{background:var(--surface-2);color:var(--muted);font-weight:600;letter-spacing:0}
-.table tr.is-lunas .chk-paid,.table tr.is-gratis .chk-paid{accent-color:var(--accent)}
-.table tr.is-lunas .sel-method,.table tr.is-gratis .sel-method{color:var(--accent-dark);border-color:rgba(31,157,116,.45);font-weight:700}
+/* ===== Baris lunas / belum pada tabel harian ===== */
 .table tr.is-lunas td:first-child,.table tr.is-gratis td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .table tr.is-belum td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
 
@@ -881,3 +878,18 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 .hub-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hub-txt strong{font-size:13px;font-weight:700;color:var(--text)}
 .hub-txt span{font-size:11px;line-height:1.35;color:var(--muted)}
+
+/* Halaman Cetak (stiker + kertas konfirmasi) */
+.print-seg{width:max-content;margin-bottom:14px}
+.print-mode[hidden]{display:none}
+
+/* Blok libur di kartu Menu, Beranda */
+.libur-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 8px}
+.libur-bar .muted{margin-left:auto}
+.libur-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.libur-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--danger-soft);color:var(--danger);font-size:11px;font-weight:700}
+.libur-chip em{font-style:normal;font-weight:600;opacity:.8}
+.chip-x{width:16px;height:16px;padding:0;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;
+  font-size:14px;line-height:1;display:grid;place-items:center;font-family:inherit}
+.chip-x:hover{background:var(--danger);color:#fff}

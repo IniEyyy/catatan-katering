@@ -1,14 +1,30 @@
 /* =========================================================
-   Lovely Kitchen — Catatan Usaha Catering (offline)
+   Catatan Katering — pencatat snack & lunch sekolah (offline)
    Data tersimpan di localStorage perangkat ini.
    ========================================================= */
 
 'use strict';
 
 /* ---------- Data & penyimpanan ---------- */
-const DB_KEY = 'lovely_kitchen_data_v1';
-const UNDO_KEY = 'lovely_kitchen_undo_v1';
-const REDO_KEY = 'lovely_kitchen_redo_v1';
+const STORE_PREFIX = 'catatan_katering_';
+const DB_KEY = STORE_PREFIX + 'data_v1';
+const UNDO_KEY = STORE_PREFIX + 'undo_v1';
+const REDO_KEY = STORE_PREFIX + 'redo_v1';
+
+/* Kunci penyimpanan memakai nama proyek sebelum diganti. Sekali dibaca lalu dipindah,
+   supaya data pemilik tetap ada setelah proyek berganti nama. */
+const LEGACY_PREFIX = 'lovely_kitchen_';
+function migrateStoreKeys() {
+  try {
+    ['data_v1', 'ui_v1', 'backups_v1', 'undo_v1', 'redo_v1'].forEach(suffix => {
+      const from = LEGACY_PREFIX + suffix, to = STORE_PREFIX + suffix;
+      const oldVal = localStorage.getItem(from);
+      if (oldVal !== null && localStorage.getItem(to) === null) localStorage.setItem(to, oldVal);
+      if (oldVal !== null) localStorage.removeItem(from);
+    });
+  } catch (e) { /* localStorage tidak bisa dipakai */ }
+}
+migrateStoreKeys();
 const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const MONTHS_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
@@ -46,8 +62,8 @@ function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.sli
 function defaultData() {
   return {
     settings: {
-      businessName: 'Lovely Kitchen',
-      tagline: 'Catering & Snack',
+      businessName: 'Nama Usaha',
+      tagline: 'Catatan Snack & Lunch',
       priceSnack: 5000,
       priceLunch: 15000,
       packages: [], // { id, type:'snack'|'lunch', name, price } — paket = tingkatan harga; makanannya dari menu harian
@@ -488,6 +504,7 @@ loadUndo();
 /* ---------- State ---------- */
 const state = {
   page: 'dashboard',
+  printMode: 'stiker',
   currentDate: todayStr(),
   unpaidAll: false,      // "Buka semua" pada daftar Belum Lunas
   unpaidOpen: null,      // null = otomatis (hanya minggu terbaru), selain itu Set tanggal Senin yang dibuka
@@ -497,8 +514,6 @@ const state = {
   rptMonth: monthKey(todayStr()),
   stickerDate: todayStr(),
   stickerMonth: monthKey(todayStr()),
-  holidayDate: todayStr(),
-  holidayMonth: monthKey(todayStr()),
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
@@ -1060,7 +1075,7 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Seminggu', po: 'Pre-Order (PO)', report: 'Laporan', pengingat: 'Pengingat & Tagihan', stiker: 'Stiker', satpam: 'Kertas Konfirmasi', libur: 'Hari Libur', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Seminggu', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
 function showPage(name) {
   state.page = name;
@@ -1077,11 +1092,18 @@ function renderPage(name) {
   else if (name === 'po') renderPO();
   else if (name === 'report') renderReport();
   else if (name === 'pengingat') renderPengingat();
-  else if (name === 'stiker') { renderStickerCalendar(); renderStickerCustomers(); stickerPreview(); }
-  else if (name === 'satpam') satpamPreview();
-  else if (name === 'libur') renderLibur();
+  else if (name === 'print') renderPrint();
+  else if (name === 'customers') renderCustomers();
   else if (name === 'log') renderLog();
   else if (name === 'settings') renderSettings();
+}
+/* Halaman Cetak: stiker & kertas konfirmasi berbagi satu tempat, mode dipilih lewat toggle */
+function renderPrint() {
+  const mode = state.printMode === 'konfirmasi' ? 'konfirmasi' : 'stiker';
+  document.querySelectorAll('#page-print .print-mode').forEach(el => { el.hidden = el.dataset.mode !== mode; });
+  document.querySelectorAll('#page-print .print-seg .seg-btn').forEach(b => b.classList.toggle('is-on', b.dataset.mode === mode));
+  if (mode === 'stiker') { renderStickerCalendar(); renderStickerCustomers(); stickerPreview(); }
+  else satpamPreview();
 }
 
 /* ---------- Render: Beranda ---------- */
@@ -1149,6 +1171,7 @@ function renderDashboard() {
   renderWeekMenu();
   renderPkgShowcase();
   renderRemStrip();
+  renderHomeHoliday();
   renderHub();
 
   const months = lastMonths(6);
@@ -1244,7 +1267,7 @@ function renderHomeCalendar() {
       '<button type="button" class="cal-nav" data-act="home-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
     '</div>' +
     '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-    '<div class="cal-grid">' + buildDayGrid(y, mo, state.menuDate || '', todayStr(), homeDayDot, 'home-day') + '</div>';
+    '<div class="cal-grid">' + buildDayGrid(y, mo, state.menuDate || '', todayStr(), homeDayDot, 'home-day', '', holidayOn) + '</div>';
 }
 const WEEK_MENU_MAX = 6;
 function menuPlanItems(date) { return db.menuPlan[date] || []; }
@@ -1691,12 +1714,12 @@ function buildDailyMergedPage() {
       '<div class="table-wrap"><table class="table table-daily">' +
         '<thead>' +
           '<tr><th class="sticky-col" rowspan="2">Nama · kelas</th>' +
-            '<th colspan="3" class="grp grp-snack">Snack</th>' +
-            '<th colspan="3" class="grp grp-lunch">Lunch</th>' +
-            '<th colspan="3" class="grp grp-day">Hari ini</th></tr>' +
-          '<tr><th>Paket</th><th>Makanan / pesan</th><th class="c">Lunas</th>' +
-            '<th>Paket</th><th>Makanan / pesan</th><th class="c">Lunas</th>' +
-            '<th>Metode</th><th>Catatan</th><th class="num">Total</th></tr>' +
+            '<th colspan="2" class="grp grp-snack">Snack</th>' +
+            '<th colspan="2" class="grp grp-lunch">Lunch</th>' +
+            '<th colspan="2" class="grp grp-day">Hari ini</th></tr>' +
+          '<tr><th>Paket</th><th>Makanan / pesan</th>' +
+            '<th>Paket</th><th>Makanan / pesan</th>' +
+            '<th>Catatan</th><th class="num">Total &amp; bayar</th></tr>' +
         '</thead>' +
         '<tbody id="hariList"></tbody>' +
       '</table></div>' +
@@ -1756,14 +1779,6 @@ function fillCascadeFilters(store, prefix, customers, includeInactive) {
   store.cls = fillFilterSelect(prefix + 'ClassFilter', classPairs, 'Semua kelas', store.cls);
 }
 /* Catatan: satu baris = satu anak = satu hari; snack dan lunch berdampingan. */
-/* Pill status pembayaran — selalu ada supaya kolomnya tidak bolong-bolong */
-function statePill(rec) {
-  const free = rec.method === 'Gratis';
-  const done = !!rec.ordered && (!!rec.paid || free);
-  if (done) return { text: free ? 'Gratis' : 'Lunas', cls: '' };
-  if (rec.ordered) return { text: 'Belum', cls: ' is-belum' };
-  return { text: 'tidak pesan', cls: ' is-kosong' };
-}
 function dayRecords(cid, date) {
   const out = {};
   DAY_TYPES.forEach(t => { out[t] = (db[t][date] || {})[cid] || { ordered: false, paid: false, method: '', note: '', pkg: '' }; });
@@ -1786,7 +1801,7 @@ function daySummary(cid, date) {
     if (!note && r.note) note = r.note;
   });
   const cls = ordered === 0 ? '' : (unpaid === 0 ? (gratis === ordered ? 'is-gratis' : 'is-lunas') : 'is-belum');
-  return { recs: recs, value: value, unpaid: unpaid, ordered: ordered, gratis: gratis, method: method, note: note, cls: cls };
+  return { name: c ? c.name : '', recs: recs, value: value, unpaid: unpaid, ordered: ordered, gratis: gratis, method: method, note: note, cls: cls };
 }
 function dailyPkgCell(type, c, r) {
   const pkgs = pkgList(type);
@@ -1809,16 +1824,51 @@ function dailyFoodCell(type, date, c, r) {
     : '';
   return '<td class="food-cell' + (items.length ? '' : ' food-none') + '" data-type="' + type + '">' + chips + btn + '</td>';
 }
-function dailyPaidCell(type, r) {
-  const free = r.method === 'Gratis';
-  const w = statePill(r);
-  return '<td class="c paid-cell" data-type="' + type + '"><input type="checkbox" class="chk-paid" data-type="' + type + '" title="' + (free ? 'Gratis (0 Rp)' : 'Lunas') + '" ' +
-    ((r.paid || free) ? 'checked ' : '') + (r.ordered && !free ? '' : 'disabled ') + '>' +
-    '<span class="state-pill' + w.cls + '">' + w.text + '</span></td>';
-}
 function dayTotalHTML(s) {
   return '<strong>' + fmtIDR(s.value) + '</strong>' +
-    (s.unpaid > 0 ? '<button type="button" class="pay-day" data-act="daily-pay-day" title="Tandai lunas semua pesanan hari ini">' + fmtIDR(s.unpaid) + ' lunasi</button>' : '');
+    (s.unpaid > 0 ? '<button type="button" class="pay-day" data-act="daily-pay-day" title="Tandai lunas semua pesanan hari ini">' + fmtIDR(s.unpaid) + ' lunasi</button>' : '') +
+    '<button type="button" class="pay-cfg" data-act="daily-pay-cfg" title="Atur metode & lunas ' + escapeHtml(s.name) + '">' + ICO_EDIT + '</button>';
+}
+
+/* Pembayaran satu anak satu hari — kolom lunas/metode tidak lagi di tabel */
+function openDayPayModal(cid, date) {
+  const c = customerById(cid);
+  const s = daySummary(cid, date);
+  if (!c || !s.ordered) { toast('Anak ini belum memesan apa-apa pada tanggal itu'); return; }
+  const msel = '<select id="dpmMethod" class="input"><option value="">— belum dipilih —</option>' +
+    db.settings.paymentMethods.map(m => '<option value="' + escapeHtml(m) + '"' + (s.method === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('') + '</select>';
+  const line = (t, id) => {
+    const r = s.recs[t];
+    if (!r.ordered) return '<p class="muted tiny">' + TYPE_LABEL[t] + ': tidak pesan</p>';
+    return '<label class="check"><input type="checkbox" id="' + id + '"' + ((r.paid || r.method === 'Gratis') ? ' checked' : '') + '> ' +
+      TYPE_LABEL[t] + ' — <strong>' + fmtIDR(effPrice(t, r, c)) + '</strong> ' +
+      (r.method === 'Gratis' ? '<span class="badge gold">Gratis</span>' : '<span class="muted tiny">sudah lunas</span>') + '</label>';
+  };
+  openModal('<h3>Pembayaran — ' + escapeHtml(c.name) + '</h3>' +
+    '<p class="muted small">' + escapeHtml(fmtLong(date)) + ' · total ' + fmtIDR(s.value) +
+      (s.unpaid > 0 ? ' · sisa ' + fmtIDR(s.unpaid) : ' · semua sudah lunas') + '</p>' +
+    '<label class="field"><span>Metode (berlaku untuk snack &amp; lunch hari ini)</span>' + msel + '</label>' +
+    line('snack', 'dpmSnack') + line('lunch', 'dpmLunch') +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Tutup</button>' +
+    '<button type="button" class="btn btn-primary" data-act="daily-pay-save" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '">Simpan</button></div>');
+}
+function saveDayPay(cid, date) {
+  const c = customerById(cid);
+  if (!c) return;
+  const meth = (document.getElementById('dpmMethod') || {}).value || '';
+  const want = { snack: !!(document.getElementById('dpmSnack') || {}).checked, lunch: !!(document.getElementById('dpmLunch') || {}).checked };
+  DAY_TYPES.forEach(t => {
+    const r = (db[t][date] || {})[cid];
+    if (!r || !r.ordered) return;
+    if (meth) r.method = meth;
+    r.paid = meth === 'Gratis' ? true : !!want[t];
+  });
+  logAction('bayar', 'Atur pembayaran ' + c.name + ' @ ' + date + ' — ' + (meth || 'metode tetap'));
+  save();
+  closeModal();
+  syncMergedRow(document.querySelector('#hariList tr[data-cid="' + cid + '"]'));
+  renderDailyStats();
+  toast('Pembayaran ' + c.name + ' disimpan');
 }
 
 function renderDailyMerged() {
@@ -1846,16 +1896,10 @@ function renderDailyMerged() {
       const s = daySummary(c.id, date);
       const leave = isOnLeave(c, date);
       const clsCell = escapeHtml(c.className) + (leave ? ' <span class="badge red" title="Sedang libur">Libur</span>' : '');
-      const canPay = s.ordered > 0;
       return '<tr data-cid="' + c.id + '" class="' + s.cls + '">' +
         '<td class="sticky-col">' + escapeHtml(c.name) + ' <span class="d-cls">' + clsCell + '</span>' + allergyBadge(c) + '</td>' +
-        DAY_TYPES.map(t => dailyPkgCell(t, c, s.recs[t]) +
-          dailyFoodCell(t, date, c, s.recs[t]) +
-          dailyPaidCell(t, s.recs[t])).join('') +
-        '<td><select class="sel-method input input-sm"' + (canPay ? '' : ' disabled title="Centang pesan dulu"') + '><option value="">—</option>' +
-          db.settings.paymentMethods.map(m => '<option value="' + escapeHtml(m) + '"' + (s.method === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('') +
-          '</select></td>' +
-        '<td><input type="text" class="inp-note input input-sm" value="' + escapeHtml(s.note) + '" placeholder="' + (canPay ? 'Catatan hari ini…' : '—') + '"></td>' +
+        DAY_TYPES.map(t => dailyPkgCell(t, c, s.recs[t]) + dailyFoodCell(t, date, c, s.recs[t])).join('') +
+        '<td><input type="text" class="inp-note input input-sm" value="' + escapeHtml(s.note) + '" placeholder="' + (s.ordered ? 'Catatan hari ini…' : '—') + '"></td>' +
         '<td class="num day-total">' + dayTotalHTML(s) + '</td>' +
         '</tr>';
     }).join('');
@@ -1873,24 +1917,9 @@ function syncMergedRow(tr) {
     const r = s.recs[t];
     const fc = tr.querySelector('.food-cell[data-type="' + t + '"]');
     if (fc) fc.outerHTML = dailyFoodCell(t, date, customerById(cid), r);
-    const cell = tr.querySelector('.paid-cell[data-type="' + t + '"]');
-    if (cell) {
-      const chk = cell.querySelector('.chk-paid');
-      const free = r.method === 'Gratis';
-      chk.checked = !!(r.paid || free);
-      chk.disabled = !r.ordered || free;
-      chk.title = free ? 'Gratis (0 Rp)' : 'Lunas';
-      const pill = cell.querySelector('.state-pill');
-      const w = statePill(r);
-      pill.className = 'state-pill' + w.cls;
-      pill.textContent = w.text;
-    }
     const pk = tr.querySelector('.sel-pkg[data-type="' + t + '"]');
     if (pk && pk.options.length > 1) { const cur = pkgFor(t, r, customerById(cid)); if (cur) pk.value = cur.id; }
   });
-  const canPay = s.ordered > 0;
-  const ms = tr.querySelector('.sel-method');
-  if (ms) { ms.disabled = !canPay; ms.value = s.method || ''; }
   const tot = tr.querySelector('.day-total');
   if (tot) tot.innerHTML = dayTotalHTML(s);
 }
@@ -4001,9 +4030,9 @@ function renderWaList() {
         '<button class="btn btn-ghost btn-sm" data-act="wa-copy" data-i="' + i + '">Salin</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="wa-open" data-i="' + i + '">' + (g.groupId ? 'Detail PO' : 'Rincian') + '</button>' +
         (g.groupId ? '<button class="btn btn-ghost btn-sm" data-act="po-group-invoice" data-id="' + escapeHtml(g.groupId) + '">Invoice</button>' : '') +
-        '<button class="btn btn-ghost btn-sm" data-act="rem-prefill"' + (g.groupId ? ' data-id="' + escapeHtml(g.groupId) + '"' : '') +
+        '<button class="icon-act bell" data-act="rem-prefill"' + (g.groupId ? ' data-id="' + escapeHtml(g.groupId) + '"' : '') +
           ' data-text="' + escapeHtml('Tagih ' + g.who + ' — sisa ' + fmtIDR(g.total)) +
-          '" data-date="' + (g.due || shiftDate(todayStr(), 7)) + '" title="Buat pengingat menagih penunggak ini">+ Pengingat</button>' +
+          '" data-date="' + (g.due || shiftDate(todayStr(), 7)) + '" title="Buat pengingat menagih penunggak ini">' + ICO_BELL + '</button>' +
       '</div></td>' +
     '</tr>';
   }).join('');
@@ -4043,37 +4072,51 @@ function saveWaSettings() {
   toast('Format pengingat disimpan');
 }
 
-/* ---------- Render: Hari Libur ---------- */
+/* ---------- Libur (dikelola dari Beranda) ---------- */
 const SCOPE_LABEL = { all: 'Semua orang', cohort: 'Angkatan', class: 'Kelas', person: 'Orang' };
-function renderLibur() {
-  if (!state.holidayDate) state.holidayDate = todayStr();
-  state.holidayMonth = state.holidayMonth || monthKey(state.holidayDate);
-  renderLiburCalendar();
+function holidayOn(ymd) { return db.holidays.some(h => h.date === ymd); }
+function holidayDates(mode) {
+  const base = state.menuDate || todayStr();
+  if (mode !== 'week') return [base];
+  const mon = mondayOf(base);
+  const out = [];
+  for (let i = 0; i < 7; i++) out.push(shiftDate(mon, i));
+  return out;
+}
+function renderHomeHoliday() {
+  const sum = document.getElementById('liburSummary');
+  if (!sum) return;
+  const chips = document.getElementById('liburChips');
+  const mk = monthKey(state.menuDate || todayStr());
+  const n = db.holidays.filter(h => monthKey(h.date) === mk).length;
+  sum.textContent = n ? n + ' tanggal libur bulan ini' : 'Belum ada libur bulan ini';
+  const soon = db.holidays.filter(h => h.date >= todayStr()).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+  if (!chips) return;
+  chips.innerHTML = soon.length
+    ? soon.map(h => {
+        let who = '';
+        if (h.scope === 'person') { const c = customerById(h.value); who = c ? c.name : ''; }
+        else if (h.value) who = h.value;
+        return '<span class="libur-chip">' + fmtShortDate(h.date) + ' · ' + (SCOPE_LABEL[h.scope] || h.scope) +
+          (who ? ' · ' + escapeHtml(who) : '') + (h.note ? ' <em>' + escapeHtml(h.note) + '</em>' : '') +
+          '<button type="button" class="chip-x" data-act="holiday-remove" data-id="' + escapeHtml(h.id) + '" title="Hapus libur ini">&times;</button></span>';
+      }).join('')
+    : '<span class="muted tiny">Tandai libur supaya pesanan anak tidak terisi otomatis pada tanggal itu.</span>';
+}
+function openHolidayModal(mode) {
+  const dates = holidayDates(mode);
+  const span = dates.length === 1 ? fmtLong(dates[0]) : fmtShortDate(dates[0]) + ' – ' + fmtShortDate(dates[6]);
+  openModal('<h3>Libur ' + (mode === 'week' ? 'Mingguan' : 'Harian') + '</h3>' +
+    '<p class="muted small">' + escapeHtml(span) + (mode === 'week' ? ' (minggu dari tanggal terpilih)' : ' (tanggal terpilih di kalender Beranda)') + '</p>' +
+    '<label class="field"><span>Berlaku untuk</span><select id="holidayScope" class="input">' +
+      Object.keys(SCOPE_LABEL).map(k => '<option value="' + k + '">' + SCOPE_LABEL[k] + '</option>').join('') +
+    '</select></label>' +
+    '<label class="field" id="holidayValueField"><span>Pilih target</span><select id="holidayValue" class="input"></select></label>' +
+    '<label class="field"><span>Catatan (opsional)</span><input type="text" id="holidayNote" class="input" placeholder="cth: libur nasional"></label>' +
+    '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Seminggu</em> — tidak perlu ditandai libur di sini.</p>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="holiday-save" data-mode="' + (mode === 'week' ? 'week' : 'day') + '">Simpan libur</button></div>');
   renderHolidayValueOptions();
-  renderHolidayList();
-}
-function renderLiburCalendar() {
-  const el = document.getElementById('liburCal');
-  if (!el) return;
-  const p = (state.holidayMonth || monthKey(state.holidayDate)).split('-').map(Number);
-  const y = p[0], mo = p[1];
-  const dotFn = d => db.holidays.some(h => h.date === d);
-  el.innerHTML =
-    '<div class="cal-head">' +
-      '<button type="button" class="cal-nav" data-act="libur-cal-prev" aria-label="Bulan sebelumnya">' + ICO_PREV + '</button>' +
-      '<div class="cal-title">' + MONTHS_FULL[mo - 1] + ' ' + y + '</div>' +
-      '<button type="button" class="cal-nav" data-act="libur-cal-next" aria-label="Bulan berikutnya">' + ICO_NEXT + '</button>' +
-    '</div>' +
-    '<div class="cal-week">' + WEEKDAYS.map(w => '<span>' + w + '</span>').join('') + '</div>' +
-    '<div class="cal-grid">' + buildDayGrid(y, mo, state.holidayDate || '', todayStr(), dotFn, 'libur-day', 'is-holiday') + '</div>';
-  setText('liburDateLabel', fmtLong(state.holidayDate || todayStr()));
-}
-function shiftLiburMonth(delta) {
-  const p = state.holidayMonth.split('-').map(Number);
-  let y = p[0], mo = p[1] + delta;
-  if (mo < 1) { mo = 12; y--; } else if (mo > 12) { mo = 1; y++; }
-  state.holidayMonth = y + '-' + pad(mo);
-  renderLiburCalendar();
 }
 function renderHolidayValueOptions() {
   const scopeSel = document.getElementById('holidayScope');
@@ -4089,22 +4132,41 @@ function renderHolidayValueOptions() {
   else if (scope === 'person') opts = db.customers.filter(c => c.active).sort(sortCustomers).map(c => [c.id, c.name + (c.className ? (' — ' + c.className) : '')]);
   sel.innerHTML = opts.length ? opts.map(o => '<option value="' + escapeHtml(o[0]) + '">' + escapeHtml(o[1]) + '</option>').join('') : '<option value="">(tidak ada data)</option>';
 }
-function renderHolidayList() {
-  const list = db.holidays.slice().sort((a, b) => b.date.localeCompare(a.date));
-  document.getElementById('holidayList').innerHTML = list.map(h => {
-    let who = 'Semua';
-    if (h.scope === 'person') { const c = customerById(h.value); who = c ? escapeHtml(c.name) : escapeHtml(h.value || '-'); }
-    else if (h.value) who = escapeHtml(h.value);
-    return '<tr>' +
-      '<td>' + fmtShortDate(h.date) + '</td>' +
-      '<td><span class="badge orange">' + (SCOPE_LABEL[h.scope] || h.scope) + '</span></td>' +
-      '<td>' + who + '</td>' +
-      '<td class="muted">' + escapeHtml(h.note || '') + '</td>' +
-      '<td class="end"><div class="row-actions"><button class="icon-act danger" data-act="holiday-remove" data-id="' + h.id + '" title="Hapus">' + ICO_TRASH + '</button></div></td>' +
-    '</tr>';
-  }).join('');
-  document.getElementById('holidayEmpty').hidden = list.length > 0;
-  document.getElementById('holidayCount').textContent = list.length + ' hari';
+function saveHoliday(mode) {
+  const scopeSel = document.getElementById('holidayScope');
+  const scope = scopeSel ? scopeSel.value : 'all';
+  const valSel = document.getElementById('holidayValue');
+  const value = scope === 'all' ? '' : ((valSel && valSel.value) || '');
+  if (scope !== 'all' && !value) { toast('Pilih dulu target liburnya'); return; }
+  const note = ((document.getElementById('holidayNote') || {}).value || '').trim();
+  const dates = holidayDates(mode);
+  let added = 0;
+  dates.forEach(d => {
+    if (db.holidays.some(h => h.date === d && h.scope === scope && (h.value || '') === value)) return;
+    db.holidays.push({ id: uid(), date: d, scope: scope, value: value, note: note });
+    added++;
+  });
+  closeModal();
+  if (!added) { toast('Tanggal itu sudah ditandai libur'); return; }
+  logAction('libur', 'Libur ' + (dates.length > 1 ? 'seminggu ' + dates[0] + ' s/d ' + dates[6] : dates[0]) +
+    ' — ' + (SCOPE_LABEL[scope] || scope) + (value ? ' (' + (scope === 'person' ? ((customerById(value) || {}).name || value) : value) + ')' : '') +
+    (note ? ' · ' + note : ''));
+  save();
+  renderHomeCalendar();
+  renderWeekMenu();
+  renderHomeHoliday();
+  toast(added + ' tanggal ditandai libur');
+}
+function removeHoliday(id) {
+  const h = db.holidays.find(x => x.id === id);
+  if (!h) return;
+  db.holidays = db.holidays.filter(x => x.id !== id);
+  logAction('libur', 'Hapus libur ' + h.date + ' (' + (SCOPE_LABEL[h.scope] || h.scope) + ')');
+  save();
+  renderHomeCalendar();
+  renderWeekMenu();
+  renderHomeHoliday();
+  toast('Libur dihapus', { undo: true });
 }
 
 /* ---------- Render: Log Aktivitas ---------- */
@@ -4390,7 +4452,7 @@ function exportBackup() {
   const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'lovely-kitchen-backup-' + todayStr() + '.json';
+  a.download = 'cadangan-katering-' + todayStr() + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(a.href);
   markExported();
@@ -4409,7 +4471,7 @@ function importBackup(file) {
 }
 
 /* ---------- Cadangan harian otomatis (tetap di perangkat) ---------- */
-const BACKUP_KEY = 'lovely_kitchen_backups_v1';
+const BACKUP_KEY = STORE_PREFIX + 'backups_v1';
 const BACKUP_MAX = 14;
 const BACKUP_BYTES = 3500000;
 function readBackups() {
@@ -4543,7 +4605,7 @@ function closeSidebar() {
 }
 
 /* ---------- Sidebar: kecilkan jadi ikon saja ---------- */
-const UI_KEY = 'lovely_kitchen_ui_v1';
+const UI_KEY = STORE_PREFIX + 'ui_v1';
 function uiPrefs() { try { return JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { return {}; } }
 function applySidebar(collapsed) {
   document.querySelector('.app').classList.toggle('nav-collapsed', collapsed);
@@ -4602,6 +4664,8 @@ function onDocClick(e) {
       break;
     case 'daily-pay-day': payAllToday(act.closest('tr') ? act.closest('tr').dataset.cid : null); break;
     case 'daily-pay-all': payAllToday(null); break;
+    case 'daily-pay-cfg': openDayPayModal(act.closest('tr').dataset.cid, state.currentDate); break;
+    case 'daily-pay-save': saveDayPay(act.dataset.cid, act.dataset.date); break;
     case 'week-menu-add': {
       const date = act.dataset.date;
       const items = menuPlanItems(date).map(it => Object.assign({}, it));
@@ -4762,30 +4826,18 @@ function onDocClick(e) {
     case 'sticker-day': { state.stickerDate = act.dataset.ymd; state.stickerMonth = monthKey(state.stickerDate); renderStickerCalendar(); renderStickerCustomers(); stickerPreview(); break; }
     case 'sticker-select-all': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = true); stickerPreview(); break;
     case 'sticker-clear': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = false); stickerPreview(); break;
+    case 'print-mode': state.printMode = act.dataset.mode === 'konfirmasi' ? 'konfirmasi' : 'stiker'; renderPrint(); break;
     case 'sticker-preview': stickerPreview(); break;
     case 'sticker-print': stickerPreview(); setTimeout(() => printFrame(document.getElementById('stickerFrame')), 300); break;
     case 'satpam-preview': satpamPreview(); break;
     case 'satpam-print': satpamPreview(); setTimeout(() => printFrame(document.getElementById('satpamFrame')), 300); break;
     case 'home-cal-prev': shiftHomeMonth(-1); break;
     case 'home-cal-next': shiftHomeMonth(1); break;
-    case 'home-day': { state.menuDate = act.dataset.ymd; state.menuMonth = monthKey(state.menuDate); state.menuDay = weekdayOf(state.menuDate) - 1; renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase(); break; }
-    case 'libur-cal-prev': shiftLiburMonth(-1); break;
-    case 'libur-cal-next': shiftLiburMonth(1); break;
-    case 'libur-day': { state.holidayDate = act.dataset.ymd; state.holidayMonth = monthKey(state.holidayDate); renderLiburCalendar(); break; }
-    case 'holiday-add': {
-      const date = state.holidayDate || todayStr();
-      const scope = document.getElementById('holidayScope').value;
-      const valEl = document.getElementById('holidayValue');
-      const value = scope === 'all' ? '' : valEl.value;
-      if (scope !== 'all' && !value) { toast('Pilih target libur terlebih dulu'); break; }
-      const note = document.getElementById('holidayNote').value.trim();
-      const c = scope === 'person' ? customerById(value) : null;
-      db.holidays.push({ id: uid(), date: date, scope: scope, value: value, note: note });
-      logAction('libur', 'Libur ' + date + ' — ' + (SCOPE_LABEL[scope] || scope) + (value ? (' (' + (c ? c.name : value) + ')') : ''));
-      save(); renderLibur(); document.getElementById('holidayNote').value = ''; toast('Hari libur ditambahkan');
-      break;
-    }
-    case 'holiday-remove': { const h = db.holidays.find(x => x.id === id); if (h) { db.holidays = db.holidays.filter(x => x.id !== id); logAction('libur', 'Hapus libur ' + h.date); save(); renderLibur(); toast('Libur dihapus', { undo: true }); } break; }
+    case 'home-day': { state.menuDate = act.dataset.ymd; state.menuMonth = monthKey(state.menuDate); state.menuDay = weekdayOf(state.menuDate) - 1; renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase(); renderHomeHoliday(); break; }
+    case 'holiday-day': openHolidayModal('day'); break;
+    case 'holiday-week': openHolidayModal('week'); break;
+    case 'holiday-save': saveHoliday(act.dataset.mode === 'week' ? 'week' : 'day'); break;
+    case 'holiday-remove': removeHoliday(id); break;
     case 'log-undo': undoToLog(id); break;
     case 'log-clear': if (db.log.length && confirm('Bersihkan seluruh log aktivitas?')) { db.log = []; logAction('log', 'Log dibersihkan'); save(); renderLog(); toast('Log dibersihkan', { undo: true }); } break;
     case 'customer-add': openCustomerModal(null); break;
@@ -4804,7 +4856,7 @@ function onDocClick(e) {
       toast('Jenis huruf & ukuran teks kembali ke bawaan');
       break;
     case 'settings-save': {
-      db.settings.businessName = document.getElementById('setName').value.trim() || 'Lovely Kitchen';
+      db.settings.businessName = document.getElementById('setName').value.trim() || 'Nama Usaha';
       db.settings.tagline = document.getElementById('setTagline').value.trim();
       db.settings.bankName = document.getElementById('setBankName').value.trim().slice(0, 30);
       db.settings.bankNumber = document.getElementById('setBankNumber').value.replace(/[^\d-]/g, '').slice(0, 30);
@@ -4822,7 +4874,7 @@ function onDocClick(e) {
     case 'backup-now': autoBackup(true); renderBackups(); toast('Cadangan harian dibuat'); break;
     case 'backup-download': {
       const b = readBackups()[+act.dataset.i];
-      if (b) { downloadText('lovely-kitchen-cadangan-' + b.day + '.json', b.json, 'application/json'); toast('Cadangan ' + fmtShortDate(b.day) + ' diunduh'); }
+      if (b) { downloadText('cadangan-katering-' + b.day + '.json', b.json, 'application/json'); toast('Cadangan ' + fmtShortDate(b.day) + ' diunduh'); }
       break;
     }
     case 'backup-restore': restoreBackup(+act.dataset.i); break;
@@ -5024,6 +5076,7 @@ function onDocChange(e) {
     return;
   }
   if (t.id === 'logAction' || t.id === 'logMonth') { renderLog(); return; }
+  if (t.id === 'holidayScope') { renderHolidayValueOptions(); return; }
 
   const pageEl = t.closest('#page-hari');
   if (pageEl && t.closest('tr')) {
@@ -5033,27 +5086,22 @@ function onDocChange(e) {
     const who = c ? c.name : cid;
     const date = state.currentDate;
     const type = t.dataset.type;
-    if (t.classList.contains('sel-method') || t.classList.contains('inp-note')) {
-      /* satu metode & satu catatan untuk seluruh hari — ditulis ke semua pesanan yang aktif */
-      const isMethod = t.classList.contains('sel-method');
+    if (t.classList.contains('inp-note')) {
+      /* satu catatan untuk seluruh hari — ditulis ke semua pesanan yang aktif */
       let touched = 0;
       DAY_TYPES.forEach(ty => {
         const rr = (db[ty][date] || {})[cid];
         if (!rr || !rr.ordered) return;
-        if (isMethod) { rr.method = t.value; if (t.value === 'Gratis') rr.paid = true; }
-        else rr.note = t.value;
-        touched++;
+        rr.note = t.value; touched++;
       });
-      if (touched && isMethod) logAction('metode', who + ' → ' + (t.value || '—') + ' @ ' + date);
-      save();
+      if (touched) save();
       syncMergedRow(tr);
       renderDailyStats();
       return;
     }
     if (type !== 'snack' && type !== 'lunch') return;
     const rec = ensureRecord(type, date, cid);
-    if (t.classList.contains('chk-paid')) { rec.paid = t.checked; logAction('bayar', who + ' ' + type + ' ' + (t.checked ? 'lunas' : 'belum') + ' @ ' + date); }
-    else if (t.classList.contains('sel-pkg')) {
+    if (t.classList.contains('sel-pkg')) {
       rec.pkg = t.value;
       const pk = pkgById(t.value);
       logAction('paket', who + ' ' + type + ' → ' + (pk ? pk.name : '—') + ' @ ' + date);
@@ -5133,7 +5181,7 @@ function renderCalendar() {
   }
 }
 
-function buildDayGrid(year, month, selectedYmd, todayYmd, dotFn, act, markCls) {
+function buildDayGrid(year, month, selectedYmd, todayYmd, dotFn, act, markCls, flagFn) {
   act = act || 'cal-pick';
   const startIdx = (new Date(year, month - 1, 1).getDay() + 6) % 7; // Senin pertama
   const days = new Date(year, month, 0).getDate();
@@ -5145,6 +5193,7 @@ function buildDayGrid(year, month, selectedYmd, todayYmd, dotFn, act, markCls) {
     const cls = 'cal-day' +
       (ymd === selectedYmd ? ' is-selected' : '') +
       (ymd === todayYmd ? ' is-today' : '') +
+      (flagFn && flagFn(ymd) ? ' is-holiday' : '') +
       (marked && markCls ? ' ' + markCls : '');
     const dot = marked && !markCls ? '<span class="cal-dot"></span>' : '';
     html += '<button type="button" class="' + cls + '" data-act="' + act + '" data-ymd="' + ymd + '">' + d + dot + '</button>';
