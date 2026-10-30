@@ -267,8 +267,13 @@ function makeDemoData() {
   d.customers = kids;
 
   const today = todayStr();
-  const offAll = shiftDate(today, -13);
-  const offClass = shiftDate(today, -6);
+  /* contoh libur sengaja berada di luar minggu berjalan — minggu ini tetap penuh pesanan
+      supaya halaman pertama tidak kosong (dan penanda libur tidak menghapus isi minggu ini) */
+  const sen = mondayOf(today);
+  const offAll = shiftDate(sen, -10);      // Jumat dua minggu lalu
+  const offClass = shiftDate(sen, -4);     // Kamis minggu lalu
+  const leaveCohort = shiftDate(sen, 11);  // Jumat minggu depan
+  const leavePerson = shiftDate(sen, 8);   // Selasa minggu depan
   const methods = ['Tunai', 'Transfer', 'QRIS'];
 
   /* tiga rotasi menu mingguan — paket sama, makanan berbeda; satu-dua hari harganya diubah dari menu */
@@ -313,6 +318,11 @@ function makeDemoData() {
       const date = shiftDate(mon, w * 7 + i);
       if (tpl[i].length) d.menuPlan[date] = tpl[i].map(x => Object.assign({}, x));
     }
+  }
+  /* tanggal libur semua orang dibiarkan hanya berisi baris PO — sama seperti hasil menandai libur di Beranda */
+  if (d.menuPlan[offAll]) {
+    const poOnly = d.menuPlan[offAll].filter(x => x.type === 'po');
+    if (poOnly.length) d.menuPlan[offAll] = poOnly; else delete d.menuPlan[offAll];
   }
 
   const pickOf = (type, date, c, i) => {
@@ -409,8 +419,8 @@ function makeDemoData() {
   d.holidays = [
     { id: uid(), date: offAll, scope: 'all', value: '', note: 'Libur nasional (contoh)' },
     { id: uid(), date: offClass, scope: 'class', value: '11C', note: 'Kelas 11C outing (contoh)' },
-    { id: uid(), date: shiftDate(today, 6), scope: 'cohort', value: '12', note: 'Wisuda kelas 12 (contoh)' },
-    { id: uid(), date: shiftDate(today, 2), scope: 'person', value: kids[5].id, note: 'Sakit (contoh)' }
+    { id: uid(), date: leaveCohort, scope: 'cohort', value: '12', note: 'Wisuda kelas 12 (contoh)' },
+    { id: uid(), date: leavePerson, scope: 'person', value: kids[5].id, note: 'Sakit (contoh)' }
   ];
 
   d.reminders = [
@@ -2129,7 +2139,9 @@ function renderDailyQuick(date, shown) {
     'Buat menu di Beranda › Menu Harian</button>';
   const btn = '<button type="button" class="btn btn-ghost btn-sm" data-nav="customers">Tambah pelanggan</button>';
   let msg = '';
-  if (!shown) msg = '<span>Belum ada pelanggan aktif untuk hari ini.</span>' + btn;
+  if (isFullHoliday(date)) msg = '<span>Tanggal ini libur untuk semua orang — tidak ada snack &amp; lunch, dan menusinya sudah dikosongkan.</span>' +
+    '<button type="button" class="btn btn-ghost btn-sm" data-nav="dashboard">Ubah libur di Beranda</button>';
+  else if (!shown) msg = '<span>Belum ada pelanggan aktif untuk hari ini.</span>' + btn;
   else if (missing.length) msg = '<span>Menu ' + missing.join(' & ') + ' belum dibuat untuk tanggal ini — pilihannya masih kosong di semua halaman.</span>' + go;
   box.innerHTML = msg;
   box.hidden = !msg;
@@ -4118,6 +4130,7 @@ function notifItems() {
   });
   if (pending) out.push({ nav: 'hari', tone: 'amber', title: pending + ' pesanan hari ini belum dipilih makanannya', sub: 'buka Hari Ini' });
   DAY_TYPES.forEach(t => {
+    if (isFullHoliday(today)) return;
     if (!menuItemsFor(t, today).length) out.push({ nav: 'dashboard', tone: 'gray', title: 'Menu ' + TYPE_LABEL[t] + ' hari ini belum diisi', sub: 'atur di kartu Menu pada Beranda' });
   });
   return out;
@@ -4394,7 +4407,9 @@ function dayDots(ymd, menuIkut) {
   const out = [];
   if (countOrdered('snack', ymd) || countOrdered('lunch', ymd) || (menuIkut && menuFor(ymd).length)) out.push('g');
   if (k === 'some') out.push('r');
-  if (db.po.some(p => p.date === ymd)) out.push('y');
+  /* "ada PO hari ini" = sudah ada pembelinya ATAU menunya sudah dibuat (kartu Menu PO / baris PO di menu) */
+  if (db.po.some(p => p.date === ymd) || db.poMenus.some(m => m.date === ymd) ||
+      menuFor(ymd).some(it => it.type === 'po')) out.push('y');
   return out;
 }
 function holidayDates(mode) {
@@ -4455,16 +4470,53 @@ function openHolidayModal(mode) {
   const dates = holidayDates(mode);
   const span = dates.length === 1 ? fmtLong(dates[0]) : fmtShortDate(dates[0]) + ' – ' + fmtShortDate(dates[6]);
   openModal('<h3>Libur ' + (mode === 'week' ? 'Mingguan' : 'Harian') + '</h3>' +
-    '<p class="muted small">' + escapeHtml(span) + (mode === 'week' ? ' (minggu dari tanggal terpilih)' : ' (tanggal terpilih di kalender Beranda)') + '</p>' +
+    '<p class="muted small">' + escapeHtml(span) + (mode === 'week' ? ' (Senin–Minggu yang memuat tanggal terpilih)' : ' (tanggal terpilih di kalender Beranda)') + '</p>' +
     '<label class="field"><span>Berlaku untuk</span><select id="holidayScope" class="input">' +
       Object.keys(SCOPE_LABEL).map(k => '<option value="' + k + '">' + SCOPE_LABEL[k] + '</option>').join('') +
     '</select></label>' +
     '<label class="field" id="holidayValueField"><span>Pilih target</span><select id="holidayValue" class="input"></select></label>' +
     '<label class="field"><span>Catatan (opsional)</span><input type="text" id="holidayNote" class="input" placeholder="cth: libur nasional"></label>' +
+    '<p class="muted tiny" id="holidayWarn"></p>' +
     '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Seminggu</em> — tidak perlu ditandai libur di sini.</p>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="holiday-save" data-mode="' + (mode === 'week' ? 'week' : 'day') + '">Simpan libur</button></div>');
+  holidayModalDates = dates;
   renderHolidayValueOptions();
+  renderHolidayWarn();
+}
+/* Hitungan dampak tanpa mengubah data — dipakai peringatan di dialog sebelum menyimpan */
+function holidayImpact(dates, scope, value) {
+  const semua = scope === 'all';
+  let porsi = 0, menu = 0;
+  dates.forEach(d => {
+    const h = { date: d, scope: scope, value: value };
+    ['snack', 'lunch'].forEach(t => {
+      const recs = db[t][d] || {};
+      for (const id in recs) {
+        if (!recs[id].ordered) continue;
+        if (!semua && !holidayMatch(h, customerById(id), d)) continue;
+        porsi++;
+      }
+    });
+    if (!semua) return;
+    menu += (db.menuPlan[d] || []).filter(it => it.type !== 'po').length;
+  });
+  return { porsi, menu };
+}
+let holidayModalDates = [];
+function renderHolidayWarn() {
+  const el = document.getElementById('holidayWarn');
+  if (!el) return;
+  const scopeSel = document.getElementById('holidayScope');
+  const valSel = document.getElementById('holidayValue');
+  const scope = scopeSel ? scopeSel.value : 'all';
+  const value = scope === 'all' ? '' : ((valSel && valSel.value) || '');
+  const dampak = holidayImpact(holidayModalDates, scope, value);
+  el.innerHTML = dampak.porsi || dampak.menu
+    ? 'Pesanan yang <strong>ikut terhapus</strong>: ' + dampak.porsi + ' porsi snack/lunch' +
+      (dampak.menu ? ' + menu snack/lunch ' + dampak.menu + ' pilihan' : '') +
+      ' — bisa dikembalikan dengan <em>Urungkan</em>.'
+    : 'Pilihan ini tidak menimpa pesanan snack/lunch yang ada, jadi tidak ada yang terhapus.';
 }
 function renderHolidayValueOptions() {
   const scopeSel = document.getElementById('holidayScope');
@@ -4472,13 +4524,43 @@ function renderHolidayValueOptions() {
   const scope = scopeSel.value;
   const field = document.getElementById('holidayValueField');
   const sel = document.getElementById('holidayValue');
-  if (scope === 'all') { field.hidden = true; sel.innerHTML = ''; return; }
+  if (scope === 'all') { field.hidden = true; sel.innerHTML = ''; renderHolidayWarn(); return; }
   field.hidden = false;
+  const pilih = sel.value;
   let opts = [];
   if (scope === 'class') opts = [...new Set(db.customers.map(c => (c.className || '').trim()).filter(Boolean))].sort().map(v => [v, v]);
   else if (scope === 'cohort') opts = [...new Set(db.customers.map(c => cohortOf(c.className)).filter(Boolean))].sort().map(v => [v, v]);
   else if (scope === 'person') opts = db.customers.filter(c => c.active).sort(sortCustomers).map(c => [c.id, c.name + (c.className ? (' — ' + c.className) : '')]);
   sel.innerHTML = opts.length ? opts.map(o => '<option value="' + escapeHtml(o[0]) + '">' + escapeHtml(o[1]) + '</option>').join('') : '<option value="">(tidak ada data)</option>';
+  if (opts.some(o => o[0] === pilih)) sel.value = pilih;
+  renderHolidayWarn();
+}
+/* Menandai libur benar-benar mengosongkan hari itu — bukan hanya menyembunyikannya.
+   Semua orang libur: pesanan snack+lunch tanggal itu dibuang dan menu snack/lunch-nya
+   ikut dihapus (baris PO dipertahankan). Libur sebagian: hanya anak yang kena. */
+function clearOrdersForHoliday(dates, scope, value) {
+  const semua = scope === 'all';
+  let porsi = 0, menu = 0;
+  dates.forEach(d => {
+    const h = { date: d, scope: scope, value: value };
+    ['snack', 'lunch'].forEach(t => {
+      const recs = db[t][d];
+      if (!recs) return;
+      Object.keys(recs).forEach(id => {
+        if (!semua && !holidayMatch(h, customerById(id), d)) return;
+        if (recs[id].ordered) porsi++;
+        delete recs[id];
+      });
+      if (!Object.keys(recs).length) delete db[t][d];
+    });
+    if (!semua) return;
+    const plan = db.menuPlan[d];
+    if (!plan) return;
+    const po = plan.filter(it => it.type === 'po');
+    menu += plan.length - po.length;
+    if (po.length) db.menuPlan[d] = po; else delete db.menuPlan[d];
+  });
+  return { porsi, menu };
 }
 function saveHoliday(mode) {
   const scopeSel = document.getElementById('holidayScope');
@@ -4496,14 +4578,19 @@ function saveHoliday(mode) {
   });
   closeModal();
   if (!added) { toast('Tanggal itu sudah ditandai libur'); return; }
+  const bersih = clearOrdersForHoliday(dates, scope, value);
   logAction('libur', 'Libur ' + (dates.length > 1 ? 'seminggu ' + dates[0] + ' s/d ' + dates[6] : dates[0]) +
     ' — ' + (SCOPE_LABEL[scope] || scope) + (value ? ' (' + (scope === 'person' ? ((customerById(value) || {}).name || value) : value) + ')' : '') +
-    (note ? ' · ' + note : ''));
+    (note ? ' · ' + note : '') +
+    (bersih.porsi ? ' · ' + bersih.porsi + ' porsi snack/lunch dihapus' : '') +
+    (bersih.menu ? ' · menu snack/lunch ' + bersih.menu + ' item dibuang' : ''));
   save();
   renderHomeCalendar();
   renderWeekMenu();
   renderHomeHoliday();
-  toast(added + ' tanggal ditandai libur');
+  toast(added + ' tanggal ditandai libur' +
+    (bersih.porsi ? ' · ' + bersih.porsi + ' pesanan snack/lunch ikut terhapus' : '') +
+    (bersih.menu ? ' · menu snack/lunch dikosongkan' : ''), { undo: !!bersih.porsi || !!bersih.menu });
 }
 function removeHoliday(id) {
   const h = db.holidays.find(x => x.id === id);
@@ -4514,7 +4601,7 @@ function removeHoliday(id) {
   renderHomeCalendar();
   renderWeekMenu();
   renderHomeHoliday();
-  toast('Libur dihapus', { undo: true });
+  toast('Libur dihapus — pesanan yang tadi terhapus tidak kembali sendiri, pakai Urungkan bila masih ingin membatalkannya', { undo: true });
 }
 
 /* ---------- Render: Log Aktivitas ---------- */
@@ -5432,13 +5519,13 @@ function onDocChange(e) {
     else renderDailyMerged();
     return;
   }
-  if (t.id === 'holidayScope') { renderHolidayValueOptions(); return; }
+  if (t.id === 'holidayScope') { renderHolidayValueOptions(); renderHolidayWarn(); return; }
+  if (t.id === 'holidayValue') { renderHolidayWarn(); return; }
   if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-pkg') || t.classList.contains('wm-price')) {
     applyMenuEdit(t, false);
     return;
   }
   if (t.id === 'logAction' || t.id === 'logMonth') { renderLog(); return; }
-  if (t.id === 'holidayScope') { renderHolidayValueOptions(); return; }
 
   const pageEl = t.closest('#page-hari');
   if (pageEl && t.closest('tr')) {
