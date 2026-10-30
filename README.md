@@ -12,7 +12,7 @@ Video lengkap (± 44 detik, 1280px, tanpa suara): **[preview.mp4](https://github
 
 1. Unduh repo, buka foldernya, klik dua kali `index.html`.
 2. Data pertama yang muncul adalah **data contoh** (19 anak + menu seminggu) supaya tampilan bisa langsung dicoba.
-3. Untuk mulai dari kosong: **Pengaturan › Hapus semua data**, lalu tambahkan pelanggan di **Pengaturan › Daftar Pelanggan**.
+3. Untuk mulai dari kosong: **Pengaturan › Reset semua data**, lalu tambahkan pelanggan di **Pengaturan › Daftar Pelanggan**.
 4. Semua perubahan tersimpan otomatis di browser ini (localStorage). Unduh cadangan berkala lewat **Beranda › Cetak & Bagikan › Cadangan JSON**.
 
 ## Halaman
