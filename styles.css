@@ -632,10 +632,12 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .wm-day:hover small,.wm-day:focus-visible small{color:var(--primary-dark);text-decoration:underline}
 .wm-day small{font-weight:500;color:var(--muted);font-size:11px}
 .wm-items{display:flex;flex-direction:column;gap:6px;min-width:0}
-.wm-item{display:grid;grid-template-columns:82px 148px 84px minmax(120px,1fr) 32px;gap:6px;align-items:start;min-width:0}
+.wm-item{display:grid;grid-template-columns:126px 92px minmax(120px,1fr) 32px;gap:6px;align-items:start;min-width:0}
 .wm-item .wm-name{min-width:0;min-height:34px;line-height:1.35;padding:7px 10px;resize:vertical;overflow:hidden;font-family:inherit}
-.wm-item .wm-type,.wm-item .wm-pkg,.wm-item .wm-price,.wm-item .icon-act{margin-top:1px}
+.wm-item .wm-type,.wm-item .wm-price,.wm-item .icon-act{margin-top:1px}
 .wm-item .wm-price{width:100%;text-align:right;font-variant-numeric:tabular-nums}
+/* baris biasa tidak punya harga — slotnya diisi keterangan supaya nama tetap sejajar antar baris */
+.wm-noprice{display:flex;align-items:center;justify-content:flex-end;height:34px;font-size:11px;color:var(--muted);border-bottom:1px dashed var(--border-strong);padding-right:3px}
 .wm-item .icon-act{width:32px;height:32px;margin-top:1px}
 .wm-items .btn-sm{align-self:flex-start}
 .wm-days{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
@@ -651,9 +653,9 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .day-chip.is-on small{color:rgba(255,255,255,.82)}
 /* satu baris menu butuh ±500px; di layar sempit nama makanan turun ke baris kedua */
 @media (max-width:640px){
-  .wm-item{grid-template-columns:74px minmax(0,1fr) 82px 32px}
-  .wm-item .wm-name{grid-column:1 / -1}
-  .wm-item .icon-act{grid-column:4;grid-row:1}
+  .wm-item{grid-template-columns:112px minmax(0,1fr) 32px}
+  .wm-item .wm-name{grid-column:1 / -1;grid-row:2}
+  .wm-item .icon-act{grid-column:3;grid-row:1}
 }
 
 /* ===== Segmen / tab kecil ===== */
@@ -718,6 +720,7 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .table-daily .food-cell{width:240px;max-width:240px}
 .table-daily .food-cell .food-chip{max-width:100%;padding:2px 5px;font-size:10.5px;overflow:hidden;white-space:nowrap;display:flex}
 .pkg-under{display:block;margin-top:4px;color:var(--muted);font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pkg-under.is-spesial{color:var(--primary-dark)}
 .table-daily td.day-total{width:150px}
 .pay-total{display:block;margin:0 auto;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;
   font-variant-numeric:tabular-nums;cursor:pointer;border-bottom:1px dashed var(--border-strong);transition:.14s}
@@ -744,9 +747,9 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
   border:1px dashed var(--border-strong);border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--muted)}
 .quick-strip[hidden]{display:none}
 .pkg-group-title{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--muted);font-weight:700;margin-bottom:8px}
-.pkg-chips{display:flex;flex-direction:column;gap:8px}
+.pkg-chips{display:flex;flex-wrap:wrap;gap:8px}
 .pkg-chip{
-  display:grid;grid-template-columns:1fr auto;gap:1px 10px;align-items:baseline;
+  display:grid;grid-template-columns:1fr auto;gap:1px 10px;align-items:baseline;flex:1 1 168px;
   padding:10px 13px;border-radius:14px;
   background:linear-gradient(150deg,var(--primary-soft),transparent 70%),var(--surface-2);
   border:1px solid var(--border);
@@ -760,6 +763,8 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .pkg-menu .pm{font-size:12.5px;line-height:1.35}
 .pkg-menu .pm b{font-weight:700}
 .pkg-menu .pm span{display:block;font-size:11.5px;color:var(--muted)}
+.pkg-menu .pm span.pm-spesial{display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:800;color:var(--primary-dark);background:var(--primary-soft);vertical-align:1px}
+.pkg-note{margin:9px 0 0}
 .pkg-menu .pm-none{font-size:11.5px;color:var(--muted);font-style:italic}
 .pkg-list{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
 .pkg-row{padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xs)}

@@ -19,8 +19,12 @@ function migrateStoreKeys() {
     ['data_v1', 'ui_v1', 'backups_v1', 'undo_v1', 'redo_v1'].forEach(suffix => {
       const from = LEGACY_PREFIX + suffix, to = STORE_PREFIX + suffix;
       const oldVal = localStorage.getItem(from);
-      if (oldVal !== null && localStorage.getItem(to) === null) localStorage.setItem(to, oldVal);
-      if (oldVal !== null) localStorage.removeItem(from);
+      if (oldVal === null) return;
+      const newVal = localStorage.getItem(to);
+      /* kunci lama hanya dibuang kalau isinya sudah aman tersalin (atau memang sama);
+         kalau beda, biarkan — jangan musnahkan data yang tidak bisa dibalik lagi */
+      if (newVal === null) localStorage.setItem(to, oldVal);
+      if (newVal === null || newVal === oldVal) localStorage.removeItem(from);
     });
   } catch (e) { /* localStorage tidak bisa dipakai */ }
 }
@@ -76,6 +80,9 @@ function oncePassed(c) { return !!c && c.status === 'sekali' && !!c.onceDate && 
 function custJalan(c) { return c.status === 'aktif' || (c.status === 'sekali' && !oncePassed(c)); }
 function custActive(c) { return c.status === 'aktif' || c.status === 'sekali'; }
 const LETTERS = 'ABCDEFGH';
+/* Jenis baris menu. "spesial" tetap snack/lunch (kolom, stiker, laporan sama) tapi harganya diketik sendiri. */
+const MENU_TYPES = ['snack', 'snack-spesial', 'lunch', 'lunch-spesial', 'po'];
+const MENU_TYPE_LABEL = { snack: 'Snack', 'snack-spesial': 'Snack Spesial', lunch: 'Lunch', 'lunch-spesial': 'Lunch Spesial', po: 'PO' };
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
 function defaultData() {
@@ -152,11 +159,15 @@ function normalize(d) {
   if (!d.menu || typeof d.menu !== 'object') d.menu = { snack: {}, lunch: {} };
   if (!d.menu.snack || typeof d.menu.snack !== 'object') d.menu.snack = {};
   if (!d.menu.lunch || typeof d.menu.lunch !== 'object') d.menu.lunch = {};
-  /* price = harga porsi hari itu; '' berarti ikut harga paketnya */
-  const normMenu = arr => (Array.isArray(arr) ? arr : []).map(it => typeof it === 'string'
-    ? { name: it, type: 'snack', pkg: '', price: '' }
-    : { name: String((it && it.name) || '').trim(), type: ['snack', 'lunch', 'po'].includes(it && it.type) ? it.type : 'snack', pkg: (it && it.pkg) || '', price: (it && +it.price > 0) ? +it.price : '' }
-  ).filter(it => it.name);
+  /* Baris biasa tidak punya harga lagi — harganya ikut paket anak. Harga di baris = hari spesial. */
+  const normMenu = arr => (Array.isArray(arr) ? arr : []).map(it => {
+    if (typeof it === 'string') return { name: it, type: 'snack', price: '' };
+    let t = MENU_TYPES.includes(it && it.type) ? it.type : 'snack';
+    const price = (it && +it.price > 0) ? +it.price : '';
+    if (price !== '' && (t === 'snack' || t === 'lunch')) t += '-spesial';
+    const harga = (t === 'po' || t === 'snack-spesial' || t === 'lunch-spesial') ? price : '';
+    return { name: String((it && it.name) || '').trim(), type: t, pkg: (it && it.pkg) || '', price: harga };
+  }).filter(it => it.name);
   if (!d.menuPlan || typeof d.menuPlan !== 'object') d.menuPlan = {};
   for (const date in d.menuPlan) {
     d.menuPlan[date] = normMenu(d.menuPlan[date]);
@@ -173,7 +184,7 @@ function normalize(d) {
   });
   ['snack', 'lunch'].forEach(t => {
     for (const date in d[t]) {
-      const n = (d.menuPlan[date] || []).filter(it => (it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack') === t).length;
+      const n = (d.menuPlan[date] || []).filter(it => menuTypeOf(it) === t).length;
       for (const id in d[t][date]) {
         const r = d[t][date][id];
         const max = t === 'snack' ? 2 : 1;
@@ -186,6 +197,15 @@ function normalize(d) {
     }
   });
   if (!Array.isArray(d.holidays)) d.holidays = [];
+  /* tanggal + lingkup libur dibatasi: berkas cadangan hasil suntingan bisa membuat
+     render agenda gagal sebelum halaman sempat tampil */
+  d.holidays = d.holidays.filter(h => h && /^\d{4}-\d{2}-\d{2}$/.test(h.date || '')).map(h => ({
+    id: h.id || uid(),
+    date: h.date,
+    scope: ['all', 'cohort', 'class', 'person'].includes(h.scope) ? h.scope : 'all',
+    value: String(h.value || '').slice(0, 60),
+    note: String(h.note || '').slice(0, 120)
+  }));
   if (!Array.isArray(d.reminders)) d.reminders = [];
   d.reminders = d.reminders.map(r => ({
     id: r.id || uid(),
@@ -233,9 +253,9 @@ function makeDemoData() {
   const sSedang = pk('snack', 'Snack Sedang', 7000);
   const sKomplit = pk('snack', 'Snack Komplit', 9500);
   const lStandar = pk('lunch', 'Nasi Kotak Standar', 16000);
-  const lSpesial = pk('lunch', 'Nasi Kotak Spesial', 20000);
+  const lBesar = pk('lunch', 'Nasi Kotak Besar', 20000);
   const lPrem = pk('lunch', 'Nasi Kotak Premium', 24000);
-  d.settings.packages = [sMini, sSedang, sKomplit, lStandar, lSpesial, lPrem];
+  d.settings.packages = [sMini, sSedang, sKomplit, lStandar, lBesar, lPrem];
   d.settings.bankName = 'Mandiri';
   d.settings.bankNumber = '1390022114455';
   d.settings.invSeq = 24;
@@ -245,24 +265,24 @@ function makeDemoData() {
   const kids = [
     mk('Alya Ramadhani', '1B', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id, phone: '0812-3400-1122', allergy: 'Alergi kacang — tanpa kue kacang' }),
     mk('Bagas Nugraha', '1B', 'Bpk. Hendra', 'weekly', [], true, false, { snackPkg: sSedang.id }),
-    mk('Cahaya Illaika', '2A', 'Ibu Sari', 'monthly', [], true, true, { lunchPkg: lSpesial.id, phone: '0812-3400-1122' }),
+    mk('Cahaya Illaika', '2A', 'Ibu Sari', 'monthly', [], true, true, { lunchPkg: lBesar.id, phone: '0812-3400-1122' }),
     mk('Dimas Aryo', '2A', 'Bpk. Yusuf', 'daily', [1, 2, 3], true, true, { snackPkg: sMini.id, phone: '0857-2200-3311' }),
     mk('Elora Suci', '3C', 'Ibu Marni', 'weekly', [], false, true, { lunchPkg: lPrem.id, allergy: 'Intoleransi susu — tanpa keju' }),
     mk('Farhan Maulana', '3C', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sKomplit.id, phone: '0857-2200-3311' }),
     mk('Gadis Puspita', '4A', 'Ibu Endah', 'semester', [], true, true, { snackPkg: sSedang.id, allergy: 'Tidak makan pedas' }),
     mk('Hafiz Ramadhan', '4A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sMini.id, phone: '0821-7788-9001' }),
-    mk('Indira Kayana', '5B', 'Ibu Marni', 'monthly', [], true, true, { lunchPkg: lSpesial.id }),
+    mk('Indira Kayana', '5B', 'Ibu Marni', 'monthly', [], true, true, { lunchPkg: lBesar.id }),
     mk('Jibril Anwar', '5B', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lStandar.id, status: 'berhenti' }),
     mk('Kiran Maheswari', '6A', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sSedang.id, phone: '0821-7788-9001', allergy: 'Alergi seafood' }),
     mk('Luthfi Hakim', '6A', 'Ibu Sari', 'daily', [1, 3, 5], true, true, { lunchPkg: lStandar.id }),
     mk('Mutiara Zahra', '7C', 'Bpk. Yusuf', 'weekly', [], true, true, { snackPkg: sMini.id, allergy: 'Vegetarian — lauk tahu/tempe' }),
     mk('Nabil Prakoso', '8A', 'Ibu Marni', 'weekly', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244' }),
-    mk('Oka Sriwibowo', '8A', 'Bpk. Hendra', 'monthly', [], false, true, { lunchPkg: lSpesial.id, status: 'selesai' }),
+    mk('Oka Sriwibowo', '8A', 'Bpk. Hendra', 'monthly', [], false, true, { lunchPkg: lBesar.id, status: 'selesai' }),
     mk('Puput Arumbani', '9B', 'Ibu Endah', 'weekly', [], true, true, { snackPkg: sKomplit.id }),
     mk('Qori Amelia', '10A', 'Ibu Sari', 'semester', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244', allergy: 'Maag — hindari asam & pedas' }),
     mk('Rafan Syahputra', '10A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sSedang.id }),
     mk('Salsabila Azzahra', '11C', 'Ibu Marni', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id }),
-    mk('Taufik Hidayat', '11C', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lSpesial.id, phone: '0857-2200-3311' }),
+    mk('Taufik Hidayat', '11C', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lBesar.id, phone: '0857-2200-3311' }),
     mk('Ulva Hanum', '12A', 'Bpk. Hendra', 'monthly', [], true, true, { allergy: 'Alergi telur' }),
     mk('Wira Santoso', '12A', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sKomplit.id, lunchPkg: lPrem.id, phone: '0821-7788-9001' }),
     mk('Yolanda Putri', '12B', 'Ibu Marni', 'daily', [2, 4, 6], true, false, { snackPkg: sSedang.id }),
@@ -282,15 +302,15 @@ function makeDemoData() {
   const leavePerson = shiftDate(sen, 8);   // Selasa minggu depan
   const methods = ['Tunai', 'Transfer', 'QRIS'];
 
-  /* tiga rotasi menu mingguan — paket sama, makanan berbeda; satu-dua hari harganya diubah dari menu */
-  const mi = (name, type, pkg, price) => ({ name, type, pkg: pkg || '', price: price || '' });
+  /* tiga rotasi menu mingguan — paket sama, makanan berbeda; dua hari berisi menu spesial dengan harganya sendiri */
+  const mi = (name, type, pkg, price) => ({ name, type, pkg: '', price: /-spesial$/.test(type) ? (price || '') : '' });
   const W1 = [
     [mi('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', sMini.id), mi('Susu Cokelat\nBiskuit', 'snack', sSedang.id)],
     [mi('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', lStandar.id), mi('Risoles Mayo\nMelon', 'snack', sSedang.id)],
     [mi('Bubur Merah\nKacang\nRoti', 'snack', sSedang.id), mi('Kue Lumpur\nKelapa', 'snack', sMini.id),
       mi('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', lPrem.id)],
     [mi('Perkedel Jagung\nSayur', 'snack', sMini.id), mi('Es Jeruk\nNata', 'snack', sSedang.id),
-      mi('Mie Ayam\nBakso\nSawi', 'lunch', lSpesial.id, 22000), mi('Nasi Ayam Kalio\nSayur', 'lunch', lStandar.id)],
+      mi('Mie Ayam Spesial\nBakso\nSawi', 'lunch-spesial', '', 22000), mi('Nasi Ayam Kalio\nSayur', 'lunch', lStandar.id)],
     [mi('Kue Putu\nBulan', 'snack', sMini.id), mi('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', lStandar.id)],
     [mi('Sandwich Telur\nKeju', 'snack', sSedang.id), mi('Kue Tart Ulang Tahun', 'po')],
     []
@@ -302,7 +322,7 @@ function makeDemoData() {
       mi('Lapis Legit\nTeh', 'snack', sSedang.id)],
     [mi('Bola Tahu\nSayur', 'snack', sMini.id), mi('Cemilan Manis\nPuding Cokelat', 'snack', sSedang.id)],
     [mi('Soto Ayam\nNasi\nPerkedel', 'lunch', lStandar.id), mi('Tahu Isi\nSayur', 'snack', sMini.id),
-      mi('Es Teh Manis\nJeruk', 'snack', sMini.id, 5000)],
+      mi('Es Teh Manis\nJeruk', 'snack-spesial', '', 5000)],
     [mi('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', lPrem.id)],
     [mi('Roti Bakar Keju\nSusu', 'snack', sSedang.id), mi('Nasi Box Pengajian', 'po')],
     []
@@ -310,7 +330,7 @@ function makeDemoData() {
   const W3 = [
     [mi('Klepon\nUnu', 'snack', sMini.id), mi('Susu Stroberi\nRoti', 'snack', sSedang.id)],
     [mi('Nasi Goreng Kampung\nTelur\nSayur', 'lunch', lStandar.id), mi('Pastel Isi\nSayur', 'snack', sSedang.id)],
-    [mi('Pisang Rebus\nKaramel', 'snack', sMini.id), mi('Nasi Ayam Woku\nSayur\nPuding', 'lunch', lSpesial.id)],
+    [mi('Pisang Rebus\nKaramel', 'snack', sMini.id), mi('Nasi Ayam Woku\nSayur\nPuding', 'lunch', lBesar.id)],
     [mi('Tahu Bulat\nBakso', 'snack', sKomplit.id), mi('Es Buah\nSemangka', 'snack', sSedang.id),
       mi('Nasi Rendang\nSayur\nBuah', 'lunch', lPrem.id)],
     [mi('Getuk Singkong\nKelapa', 'snack', sMini.id), mi('Nasi Pecel\nAyam Goreng', 'lunch', lStandar.id)],
@@ -332,7 +352,7 @@ function makeDemoData() {
   }
 
   const pickOf = (type, date, c, i) => {
-    const items = (d.menuPlan[date] || []).filter(x => (x.type === 'lunch' ? 'lunch' : x.type === 'po' ? 'po' : 'snack') === type);
+    const items = (d.menuPlan[date] || []).filter(x => menuTypeOf(x) === type);
     if (!items.length) return { items: [], mis: [] };
     const first = (i * 3 + c.name.length + (type === 'lunch' ? 2 : 0)) % items.length;
     const mis = [first];
@@ -349,7 +369,9 @@ function makeDemoData() {
     { c: kids[15], type: 'lunch', date: hariKerja(today, 2) }   // masih berjalan
   ];
   sekali.forEach(x => { x.c.status = 'sekali'; x.c.onceDate = x.date; x.c.active = true; });
-  for (let i = 41; i >= 0; i--) {
+  /* 42 hari ke belakang + seminggu ke depan — langganan asli juga sudah terisi ke depan,
+     jadi akhir pekan pun halaman Cetak / Pesanan Mingguan tidak kosong */
+  for (let i = 41; i >= -7; i--) {
     const date = shiftDate(today, -i);
     if (weekdayOf(date) === 7) continue;              // Minggu diliburkan
     if (date === offAll) continue;                    // libur nasional (contoh)
@@ -369,7 +391,7 @@ function makeDemoData() {
           ordered: true, paid: gratis || !unpaid,
           method: gratis ? 'Gratis' : methods[(i + c.name.length + (type === 'lunch' ? 1 : 0)) % 3],
           note: i === 4 && c.name === 'Alya Ramadhani' ? 'Tanpa selai (alergi)' : (i === 2 && c.name === 'Wira Santoso' ? 'Bawa kotak sendiri' : ''),
-          pkg: pick.mis.length ? (pick.items[pick.mis[0]].pkg || '') : (type === 'snack' && c.name === 'Mutiara Zahra' && i % 5 === 0 ? sKomplit.id : '')
+          pkg: c[type === 'snack' ? 'snackPkg' : 'lunchPkg'] || ''
         };
         if (pick.mis.length) { rec.mis = pick.mis; rec.mi = pick.mis[0]; }
         d[type][date][c.id] = rec;
@@ -379,10 +401,10 @@ function makeDemoData() {
 
   /* pesanan tunggal mereka dibuat terpisah, persis pada tanggal pilihan */
   sekali.forEach(x => {
-    const items = (d.menuPlan[x.date] || []).filter(y => (y.type === 'lunch' ? 'lunch' : y.type === 'po' ? 'po' : 'snack') === x.type);
+    const items = (d.menuPlan[x.date] || []).filter(y => menuTypeOf(y) === x.type);
     const r = {
       ordered: true, paid: false, method: methods[1], note: '',
-      pkg: x.c[x.type === 'snack' ? 'snackPkg' : 'lunchPkg'] || (items[0] && items[0].pkg) || (x.type === 'snack' ? sMini.id : lStandar.id)
+      pkg: x.c[x.type === 'snack' ? 'snackPkg' : 'lunchPkg'] || (x.type === 'snack' ? sMini.id : lStandar.id)
     };
     if (items.length === 1) { r.mis = [0]; r.mi = 0; }
     (d[x.type][x.date] = d[x.type][x.date] || {})[x.c.id] = r;
@@ -694,9 +716,8 @@ function pkgFor(type, rec, cust) {
   if (def && def.type === type) return def;
   return pkgList(type)[0] || null;
 }
-/* Harga sebuah porsi selalu dari paket: override harian > paket pelanggan > paket pertama */
-/* Harga satu porsi: harga paketnya, kecuali menu pada tanggal itu memberi harga lain.
-   Anak yang memilih makanan (chip A/B/C) mengikuti harga pilihan pertama. */
+/* Harga satu porsi: menu spesial memakai harga yang diketik di barisnya (sama untuk semua anak),
+   menu biasa memakai harga paket anak itu — porsinya yang menentukan, bukan makanannya. */
 function effPrice(type, rec, cust, date) {
   const p = pkgFor(type, rec, cust);
   const base = p ? +p.price || 0 : basePrice(type);
@@ -704,13 +725,8 @@ function effPrice(type, rec, cust, date) {
   const items = menuItemsFor(type, date);
   if (!items.length) return base;
   const picks = rec && rec.ordered ? customPicks(type, rec) : [];
-  const it = picks.length
-    ? items.filter((x, i) => picks.indexOf(i) >= 0)[0]
-    : items.filter(x => x.pkg === (p && p.id))[0];
-  if (!it) return base;
-  if (+it.price > 0) return +it.price;
-  const ip = pkgById(it.pkg);
-  return ip ? +ip.price || 0 : base;
+  if (!picks.length) return base;
+  return spesialPrice(items[picks[0]]) || base;
 }
 function pkgLabel(p) { return p.name + ' (Rp ' + (+p.price || 0).toLocaleString('id-ID') + ')'; }
 function defaultMethod() {
@@ -1441,7 +1457,13 @@ function writeMenuPlan(date, items) {
 }
 /* Menu yang tampil untuk sebuah tanggal (menu mingguan) */
 function menuFor(date) { return db.menuPlan[date] || []; }
-function menuTypeOf(it) { return it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack'; }
+function menuTypeOf(it) {
+  const t = it && it.type;
+  return t === 'lunch' || t === 'lunch-spesial' ? 'lunch' : t === 'po' ? 'po' : 'snack';
+}
+function isSpesial(it) { return !!(it && /-spesial$/.test(String(it.type))); }
+/* Harga yang diketik di baris spesial; 0 berarti belum diisi (belum ditagih sebagai spesial) */
+function spesialPrice(it) { return isSpesial(it) && +it.price > 0 ? +it.price : 0; }
 function menuItemsFor(type, date) {
   return menuFor(date).filter(it => menuTypeOf(it) === type);
 }
@@ -1459,38 +1481,26 @@ function poPrice(it, date) {
 function menuItemsHtml(date) {
   const items = menuPlanItems(date);
   return items.map((it, idx) => {
-    const type = ['snack', 'lunch', 'po'].includes(it.type) ? it.type : 'snack';
-    const pkgs = pkgList(type);
-    let pkgSel, priceInp = '';
-    if (type === 'po') {
-      pkgSel = '<select class="input input-sm wm-pkg" disabled title="PO tidak memakai paket"><option>PO</option></select>';
+    const raw = MENU_TYPES.includes(it.type) ? it.type : 'snack';
+    let harga;
+    if (raw === 'po') {
       const m = poMenuFor(date, it.name);
       const def = m ? +m.price || 0 : 0;
       const shown = (+it.price > 0) ? +it.price : (def || '');
-      priceInp = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
+      harga = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
         '" value="' + shown + '" placeholder="harga" title="Harga per porsi PO ini' +
         (m ? ' — terbawa dari menu PO ' + escapeHtml(m.item) + ' di halaman Pre-Order (' + fmtIDR(def) + ')' : ' — belum ada menu PO dengan nama ini di halaman Pre-Order, isi sendiri') +
         '.">';
-    } else if (!pkgs.length) {
-      pkgSel = '<select class="input input-sm wm-pkg" disabled title="Belum ada paket"><option>Belum ada paket</option></select>';
+    } else if (raw === 'snack-spesial' || raw === 'lunch-spesial') {
+      harga = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
+        '" value="' + (it.price || '') + '" placeholder="harga" title="Harga menu spesial hari ini — semua anak yang memilih makanan ini membayar harga ini, berapa pun paketnya.">';
     } else {
-      const cur = pkgs.some(p => p.id === it.pkg) ? it.pkg : pkgs[0].id;
-      pkgSel = '<select class="input input-sm wm-pkg" data-date="' + date + '" data-idx="' + idx + '" title="Paket harga">' +
-        pkgs.map(p => '<option value="' + escapeHtml(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' +
-          escapeHtml(p.name) + '</option>').join('') +
-        '</select>';
-      const def = (pkgById(cur) ? +pkgById(cur).price : 0) || 0;
-      const shown = (+it.price > 0) ? +it.price : def;
-      priceInp = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
-        '" value="' + shown + '" placeholder="' + def + '" title="Harga porsi hari ini. Bawaannya harga paket (' + fmtIDR(def) + ') — ubah kalau hari itu harganya beda; kosongkan untuk mengikuti paket.">';
+      harga = '<span class="wm-noprice" title="Baris biasa tidak punya harga: tiap anak membayar sesuai paket porsinya sendiri, diatur di Pesanan Mingguan">paket anak</span>';
     }
     return '<div class="wm-item">' +
-      '<select class="input input-sm wm-type" data-date="' + date + '" data-idx="' + idx + '">' +
-        '<option value="snack"' + (type === 'snack' ? ' selected' : '') + '>Snack</option>' +
-        '<option value="lunch"' + (type === 'lunch' ? ' selected' : '') + '>Lunch</option>' +
-        '<option value="po"' + (type === 'po' ? ' selected' : '') + '>PO</option>' +
-      '</select>' +
-      pkgSel + priceInp +
+      '<select class="input input-sm wm-type" data-date="' + date + '" data-idx="' + idx + '" title="Jenis makanan pada hari ini">' +
+        MENU_TYPES.map(t => '<option value="' + t + '"' + (t === raw ? ' selected' : '') + '>' + MENU_TYPE_LABEL[t] + '</option>').join('') +
+      '</select>' + harga +
       '<textarea class="input input-sm wm-name" rows="1" data-date="' + date + '" data-idx="' + idx + '" placeholder="Nama menu / isi paket — tekan Enter untuk baris baru">' + escapeHtml(it.name) + '</textarea>' +
       '<button type="button" class="icon-act danger" data-act="week-menu-del" data-date="' + date + '" data-idx="' + idx + '" title="Hapus pilihan">×</button>' +
     '</div>';
@@ -1582,23 +1592,29 @@ function applyMenuEdit(t, quiet) {
       items.splice(idx, 1);
     }
   } else if (t.classList.contains('wm-type')) {
-    items[idx].type = ['snack', 'lunch', 'po'].includes(t.value) ? t.value : 'snack';
-    if (items[idx].type === 'po') items[idx].pkg = '';
-    else if (!pkgList(items[idx].type).some(p => p.id === items[idx].pkg)) items[idx].pkg = firstPkgId(items[idx].type);
-    items[idx].price = '';
-  } else if (t.classList.contains('wm-pkg')) {
-    items[idx].pkg = t.value;
-    items[idx].price = '';
+    const lama = MENU_TYPES.includes(items[idx].type) ? items[idx].type : 'snack';
+    items[idx].type = MENU_TYPES.includes(t.value) ? t.value : 'snack';
+    const baru = items[idx].type;
+    if (baru === 'po') { items[idx].pkg = ''; items[idx].price = ''; }
+    else if (baru === 'snack-spesial' || baru === 'lunch-spesial') {
+      if (lama !== baru && !(+items[idx].price > 0)) {
+        const p = pkgById(firstPkgId(menuTypeOf(items[idx])));
+        items[idx].price = p ? +p.price || 0 : '';
+      }
+    } else items[idx].price = '';
   } else if (t.classList.contains('wm-price')) {
-    /* harga = default paket selama kolom dibiarkan sama dengan harga paket atau dikosongkan */
-    const p = pkgById(items[idx].pkg);
-    const def = p ? +p.price || 0 : 0;
     const v = t.value === '' ? null : Math.max(0, +t.value || 0);
-    items[idx].price = (v === null || v === def) ? '' : v;
-    if (items[idx].type === 'po' && v !== null && v !== def) {
-      const m = poMenuFor(date, items[idx].name);
-      if (m && +m.price !== v) { m.price = v; poSync = v; }
-    }
+    if (items[idx].type === 'po') {
+      items[idx].price = v === null ? '' : v;
+      if (v !== null) {
+        const m = poMenuFor(date, items[idx].name);
+        if (m && +m.price !== v) { m.price = v; poSync = v; }
+      }
+    } else if (v === null || v <= 0) {
+      /* tanpa harga, barisnya kembali jadi menu biasa */
+      items[idx].price = '';
+      if (isSpesial(items[idx])) items[idx].type = menuTypeOf(items[idx]);
+    } else items[idx].price = v;
   }
   writeMenuPlan(date, items);
   const terisi = autoPickSingles([date]);
@@ -1635,13 +1651,13 @@ function menuShareImage() {
     date: d,
     items: menuFor(d).map(it => {
       const parts = menuLines(it.name);
-      const p = it.pkg ? pkgById(it.pkg) : null;
+      const sp = spesialPrice(it);
       const po = it.type === 'po' ? poPrice(it, d) : 0;
       return {
-        type: it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack',
+        type: menuTypeOf(it),
         title: parts[0] || it.name,
         comps: parts.slice(1).join(' · '),
-        pkg: p ? p.name + ' · ' + fmtIDR(+it.price > 0 ? +it.price : p.price) : (it.type === 'po' ? 'Pre-Order' + (po ? ' · ' + fmtIDR(po) : '') : '')
+        pkg: sp ? 'Spesial · ' + fmtIDR(sp) : (it.type === 'po' ? 'Pre-Order' + (po ? ' · ' + fmtIDR(po) : '') : '')
       };
     })
   }));
@@ -1873,24 +1889,23 @@ function renderPkgShowcase() {
   el.innerHTML = ['snack', 'lunch'].map(type => {
     const counts = pkgCounts(type, date).map;
     const total = countOrdered(type, date);
-    const plan = menuFor(date).filter(it => (it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack') === type);
-    const chips = pkgList(type).map(p => {
-      const items = plan.filter(it => (it.pkg || firstPkgId(type)) === p.id);
-      const menu = items.map(it => {
-        const parts = menuLines(it.name);
-        return '<div class="pm"><b>' + escapeHtml(parts[0] || it.name) + '</b>' +
-          (parts.length > 1 ? '<span>' + parts.slice(1).map(escapeHtml).join(' · ') + '</span>' : '') + '</div>';
-      }).join('');
-      const usedBy = counts[p.id] || 0;
-      return '<div class="pkg-chip"><span class="pkg-name">' + escapeHtml(p.name) + '</span>' +
-        '<span class="pkg-price">' + fmtIDR(p.price) + '</span>' +
-        '<span class="pkg-use">' + usedBy + ' orang pesan</span>' +
-        '<div class="pkg-menu">' + (menu || '<span class="pm-none">belum ada menu paket ini' +
-          (usedBy ? ' — ' + usedBy + ' orang pesan dengan paket ini' : '') + '</span>') + '</div></div>';
+    const plan = menuItemsFor(type, date);
+    const chips = pkgList(type).map(p =>
+      '<div class="pkg-chip"><span class="pkg-name">' + escapeHtml(p.name) + '</span>' +
+      '<span class="pkg-price">' + fmtIDR(p.price) + '</span>' +
+      '<span class="pkg-use">' + (counts[p.id] || 0) + ' orang pesan</span></div>').join('');
+    const menu = plan.map(it => {
+      const parts = menuLines(it.name);
+      const sp = spesialPrice(it);
+      return '<div class="pm"><b>' + escapeHtml(parts[0] || it.name) + '</b>' +
+        (sp ? '<span class="pm-spesial">Spesial ' + fmtIDR(sp) + '</span>' : '') +
+        (parts.length > 1 ? '<span>' + parts.slice(1).map(escapeHtml).join(' · ') + '</span>' : '') + '</div>';
     }).join('');
     return '<div class="pkg-group"><div class="pkg-group-title">' + (type === 'snack' ? 'Snack' : 'Lunch') +
       '<span class="muted tiny"> · ' + total + ' porsi</span></div>' +
-      '<div class="pkg-chips">' + (chips || '<span class="muted small">Belum ada paket — tambah di Pengaturan.</span>') + '</div></div>';
+      '<div class="pkg-chips">' + (chips || '<span class="muted small">Belum ada paket — tambah di Pengaturan.</span>') + '</div>' +
+      '<p class="muted tiny pkg-note">Makanan di bawah berlaku untuk semua paket — tiap anak bayar sesuai paketnya sendiri, kecuali yang bertanda Spesial.</p>' +
+      '<div class="pkg-menu">' + (menu || '<span class="pm-none">belum ada menu pada tanggal ini</span>') + '</div></div>';
   }).join('');
 }
 function pkgUsage(p) {
@@ -1974,8 +1989,9 @@ function foodChips(type, date, rec, cid) {
   }
   return items.slice(0, LETTERS.length).map((it, k) => {
     const on = picks.indexOf(k) >= 0;
+    const sp = spesialPrice(it);
     return '<button type="button" class="food-chip ' + (on ? 'is-on' : 'is-off') + '" data-act="daily-food" data-type="' + type +
-      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + foodTip(k, it) + '">' +
+      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + foodTip(k, it, sp ? 'Spesial · ' + fmtIDR(sp) : '') + '">' +
       '<b>' + LETTERS[k] + '</b>' + escapeHtml(label(it)) + '</button>';
   }).join('');
 }
@@ -2077,7 +2093,10 @@ function dailyFoodCell(type, date, c, r) {
       (r.ordered ? '✓ pesan' : 'pesan') + '</button>'
     : '';
   const pk = r.ordered ? pkgFor(type, r, c) : null;
-  const pkgLine = pk ? '<span class="pkg-under">' + escapeHtml(pk.name) + ' · ' + fmtIDR(effPrice(type, r, c, date)) + '</span>' : '';
+  const sp = picks.length ? spesialPrice(items[picks[0]]) : 0;
+  const pkgLine = !r.ordered ? '' : (sp
+    ? '<span class="pkg-under is-spesial">Spesial · ' + fmtIDR(sp) + '</span>'
+    : (pk ? '<span class="pkg-under">' + escapeHtml(pk.name) + ' · ' + fmtIDR(effPrice(type, r, c, date)) + '</span>' : ''));
   return '<td class="food-cell' + (items.length ? '' : ' food-none') + (leave ? ' is-leave' : '') + '" data-type="' + type + '">' + chips + btn + pkgLine + '</td>';
 }
 function dayTotalHTML(s) {
@@ -2282,7 +2301,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti paket pilihan pertama). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan, ubah harganya di halaman Hari Ini. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti pilihan pertama — paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2297,7 +2316,9 @@ function customDates() {
 }
 function customPkgNote(type, rec, c, chosen) {
   const mode = db.settings.customDisplay === 'name' ? 'name' : db.settings.customDisplay === 'price' ? 'price' : 'both';
-  const p = chosen ? (pkgById(chosen.pkg) || pkgFor(type, rec, c)) : pkgFor(type, rec, c);
+  const sp = spesialPrice(chosen);
+  if (sp) return mode === 'name' ? 'Spesial' : mode === 'price' ? fmtIDR(sp) : 'Spesial · ' + fmtIDR(sp);
+  const p = pkgFor(type, rec, c);
   if (!p) return mode === 'price' ? '—' : 'tanpa paket';
   if (mode === 'name') return p.name;
   if (mode === 'price') return fmtIDR(p.price);
@@ -2335,7 +2356,7 @@ function autoPickSingles(dates, onlyId) {
         }
         if (semua.length || satu < 0) return;
         r.mis = [satu]; r.mi = satu;
-        r.pkg = items[satu].pkg || r.pkg || firstPkgId(t) || '';
+        if (!r.pkg) { const p = pkgFor(t, r, customerById(id)); if (p) r.pkg = p.id; }
         if (!r.method) r.method = defaultMethod();
         berubah++;
       });
@@ -2393,7 +2414,7 @@ function setCustomFood(cid, date, mi, typeIn) {
   if (had) picks = picks.filter(x => x !== mi);
   else if (type === 'snack') {
     picks = picks.length >= 2 ? [mi] : picks.concat(mi).sort((a, b) => a - b);
-    if (picks.length === 2) toast('Snack: ' + LETTERS[picks[0]] + ' + ' + LETTERS[picks[1]] + ' — harga mengikuti paket ' + LETTERS[picks[0]]);
+    if (picks.length === 2) toast('Snack: ' + LETTERS[picks[0]] + ' + ' + LETTERS[picks[1]] + ' — harga mengikuti pilihan ' + LETTERS[picks[0]]);
   } else picks = [mi];
   rec.mis = picks;
   rec.mi = picks.length ? picks[0] : undefined;
@@ -2401,7 +2422,7 @@ function setCustomFood(cid, date, mi, typeIn) {
   if (picks.length) {
     rec.ordered = true;
     const primary = items[picks[0]];
-    rec.pkg = (primary && primary.pkg) || rec.pkg || firstPkgId(type) || '';
+    if (!rec.pkg) { const p = pkgFor(type, rec, c); if (p) rec.pkg = p.id; }
     if (!rec.method) rec.method = defaultMethod();
     logAction('kustomisasi', 'Pilih ' + type + ' ' + c.name + ' @ ' + date + ' menu ' + picks.map(k => LETTERS[k]).join('+') + ' — ' + (menuLines(primary.name)[0] || ''));
   } else {
@@ -2498,9 +2519,9 @@ function renderCustom() {
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
         '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) =>
           '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '" data-tip="' +
-          foodTip(k, it, (pkgById(it.pkg) ? 'Paket ' + pkgLabel(pkgById(it.pkg)) : 'Paket mengikuti pelanggan')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
+          foodTip(k, it, (spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ' — berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
         '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
-        escapeHtml(picks.length > 1 ? ('2 pilihan — harga mengikuti paket pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu — harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
+        escapeHtml(picks.length > 1 ? ('2 pilihan — harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu — harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
         escapeHtml(picks.length || ordered ? customPkgNote(type, rec, c, picks.length ? items[picks[0]] : null) : 'belum pesan') + '</div>' +
         '</td>';
     }).join('');
@@ -3462,8 +3483,8 @@ function renderBillPanel() {
         '<span class="danger-text">' + fmtIDR(k.total) + '</span></div>' +
       (k.lines.length
         ? '<ul class="bill-lines">' + groupByWeek(k.lines).map(g =>
-            '<li class="wk"><span>Minggu ' + weekRangeLabel(g.monday) + '</span><span>' + fmtIDR(g.total) + '</span></li>' +
-            g.lines.map(l => '<li><span>' + fmtShortDate(l.date) + ' · ' + l.label + '</span><span>' + fmtIDR(l.amount) + '</span></li>').join('')
+            '<li class="wk"><span>Minggu ' + escapeHtml(weekRangeLabel(g.monday)) + '</span><span>' + fmtIDR(g.total) + '</span></li>' +
+            g.lines.map(l => '<li><span>' + escapeHtml(fmtShortDate(l.date)) + ' · ' + escapeHtml(l.label) + '</span><span>' + fmtIDR(l.amount) + '</span></li>').join('')
           ).join('') + '</ul>'
         : '<p class="muted tiny">Tidak ada tagihan tertunda pada periode ini.</p>') +
     '</div>').join('') +
@@ -3827,8 +3848,10 @@ function openReportDetail(cid) {
   );
 }
 
+/* Dokumen cetak cukup butuh gaya: tanpa skrip dan tanpa permintaan jaringan apa pun. */
+const DOC_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">';
 function printableDoc(title, subtitle, inner) {
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4 portrait;margin:12mm}' +
     'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:12px}' +
     'h1{font-size:19px;margin:0 0 2mm;letter-spacing:.2px}' +
@@ -4005,7 +4028,7 @@ function buildStickerHTML(customers, o) {
       (usedRows ? 'grid-template-rows:repeat(' + usedRows + ',' + rowHmm.toFixed(2) + 'mm)' : '') + '">' + items + '</div>';
   }).join('');
   const edge = o.lines ? (+style.lineW || 2) + 'px solid #A9A092' : '0';
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4;margin:5mm 6mm}' +
     '*{box-sizing:border-box}' +
     'html,body{margin:0;padding:0;background:#fff}' +
@@ -4129,7 +4152,7 @@ function satpamEntries(date, type) {
 function buildSatpamHTML(date, type, showClass) {
   const entries = satpamEntries(date, type);
   const typeLabel = type === 'snack' ? 'Snack' : 'Lunch';
-  const menus = menuFor(date).filter(it => (it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack') === type);
+  const menus = menuFor(date).filter(it => menuTypeOf(it) === type);
   const menuHtml = menus.length
     ? '<div class="menu"><strong>Pilihan ' + typeLabel + ':</strong>' + menus.map(m => {
         const parts = menuLines(m.name);
@@ -4152,7 +4175,7 @@ function buildSatpamHTML(date, type, showClass) {
   const caption = useFoods
     ? '<div class="cap">Kolom <b>' + foods.map((f, k) => LETTERS[k]).join(' / ') + '</b> = pilihan makanan anak. Kotak kosong centang saat diserahkan, strip (&ndash;) berarti anak tersebut <b>tidak memilih</b> makanan itu.</div>'
     : '<div class="cap">Belum ada menu ' + typeLabel + ' pada tanggal ini &mdash; kolom Paket + Cek dipakai sementara.</div>';
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4 portrait;margin:12mm}' +
     'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:12px}' +
     'h1{font-size:19px;margin:0 0 2mm;letter-spacing:.2px}' +
@@ -4604,7 +4627,7 @@ function renderHomeHoliday() {
         let who = '';
         if (h.scope === 'person') { const c = customerById(h.value); who = c ? c.name : ''; }
         else if (h.value) who = h.value;
-        return '<span class="libur-chip">' + fmtShortDate(h.date) + ' · ' + (SCOPE_LABEL[h.scope] || h.scope) +
+        return '<span class="libur-chip">' + escapeHtml(fmtShortDate(h.date)) + ' · ' + escapeHtml(SCOPE_LABEL[h.scope] || h.scope) +
           (who ? ' · ' + escapeHtml(who) : '') + (h.note ? ' <em>' + escapeHtml(h.note) + '</em>' : '') +
           '<button type="button" class="chip-x" data-act="holiday-remove" data-id="' + escapeHtml(h.id) + '" title="Hapus libur ini">&times;</button></span>';
       }).join('')
@@ -4839,13 +4862,25 @@ function renderSettings() {
   renderCustomers();
   renderBackups();
 }
+/* Makanan yang benar-benar dimakan anak ber-paket ini dalam 7 hari ke depan */
 function pkgMenuSample(p) {
+  const type = p.type;
   const names = [];
   for (let i = 0; i < 7; i++) {
-    menuFor(shiftDate(todayStr(), i)).forEach(it => {
-      if (it.type !== p.type || (it.pkg || firstPkgId(p.type)) !== p.id) return;
-      const nm = menuLines(it.name)[0];
-      if (nm && names.indexOf(nm) < 0) names.push(nm);
+    const d = shiftDate(todayStr(), i);
+    const items = menuItemsFor(type, d);
+    const recs = db[type][d] || {};
+    Object.keys(recs).forEach(id => {
+      const r = recs[id];
+      if (!r || !r.ordered) return;
+      const pk = pkgFor(type, r, customerById(id));
+      if (!pk || pk.id !== p.id) return;
+      customPicks(type, r).forEach(k => {
+        const it = items[k];
+        if (!it) return;
+        const nm = menuLines(it.name)[0];
+        if (nm && names.indexOf(nm) < 0) names.push(nm);
+      });
     });
   }
   return names;
@@ -5165,7 +5200,9 @@ function autoBackup(force) {
   const stamp = new Date().toISOString();
   const day = stamp.slice(0, 10);
   const list = readBackups();
-  if (list.length && list[0].day === day) list[0] = { day: day, ts: stamp, json: json };
+  /* Jangan menimpa salinan hari ini dengan isi yang BEDA (mis. tepat setelah "Reset"):
+     data asli pagi harinya hilang tanpa bekas. Isi yang sama cukup diperbarui jamnya. */
+  if (list.length && list[0].day === day && list[0].json === json) list[0] = { day: day, ts: stamp, json: json };
   else list.unshift({ day: day, ts: stamp, json: json });
   writeBackups(list);
 }
@@ -5345,8 +5382,7 @@ function onDocClick(e) {
       if (items.length >= WEEK_MENU_MAX) { toast('Maksimal ' + WEEK_MENU_MAX + ' pilihan per hari'); break; }
       const last = items[items.length - 1];
       const type = last ? last.type : 'snack';
-      const pkg = last && last.type === type && last.pkg ? last.pkg : (type === 'po' ? '' : firstPkgId(type));
-      items.push({ name: '', type: type, pkg: pkg });
+      items.push({ name: '', type: type, pkg: '', price: '' });
       writeMenuPlan(date, items);
       save(); renderWeekMenu(); renderPkgShowcase(); renderHomeCalendar();
       const inputs = document.querySelectorAll('.wm-name[data-date="' + date + '"]');
@@ -5785,7 +5821,7 @@ function onDocChange(e) {
   if (t.id === 'holidayScope') { renderHolidayValueOptions(); renderHolidayWarn(); return; }
   if (t.id === 'holidayValue') { renderHolidayWarn(); return; }
   if (t.dataset.hp === '1') { filterHolidayPeople(); renderHolidayWarn(); return; }
-  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-pkg') || t.classList.contains('wm-price')) {
+  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-price')) {
     applyMenuEdit(t, false);
     return;
   }
