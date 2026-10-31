@@ -4,7 +4,7 @@
 :root{
   color-scheme:light;
   --font:"Segoe UI Variable Text","Inter","Segoe UI",system-ui,-apple-system,"SF Pro Text",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --ui-zoom:1; /* skala teks aplikasi, diatur dari Pengaturan › Tampilan Aplikasi */
+  --ui-zoom:1; /* skala teks aplikasi, diatur dari Pengaturan › Tampilan & Cadangan Data */
 
   /* ---- mode terang ---- */
   --bg:#EEF0F9;
@@ -293,6 +293,7 @@ body.theme-dark .card{background:linear-gradient(180deg,rgba(255,255,255,.035),r
 .card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px;flex-wrap:wrap}
 .card-head h3{font-size:15px;display:flex;align-items:center;gap:9px;letter-spacing:-.2px}
 .card-head h3::before{content:"";width:4px;height:15px;border-radius:3px;background:var(--grad);box-shadow:0 0 12px var(--glow-1)}
+.card-divide{padding-top:17px;border-top:1px solid var(--border)}
 .head-tools{display:flex;align-items:center;gap:10px;margin-left:auto}
 
 /* ===== Buttons ===== */
@@ -333,6 +334,12 @@ select.input{appearance:none;-webkit-appearance:none;
 .input-sm{padding:8px 11px;font-size:13.5px;border-radius:11px}
 .field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
 .field>span{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.hp-list{max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);padding:6px}
+.hp-list[hidden]{display:none}
+.hp-row{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer}
+.hp-row:hover{background:var(--surface-3)}
+.hp-row[hidden]{display:none}
+.hp-row input{width:16px;height:16px;accent-color:var(--primary);flex:none}
 .check{display:flex;align-items:center;gap:9px;font-size:14px;margin:8px 0;cursor:pointer}
 .check input{width:18px;height:18px;accent-color:var(--primary);cursor:pointer}
 
@@ -371,13 +378,15 @@ body.theme-dark .stat-card{background:linear-gradient(160deg,rgba(255,255,255,.0
 .donut-legend .lg em{font-style:normal;font-weight:800;color:var(--primary-dark);font-variant-numeric:tabular-nums}
 
 /* ===== Table ===== */
-.table-wrap{overflow:auto;max-height:min(70vh,620px);border-radius:14px;border:1px solid var(--border);background:var(--surface)}
+.table-wrap{overflow:auto;max-height:min(88vh,900px);border-radius:14px;border:1px solid var(--border);background:var(--surface)}
 body.theme-dark .table-wrap{background:rgba(255,255,255,.012)}
+/* seluruh kepala tabel menempel — termasuk baris judul Snack/Lunch/Hari Ini di atas baris kedua */
+.table thead{position:sticky;top:0;z-index:4}
 .table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
 .table th{
   text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;
   color:var(--muted);font-weight:700;padding:11px 10px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:var(--surface);z-index:1;
+  background:var(--surface);
 }
 body.theme-dark .table th{background:#141722}
 .table td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -528,20 +537,15 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
   background:var(--grad);color:#fff;border-color:transparent;
   box-shadow:0 8px 20px rgba(216,38,47,.35);
 }
-.cal-day.is-today.is-selected{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);box-shadow:0 8px 20px rgba(56,211,159,.3), inset 0 0 0 2px var(--accent)}
-.cal-day.is-today.is-selected:hover{background:var(--accent-soft);border-color:var(--accent)}
+/* tanggal hari ini yang sedang dipilih ikut merah — merah menang atas hijau (permintaan pemilik) */
 .cal-dots{position:absolute;bottom:7px;left:0;right:0;display:flex;justify-content:center;gap:3px}
 .cal-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
 /* hijau = ada snack/lunch · merah = hanya sebagian orang libur · kuning = ada pre-order */
 .cal-dot.r{background:var(--danger);box-shadow:0 0 6px var(--danger)}
 .cal-dot.y{background:var(--gold);box-shadow:0 0 6px var(--gold)}
-.cal-month.is-today.is-selected{background:var(--accent-soft);color:var(--accent-dark);border-color:var(--accent);box-shadow:0 8px 20px rgba(56,211,159,.3), inset 0 0 0 2px var(--accent)}
 .cal-day.is-selected .cal-dot{background:#fff;box-shadow:none}
 .cal-day.is-selected .cal-dot.r{background:#FF8A7A;box-shadow:none}
 .cal-day.is-selected .cal-dot.y{background:#F0D089;box-shadow:none}
-.cal-day.is-today.is-selected .cal-dot{background:var(--accent-dark);box-shadow:0 0 6px var(--accent)}
-.cal-day.is-today.is-selected .cal-dot.r{background:var(--danger);box-shadow:0 0 6px var(--danger)}
-.cal-day.is-today.is-selected .cal-dot.y{background:var(--gold);box-shadow:0 0 6px var(--gold)}
 .cal-keys{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:11px;font-size:11px;font-weight:600;color:var(--muted)}
 .cal-keys span{display:inline-flex;align-items:center;gap:6px}
 .cal-keys .cal-dot{display:inline-block;box-shadow:none}
@@ -623,7 +627,9 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 /* ===== Menu mingguan / harian ===== */
 .week-menu{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
 .wm-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start}
-.wm-day{display:flex;flex-direction:column;font-size:12.5px;font-weight:600;padding-top:9px}
+.wm-day{display:flex;flex-direction:column;font-size:12.5px;font-weight:600;padding-top:9px;
+  background:none;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit}
+.wm-day:hover small,.wm-day:focus-visible small{color:var(--primary-dark);text-decoration:underline}
 .wm-day small{font-weight:500;color:var(--muted);font-size:11px}
 .wm-items{display:flex;flex-direction:column;gap:6px;min-width:0}
 .wm-item{display:grid;grid-template-columns:82px 148px 84px minmax(120px,1fr) 32px;gap:6px;align-items:start;min-width:0}
@@ -658,10 +664,16 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .seg-btn.is-on{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(216,38,47,.28)}
 
 /* ===== Kustomisasi mingguan ===== */
-.custom-wrap{overflow:auto;max-height:70vh}
+.custom-wrap{overflow:auto;max-height:min(88vh,900px)}
 .custom-table{min-width:940px}
 .custom-table th.day{min-width:108px;line-height:1.25;text-align:center}
 .custom-table th.day small{display:block;font-size:10px;font-weight:600;letter-spacing:0;color:var(--muted);text-transform:none}
+.custom-table th.day .day-jump{display:block;width:100%;margin-top:1px;background:none;border:0;padding:0;cursor:pointer;
+  font-size:10px;font-weight:600;letter-spacing:0;color:var(--muted);text-transform:none;font-family:inherit}
+.custom-table th.day .day-jump:hover,.custom-table th.day .day-jump:focus-visible{color:var(--primary-dark);text-decoration:underline}
+.row-jump{border:1px solid var(--border);background:var(--surface-2);color:var(--muted);border-radius:999px;
+  font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.row-jump:hover,.row-jump:focus-visible{border-color:var(--primary);color:var(--primary-dark)}
 .custom-table td.cell{padding:5px;min-width:104px}
 .custom-table td.cell select{width:100%;font-size:12.5px;padding:6px 22px 6px 8px;background-position:right 6px center}
 .cs-food{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}.cs-letter{width:27px;height:27px;padding:0;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-strong);
@@ -680,6 +692,9 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
   color:var(--muted);font-size:11px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit;transition:.15s}
 .cs-plain:hover{border-color:var(--primary);color:var(--primary-dark)}
 .cs-plain.is-on{border-style:solid;background:var(--grad);border-color:transparent;color:#fff}
+.cs-plain.is-blocked{opacity:.5;border-style:dotted;cursor:not-allowed}
+.cs-plain.is-blocked:hover{border-color:var(--border-strong);color:inherit}
+#hariList td.food-cell.is-leave .food-chip{opacity:.45}
 .wa-table tr.is-group td{background:var(--surface-2)}
 .wa-table tr.is-group:nth-child(even) td{background:var(--surface-3)}
 .cs-legend.cs-none{opacity:.5;font-style:italic}

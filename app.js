@@ -61,15 +61,20 @@ const UI_FONTS = {
   narrow: '"Arial Narrow",Arial,Helvetica,sans-serif'
 };
 const UI_ZOOM_MIN = 85, UI_ZOOM_MAX = 130;
-/* Status pelanggan: aktif = ikut pesanan berikutnya; selesai = sudah tamat (catatan tetap ada); berhenti = nonaktif */
-const CUST_STATUS = ['aktif', 'selesai', 'berhenti'];
-const STATUS_LABEL = { aktif: 'Aktif', selesai: 'Selesai', berhenti: 'Berhenti' };
-const STATUS_BADGE = { aktif: 'green', selesai: 'gold', berhenti: 'red' };
+/* Status pelanggan: aktif = ikut pesanan berikutnya; sekali = satu tanggal saja; selesai = sudah tamat (catatan tetap ada); berhenti = nonaktif */
+const CUST_STATUS = ['aktif', 'sekali', 'selesai', 'berhenti'];
+const STATUS_LABEL = { aktif: 'Aktif', sekali: 'Beli Sekali', selesai: 'Selesai', berhenti: 'Berhenti' };
+const STATUS_BADGE = { aktif: 'green', sekali: 'orange', selesai: 'gold', berhenti: 'red' };
 const STATUS_HINT = {
   aktif: 'masih berlangganan — akan ikut terisi pada pesanan berikutnya',
+  sekali: 'hanya beli satu kali pada tanggal yang dipilih — setelah hari itu lewat ia keluar dari daftar "yang berjalan"',
   selesai: 'sudah tamat / pindah (mis. lulus) — riwayat tagihan tetap disimpan, tidak ikut pesanan berikutnya',
   berhenti: 'berhenti sementara — bisa diaktifkan lagi kapan saja'
 };
+/* Anak yang masih "berjalan": langganan aktif, atau beli sekali yang tanggalnya belum lewat */
+function oncePassed(c) { return !!c && c.status === 'sekali' && !!c.onceDate && c.onceDate < todayStr(); }
+function custJalan(c) { return c.status === 'aktif' || (c.status === 'sekali' && !oncePassed(c)); }
+function custActive(c) { return c.status === 'aktif' || c.status === 'sekali'; }
 const LETTERS = 'ABCDEFGH';
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
@@ -86,7 +91,7 @@ function defaultData() {
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
-      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, padV: 2.6, tight: 100, mark: 'dot', tone: 'soft' },
+      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, padV: 2.6, tight: 100, mark: 'bar', tone: 'soft' },
       uiFont: 'default', // jenis huruf seluruh aplikasi (key UI_FONTS)
       uiZoom: 100,       // skala teks seluruh aplikasi, 85–130 %
       customDisplay: 'both', // tampilan sel Kustomisasi: 'both' | 'name' | 'price'
@@ -127,7 +132,7 @@ function normalize(d) {
   /* tight = persen tinggi sel terhadap tinggi otomatis — memperkecil kotak tanpa mengubah font manual */
   const tg = +sk.tight;
   sk.tight = Number.isFinite(tg) ? Math.min(100, Math.max(50, tg)) : 100;
-  sk.mark = STK_MARKS[sk.mark] ? sk.mark : 'dot';
+  sk.mark = STK_MARKS[sk.mark] ? sk.mark : 'bar';
   sk.tone = STK_TONES[sk.tone] ? sk.tone : 'soft';
   d.settings.sticker = sk;
   d.settings.uiFont = UI_FONTS[d.settings.uiFont] ? d.settings.uiFont : 'default';
@@ -163,7 +168,8 @@ function normalize(d) {
     c.phone = String(c.phone || '').trim(); c.allergy = String(c.allergy || '').trim().slice(0, 80);
     /* status = satu-satunya sumber; c.active dibiarkan tetap terisi supaya logika lama tidak berubah */
     c.status = CUST_STATUS.indexOf(c.status) >= 0 ? c.status : (c.active === false ? 'berhenti' : 'aktif');
-    c.active = c.status === 'aktif';
+    c.onceDate = /^\d{4}-\d{2}-\d{2}$/.test(c.onceDate || '') ? c.onceDate : '';
+    c.active = custActive(c);
   });
   ['snack', 'lunch'].forEach(t => {
     for (const date in d[t]) {
@@ -336,6 +342,13 @@ function makeDemoData() {
     }
     return { items, mis };
   };
+  /* dua anak cukup beli sekali — satu tanggal pilihan, bukan rangkaian hari */
+  const hariKerja = (dari, langkah) => { let x = shiftDate(dari, langkah); while (weekdayOf(x) > 5) x = shiftDate(x, langkah); return x; };
+  const sekali = [
+    { c: kids[7], type: 'snack', date: hariKerja(today, -2) },  // tanggalnya sudah lewat → tidak muncul di "yang berjalan"
+    { c: kids[15], type: 'lunch', date: hariKerja(today, 2) }   // masih berjalan
+  ];
+  sekali.forEach(x => { x.c.status = 'sekali'; x.c.onceDate = x.date; x.c.active = true; });
   for (let i = 41; i >= 0; i--) {
     const date = shiftDate(today, -i);
     if (weekdayOf(date) === 7) continue;              // Minggu diliburkan
@@ -363,6 +376,17 @@ function makeDemoData() {
       }
     }
   }
+
+  /* pesanan tunggal mereka dibuat terpisah, persis pada tanggal pilihan */
+  sekali.forEach(x => {
+    const items = (d.menuPlan[x.date] || []).filter(y => (y.type === 'lunch' ? 'lunch' : y.type === 'po' ? 'po' : 'snack') === x.type);
+    const r = {
+      ordered: true, paid: false, method: methods[1], note: '',
+      pkg: x.c[x.type === 'snack' ? 'snackPkg' : 'lunchPkg'] || (items[0] && items[0].pkg) || (x.type === 'snack' ? sMini.id : lStandar.id)
+    };
+    if (items.length === 1) { r.mis = [0]; r.mi = 0; }
+    (d[x.type][x.date] = d[x.type][x.date] || {})[x.c.id] = r;
+  });
 
   const pm = (date, item, price) => ({ id: uid(), date, item, price, note: '' });
   const m1 = pm(shiftDate(today, -4), 'Rice Bowl Rapat Guru', 18000);
@@ -590,13 +614,15 @@ const state = {
   poMonth: monthKey(todayStr()),
   rptMonth: monthKey(todayStr()),
   stickerDate: todayStr(),
+  stickerType: 'snack', // filter daftar anak di kartu stiker: snack | lunch
+  satpamType: 'snack',  // jenis kertas konfirmasi yang dibuat: snack | lunch
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
   debtors: [],       // hasil perhitungan penunggak pada halaman Pengingat
   preview: null,     // { url, file, title } gambar yang sedang dipratinjau sebelum dibagikan
-  cust: { q: '', level: '', cohort: '', cls: '', status: 'aktif' },
+  cust: { q: '', level: '', cohort: '', cls: '', status: 'jalan' }, // 'jalan' = aktif + beli sekali yang belum lewat
   custSel: new Set(), // pelanggan terpilih untuk aksi massal
   menuTab: 'week', // tab kartu Menu di Beranda: 'week' | 'daily'
   menuDay: 0, // hari terpilih (0=Senin..6=Minggu) saat tab Menu Harian aktif
@@ -735,9 +761,29 @@ function endOfMonth(ymd) {
   const p = ymd.split('-').map(Number);
   return p[0] + '-' + pad(p[1]) + '-' + pad(new Date(p[0], p[1], 0).getDate());
 }
+/* "Beli sekali": satu pesanan pada satu tanggal pilihan, bukan rangkaian hari. */
+function fillOnceOrder(c) {
+  const d = c.onceDate;
+  if (!d) return 0;
+  let n = 0;
+  ['snack', 'lunch'].forEach(t => {
+    if (!c[t === 'snack' ? 'snackDefault' : 'lunchDefault']) return;
+    const lama = (db[t][d] || {})[c.id];
+    if (lama && lama.ordered) return;
+    if (isOnLeave(c, d)) return;
+    const r = ensureRecord(t, d, c.id);
+    r.ordered = true; r.paid = false;
+    if (!r.method) r.method = defaultMethod();
+    if (!r.pkg) { const p = pkgFor(t, r, c); if (p) r.pkg = p.id; }
+    n++;
+  });
+  autoPickSingles([d], c.id);
+  return n;
+}
 /* Mingguan: 7 hari berikutnya. Bulanan: besok s/d akhir bulan. Hanya Senin–Jumat. */
 function autoFillPeriod(c) {
   if (!c || c.active === false) return 0;
+  if (c.status === 'sekali') return fillOnceOrder(c);
   if (c.period === 'semester' || c.period === 'daily') return 0;
   const today = todayStr();
   const last = c.period === 'weekly' ? shiftDate(today, 7) : endOfMonth(today);
@@ -1169,7 +1215,7 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Seminggu', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
 function showPage(name) {
   state.page = name;
@@ -1213,8 +1259,20 @@ function autoPrintDates() {
 function renderPrint() {  const mode = state.printMode === 'konfirmasi' ? 'konfirmasi' : 'stiker';
   document.querySelectorAll('#page-print .print-mode').forEach(el => { el.hidden = el.dataset.mode !== mode; });
   document.querySelectorAll('#page-print .print-seg .seg-btn').forEach(b => b.classList.toggle('is-on', b.dataset.mode === mode));
+  syncTypeSeg('sticker-type', state.stickerType);
+  syncTypeSeg('satpam-type', state.satpamType);
   if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
   else satpamPreview();
+}
+/* Tombol Snack | Lunch berdampingan (stiker & konfirmasi) — sama seperti pemilih jenis lain */
+function syncTypeSeg(act, type) {
+  document.querySelectorAll('[data-act="' + act + '"]').forEach(b => b.classList.toggle('is-on', b.dataset.type === type));
+}
+function typeSeg(act, el) {
+  const t = el.dataset.type === 'lunch' ? 'lunch' : 'snack';
+  if (act === 'sticker-type') { state.stickerType = t; renderStickerCustomers(); stickerPreview(); }
+  else { state.satpamType = t; satpamPreview(); }
+  syncTypeSeg(act, t);
 }
 
 /* ---------- Render: Beranda ---------- */
@@ -1383,8 +1441,9 @@ function writeMenuPlan(date, items) {
 }
 /* Menu yang tampil untuk sebuah tanggal (menu mingguan) */
 function menuFor(date) { return db.menuPlan[date] || []; }
+function menuTypeOf(it) { return it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack'; }
 function menuItemsFor(type, date) {
-  return menuFor(date).filter(it => (it.type === 'lunch' ? 'lunch' : it.type === 'po' ? 'po' : 'snack') === type);
+  return menuFor(date).filter(it => menuTypeOf(it) === type);
 }
 /* Menu PO dicatat dua kali (nama di rencana menu, harga di db.poMenus) — dicari atas nama yang sama */
 function poMenuFor(date, name) {
@@ -1480,7 +1539,8 @@ function renderWeekMenu() {
         w + '<small>' + d.slice(8) + '/' + d.slice(5, 7) + '</small></button>';
     }).join('') + '</div>' +
       '<div class="wm-row">' +
-        '<span class="wm-day">' + WEEKDAYS[idx] + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></span>' +
+        '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
+          WEEKDAYS[idx] + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
         '<div class="wm-items">' +
           (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu — tekan + Pilihan.</p>') +
           addBtn(date) +
@@ -1497,7 +1557,8 @@ function renderWeekMenu() {
   el.innerHTML = WEEKDAYS.map((w, i) => {
     const date = shiftDate(mon, i);
     return '<div class="wm-row">' +
-      '<span class="wm-day">' + w + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></span>' +
+      '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
+        w + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
       '<div class="wm-items">' +
         (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu — tekan + Pilihan.</p>') +
         addBtn(date) +
@@ -1515,7 +1576,11 @@ function applyMenuEdit(t, quiet) {
   const isName = t.classList.contains('wm-name');
   if (isName) {
     items[idx].name = (t.value || '').trim();
-    if (!items[idx].name) items.splice(idx, 1);
+    if (!items[idx].name) {
+      const ty = menuTypeOf(items[idx]);
+      if (ty !== 'po') shiftPicksAfterDelete(date, ty, items.filter(x => menuTypeOf(x) === ty).indexOf(items[idx]));
+      items.splice(idx, 1);
+    }
   } else if (t.classList.contains('wm-type')) {
     items[idx].type = ['snack', 'lunch', 'po'].includes(t.value) ? t.value : 'snack';
     if (items[idx].type === 'po') items[idx].pkg = '';
@@ -1536,12 +1601,14 @@ function applyMenuEdit(t, quiet) {
     }
   }
   writeMenuPlan(date, items);
+  const terisi = autoPickSingles([date]);
   save();
   if (!quiet) logAction('menu', 'Menu ' + date + ': ' + (menuPlanItems(date).map(i => flatName(i.name)).join(', ') || '(kosong)'));
   if (poSync) logAction('po', 'Harga menu PO ' + flatName(items[idx].name) + ' @ ' + date + ' jadi ' + fmtIDR(poSync));
   const row = menuPlanItems(date)[idx];
   if (!isName || !row || (isName && !row.name)) renderWeekMenu();
   renderHomeCalendar();
+  if (terisi) { renderDailyMerged(); renderCustom(); }
 }
 
 /* ---------- Bagikan menu sebagai foto ---------- */
@@ -1890,7 +1957,7 @@ function dailyMatch(c, f) {
   if (f.cls && (c.className || '').trim() !== f.cls) return false;
   return true;
 }
-/* Chip makanan anak pada tanggal tsb. Dengan cid → jadi tombol pilihan (halaman harian & Pesanan Seminggu).
+/* Chip makanan anak pada tanggal tsb. Dengan cid → jadi tombol pilihan (halaman harian & Pesanan Mingguan).
    data-tip = isi lengkap menu, ditampilkan sebagai dialog kecil saat chip disorot/difokus. */
 function foodTip(k, it, extra) {
   const lines = menuLines(it.name);
@@ -1996,20 +2063,22 @@ function daySummary(cid, date) {
   return { name: c ? c.name : '', recs: recs, value: value, unpaid: unpaid, ordered: ordered, gratis: gratis, method: method, note: note };
 }
 /* Sel makanan: chip pilihan (hover = isi lengkap) + nama paket di bawahnya.
-   Ganti paket dilakukan di Pesanan Seminggu, bukan di tabel harian. */
+   Ganti paket dilakukan di Pesanan Mingguan, bukan di tabel harian. */
 function dailyFoodCell(type, date, c, r) {
   const items = menuItemsFor(type, date);
   const picks = r.ordered ? customPicks(type, r).filter(k => k < items.length) : [];
   const chips = items.length ? foodChips(type, date, r, c.id) : '';
+  const leave = isOnLeave(c, date);
   const showBtn = !items.length || (r.ordered && !picks.length);
   const btn = showBtn
-    ? '<button type="button" class="cs-plain' + (r.ordered ? ' is-on' : '') + '" data-act="daily-plain" data-type="' + type + '" data-cid="' + escapeHtml(c.id) + '" title="' +
-      (r.ordered ? 'Batalkan pesanan ' + type + ' hari ini' : 'Tandai pesan ' + type + ' hari ini — paket mengikuti default pelanggan') + '">' +
+    ? '<button type="button" class="cs-plain' + (r.ordered ? ' is-on' : '') + (leave && !r.ordered ? ' is-blocked' : '') +
+      '" data-act="daily-plain" data-type="' + type + '" data-cid="' + escapeHtml(c.id) + '" title="' +
+      (r.ordered ? 'Batalkan pesanan ' + type + ' hari ini' : leave ? 'Libur — lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan ' + type + ' hari ini — paket mengikuti default pelanggan') + '">' +
       (r.ordered ? '✓ pesan' : 'pesan') + '</button>'
     : '';
   const pk = r.ordered ? pkgFor(type, r, c) : null;
   const pkgLine = pk ? '<span class="pkg-under">' + escapeHtml(pk.name) + ' · ' + fmtIDR(effPrice(type, r, c, date)) + '</span>' : '';
-  return '<td class="food-cell' + (items.length ? '' : ' food-none') + '" data-type="' + type + '">' + chips + btn + pkgLine + '</td>';
+  return '<td class="food-cell' + (items.length ? '' : ' food-none') + (leave ? ' is-leave' : '') + '" data-type="' + type + '">' + chips + btn + pkgLine + '</td>';
 }
 function dayTotalHTML(s) {
   return '<button type="button" class="pay-total" data-act="daily-pay-cfg" title="Atur metode pembayaran dan lunasi ' + escapeHtml(s.name) + '">' + fmtIDR(s.value) + '</button>';
@@ -2082,7 +2151,9 @@ function renderDailyMerged() {
       const leave = isOnLeave(c, date);
       const clsCell = escapeHtml(c.className) + (leave ? ' <span class="badge red" title="Sedang libur">Libur</span>' : '');
       return '<tr data-cid="' + c.id + '">' +
-        '<td class="sticky-col">' + escapeHtml(c.name) + ' <span class="d-cls">' + clsCell + '</span>' + allergyBadge(c) + '</td>' +
+        '<td class="sticky-col">' + escapeHtml(c.name) + ' <span class="d-cls">' + clsCell + '</span>' + allergyBadge(c) +
+        ' <button type="button" class="row-jump" data-act="goto-orders" data-cid="' + escapeHtml(c.id) +
+        '" title="Koreksi 7 hari anak ini di Pesanan Mingguan">7 hari</button></td>' +
         DAY_TYPES.map(t => dailyFoodCell(t, date, c, s.recs[t])).join('') +
         '<td><input type="text" class="inp-note input input-sm" value="' + escapeHtml(s.note) + '" placeholder="' + (s.ordered ? 'Catatan hari ini…' : '—') + '"></td>' +
         '<td class="num day-total">' + dayTotalHTML(s) + '</td>' +
@@ -2148,12 +2219,12 @@ function renderDailyQuick(date, shown) {
 }
 /* Pintasan dari halaman lain: buka Beranda › Menu Harian untuk satu tanggal.
    withPo menyiapkan satu baris PO kosong supaya tinggal ditulis. */
-function openDailyMenu(date, withPo) {
+function openDailyMenu(date, withPo, tab) {
   const d = date || todayStr();
   state.menuDate = d;
   state.menuMonth = monthKey(d);
   state.menuDay = weekdayOf(d) - 1;
-  state.menuTab = 'daily';
+  state.menuTab = tab === 'week' ? 'week' : 'daily';
   showPage('dashboard');
   if (withPo && !menuItemsFor('po', d).length) {
     const items = menuPlanItems(d).map(it => Object.assign({}, it));
@@ -2183,6 +2254,7 @@ function buildCustomPage() {
       '<div class="date-field" style="cursor:default">' + ICO_CAL + '<span id="customWeekText"></span></div>' +
       '<button class="nav-arrow" data-act="custom-next" title="Minggu berikutnya">' + ICO_NEXT + '</button>' +
       '<button class="btn btn-ghost btn-sm" data-act="custom-today">Minggu ini</button>' +
+      '<button class="btn btn-ghost btn-sm" data-act="goto-menu" data-week="1" data-tab="week" title="Tulis / ubah makanan minggu ini di Beranda › Menu Mingguan">Atur menu</button>' +
       '<div class="seg">' +
         '<button class="seg-btn" data-act="custom-type" data-type="snack">Snack</button>' +
         '<button class="seg-btn" data-act="custom-type" data-type="lunch">Lunch</button>' +
@@ -2200,7 +2272,7 @@ function buildCustomPage() {
     '<div class="stat-grid" id="customStats"></div>' +
     '<div class="card">' +
       '<div class="card-head">' +
-        '<div><h3>Tabel Pesanan Seminggu</h3><span class="muted tiny" id="customCount"></span></div>' +
+        '<div><h3>Tabel Pesanan Mingguan</h3><span class="muted tiny" id="customCount"></span></div>' +
         '<div class="head-tools">' +
           '<span class="muted tiny">tampilkan</span>' +
           '<div class="seg seg-xs" id="customDisplaySeg">' +
@@ -2238,6 +2310,74 @@ function customPicks(type, rec) {
   if (list.length > max) list = list.slice(0, max);
   return [...new Set(list)].sort((a, b) => a - b);
 }
+/* Hari yang pilihan makanannya cuma satu: pesanan yang sudah ada langsung memakai pilihan itu,
+   sehingga tombol "pesan" tidak perlu diklik lagi. Sekalian merapikan indeks pilihan yang
+   hangus karena baris menu dihapus atau digeser. onlyId membatasi perbaikan ke satu anak. */
+function autoPickSingles(dates, onlyId) {
+  let berubah = 0;
+  (dates || Object.keys(db.menuPlan)).forEach(d => {
+    ['snack', 'lunch'].forEach(t => {
+      const recs = db[t][d];
+      if (!recs) return;
+      const items = menuItemsFor(t, d);
+      const bernama = items.filter(it => String(it.name || '').trim());
+      const satu = bernama.length === 1 ? items.indexOf(bernama[0]) : -1;
+      Object.keys(recs).forEach(id => {
+        if (onlyId && id !== onlyId) return;
+        const r = recs[id];
+        if (!r || !r.ordered) return;
+        const semua = customPicks(t, r);
+        const sah = semua.filter(k => k < items.length);
+        if (semua.length && semua.length !== sah.length) {
+          if (sah.length) { r.mis = sah; r.mi = sah[0]; } else { delete r.mis; delete r.mi; }
+          berubah++;
+          return;
+        }
+        if (semua.length || satu < 0) return;
+        r.mis = [satu]; r.mi = satu;
+        r.pkg = items[satu].pkg || r.pkg || firstPkgId(t) || '';
+        if (!r.method) r.method = defaultMethod();
+        berubah++;
+      });
+    });
+  });
+  return berubah;
+}
+/* Pilihan makanan disimpan sebagai nomor urut baris, jadi baris yang dihapus harus
+   menggeser nomor di bawahnya supaya pesanan anak lain tidak menunjuk makanan lain. */
+function shiftPicksAfterDelete(date, type, pos) {
+  if (pos < 0) return;
+  const recs = db[type][date];
+  if (!recs) return;
+  Object.keys(recs).forEach(id => {
+    const r = recs[id];
+    if (!r || !r.ordered) return;
+    const list = customPicks(type, r);
+    if (!list.length) return;
+    const geser = [...new Set(list.map(k => k === pos ? -1 : k > pos ? k - 1 : k).filter(k => k >= 0))].sort((a, b) => a - b);
+    if (geser.length === list.length && geser.every((k, i) => k === list[i])) return;
+    if (geser.length) { r.mis = geser; r.mi = geser[0]; } else { delete r.mis; delete r.mi; }
+  });
+}
+
+/* ---------- Pesan saat tanggal libur ----------
+   Yang sudah dipesan boleh dibatalkan; yang belum, ditanya dulu lewat dialog. */
+let pendingAfterUnblock = null;
+function leaveHolidayFor(c, date) { return db.holidays.find(h => holidayMatch(h, c, date)) || null; }
+function askUnblockLeave(c, date, retry) {
+  const h = leaveHolidayFor(c, date);
+  if (!h) return false;
+  const siapa = h.scope === 'person' ? (((customerById(h.value) || {}).name) || h.value) : h.value;
+  pendingAfterUnblock = retry;
+  openModal('<h3>Tanggal itu libur</h3>' +
+    '<p class="muted small">' + escapeHtml(fmtLong(date)) + ' ditandai libur untuk <strong>' + escapeHtml(SCOPE_LABEL[h.scope] || h.scope) +
+    (siapa ? ' · ' + escapeHtml(siapa) : '') + (h.note ? ' · ' + escapeHtml(h.note) : '') + '.</p>' +
+    '<p class="muted small">Pesanan snack/lunch ' + escapeHtml(c.name) + ' tidak bisa dinyalakan pada hari libur — <strong>pre-order (PO) tetap boleh</strong>. ' +
+    'Menandai libur menghapus pesanan hari itu, jadi menyalakannya lagi berarti memesan ulang dari awal.</p>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-danger" data-act="holiday-unblock" data-id="' + escapeHtml(h.id) + '">Lepas libur lalu pesan</button></div>');
+  return true;
+}
 function setCustomFood(cid, date, mi, typeIn) {
   const type = typeIn === 'lunch' || typeIn === 'snack' ? typeIn : (state.custom.type === 'lunch' ? 'lunch' : 'snack');
   const c = customerById(cid);
@@ -2245,9 +2385,11 @@ function setCustomFood(cid, date, mi, typeIn) {
   const items = menuItemsFor(type, date);
   const it = items[mi];
   if (!it) return;
+  const lama = (db[type][date] || {})[cid];
+  const had = !!lama && customPicks(type, lama).indexOf(mi) >= 0;
+  if (!had && askUnblockLeave(c, date, () => setCustomFood(cid, date, mi, typeIn))) return;
   const rec = ensureRecord(type, date, cid);
   let picks = customPicks(type, rec);
-  const had = picks.indexOf(mi) >= 0;
   if (had) picks = picks.filter(x => x !== mi);
   else if (type === 'snack') {
     picks = picks.length >= 2 ? [mi] : picks.concat(mi).sort((a, b) => a - b);
@@ -2276,6 +2418,8 @@ function togglePlainOrder(cid, date, typeIn) {
   const type = typeIn === 'snack' || typeIn === 'lunch' ? typeIn : customType();
   const c = customerById(cid);
   if (!c) return;
+  const ada = (db[type][date] || {})[cid];
+  if ((!ada || !ada.ordered) && askUnblockLeave(c, date, () => togglePlainOrder(cid, date, typeIn))) return;
   const rec = ensureRecord(type, date, cid);
   rec.ordered = !rec.ordered;
   if (rec.ordered) {
@@ -2321,7 +2465,9 @@ function renderCustom() {
     cols.map(col => {
       const items = col.items;
       const legend = items.length ? '' : '<span class="cs-legend cs-none">belum ada menu</span>';
-      return '<th class="day">' + WEEKDAYS[col.dow] + '<small>' + col.date.slice(8) + '/' + col.date.slice(5, 7) + '</small>' + legend + '</th>';
+      return '<th class="day">' + WEEKDAYS[col.dow] +
+        '<button type="button" class="day-jump" data-act="goto-day" data-date="' + col.date + '" title="Buka halaman Hari Ini pada tanggal ini">' +
+        col.date.slice(8) + '/' + col.date.slice(5, 7) + '</button>' + legend + '</th>';
     }).join('') +
     '<th class="num">Total mingguan</th>';
 
@@ -2343,8 +2489,8 @@ function renderCustom() {
       const leave = isOnLeave(c, d);
       if (!items.length) {
         return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
-          '<button type="button" class="cs-plain' + (ordered ? ' is-on' : '') + '" data-act="custom-plain" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" title="' +
-          (ordered ? 'Batalkan pesanan hari ini' : 'Tandai pesan hari ini — paket mengikuti default pelanggan; ubah di halaman ' + (type === 'snack' ? 'Snack' : 'Lunch')) + '">' +
+          '<button type="button" class="cs-plain' + (ordered ? ' is-on' : '') + (leave && !ordered ? ' is-blocked' : '') + '" data-act="custom-plain" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" title="' +
+          (ordered ? 'Batalkan pesanan hari ini' : leave ? 'Libur — lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan hari ini — paket mengikuti default pelanggan, ubah paketnya di sel ini') + '">' +
           (ordered ? '✓ pesan' : 'pesan') + '</button>' +
           '<div class="cs-pkg' + (ordered ? ' is-manual' : ' is-off') + '">' + escapeHtml(ordered ? customPkgNote(type, rec, c) : 'belum pesan') + '</div></td>';
       }
@@ -3753,20 +3899,18 @@ function stickerOrdersOn(date) {
 function renderStickerCustomers() {
   const date = state.stickerDate || todayStr();
   const ordered = stickerOrdersOn(date);
-  const typeEl = document.getElementById('stickerType');
-  const want = typeEl ? typeEl.value : 'all';
+  const want = state.stickerType === 'lunch' ? 'lunch' : 'snack';
+  const label = want === 'snack' ? 'Snack' : 'Lunch';
   const match = c => {
     const o = ordered[c.id];
     if (!o) return false;
-    if (want === 'snack') return o.indexOf('Snack') >= 0;
-    if (want === 'lunch') return o.indexOf('Lunch') >= 0;
-    return true;
+    return o.indexOf(label) >= 0;
   };
   const list = db.customers.filter(match).sort(sortCustomers);
   const wrap = document.getElementById('stickerCustomerList');
   if (!list.length) {
-    wrap.innerHTML = '<p class="empty">Tidak ada pesanan ' + (want === 'snack' ? 'snack' : want === 'lunch' ? 'lunch' : 'snack / lunch') +
-      ' pada ' + escapeHtml(fmtLong(date)) + '. Ubah filter atau pilih tanggal lain.</p>';
+    wrap.innerHTML = '<p class="empty">Tidak ada pesanan ' + (want === 'snack' ? 'snack' : 'lunch') +
+      ' pada ' + escapeHtml(fmtLong(date)) + '. Ganti filter atau pilih tanggal lain.</p>';
     return;
   }
   wrap.innerHTML = list.map(c =>
@@ -3818,7 +3962,7 @@ function buildStickerHTML(customers, o) {
   const brandName = db.settings.businessName;
   const frame = document.getElementById('stickerFrame');
   const fit = frame && frame.clientWidth ? Math.min(1, (frame.clientWidth - 16) / 794).toFixed(3) : 1;
-  const markKind = STK_MARKS[style.mark] ? style.mark : 'dot';
+  const markKind = STK_MARKS[style.mark] ? style.mark : 'bar';
   const markFg = (STK_TONES[style.tone] || STK_TONES.soft).fg;
   const corner = markKind === 'dot' || markKind === 'letter';
   const markMm = Math.max(2.6, Math.min(8, (STICKER_SHEET_W / cols) * (markKind === 'letter' ? 0.15 : 0.06)));
@@ -3950,7 +4094,7 @@ function saveStickerStyle() {
   st.brandScale = clampScale(val('stickerBrandScale', 100), 40, 200);
   st.padV = Math.min(10, Math.max(0, +val('stickerCellPad', 2.6) || 0));
   st.tight = Math.min(100, Math.max(50, +val('stickerCellTight', 100) || 100));
-  st.mark = STK_MARKS[val('stickerMark', 'dot')] ? val('stickerMark', 'dot') : 'dot';
+  st.mark = STK_MARKS[val('stickerMark', 'bar')] ? val('stickerMark', 'bar') : 'bar';
   st.tone = STK_TONES[val('stickerTone', 'soft')] ? val('stickerTone', 'soft') : 'soft';
   save({ noUndo: true });
 }
@@ -4046,7 +4190,7 @@ function buildSatpamHTML(date, type, showClass) {
 }
 function satpamPreview() {
   const date = state.satpamDate || todayStr();
-  const type = document.getElementById('satpamType').value;
+  const type = state.satpamType;
   const showClass = document.getElementById('satpamShowClass').checked;
   document.getElementById('satpamFrame').srcdoc = buildSatpamHTML(date, type, showClass);
   document.getElementById('satpamCount').textContent = satpamEntries(date, type).length + ' nama';
@@ -4475,26 +4619,40 @@ function openHolidayModal(mode) {
       Object.keys(SCOPE_LABEL).map(k => '<option value="' + k + '">' + SCOPE_LABEL[k] + '</option>').join('') +
     '</select></label>' +
     '<label class="field" id="holidayValueField"><span>Pilih target</span><select id="holidayValue" class="input"></select></label>' +
+    '<div class="field" id="holidayPeopleField" hidden><span>Pilih anak — boleh lebih dari satu</span>' +
+      '<input type="text" id="holidayPeopleQ" class="input input-sm" placeholder="cari nama atau kelas…" autocomplete="off">' +
+      '<div class="hp-list" id="holidayPeople"></div>' +
+      '<span class="muted tiny" id="holidayPeopleCount"></span></div>' +
     '<label class="field"><span>Catatan (opsional)</span><input type="text" id="holidayNote" class="input" placeholder="cth: libur nasional"></label>' +
     '<p class="muted tiny" id="holidayWarn"></p>' +
-    '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Seminggu</em> — tidak perlu ditandai libur di sini.</p>' +
+    '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Mingguan</em> — tidak perlu ditandai libur di sini.</p>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="holiday-save" data-mode="' + (mode === 'week' ? 'week' : 'day') + '">Simpan libur</button></div>');
   holidayModalDates = dates;
   renderHolidayValueOptions();
-  renderHolidayWarn();
+}
+/* Target libur dari isi dialog: 'all' = value kosong; 'person' = banyak id; lainnya = satu nilai */
+function holidayTargets() {
+  const scopeSel = document.getElementById('holidayScope');
+  const scope = scopeSel ? scopeSel.value : 'all';
+  if (scope === 'all') return { scope: scope, values: [''] };
+  if (scope === 'person') {
+    const values = Array.from(document.querySelectorAll('#holidayPeople input:checked')).map(i => i.value);
+    return { scope: scope, values: values };
+  }
+  const valSel = document.getElementById('holidayValue');
+  return { scope: scope, values: [((valSel && valSel.value) || '')] };
 }
 /* Hitungan dampak tanpa mengubah data — dipakai peringatan di dialog sebelum menyimpan */
-function holidayImpact(dates, scope, value) {
+function holidayImpact(dates, scope, values) {
   const semua = scope === 'all';
   let porsi = 0, menu = 0;
   dates.forEach(d => {
-    const h = { date: d, scope: scope, value: value };
     ['snack', 'lunch'].forEach(t => {
       const recs = db[t][d] || {};
       for (const id in recs) {
         if (!recs[id].ordered) continue;
-        if (!semua && !holidayMatch(h, customerById(id), d)) continue;
+        if (!semua && !leaveHit(scope, values, customerById(id), d)) continue;
         porsi++;
       }
     });
@@ -4503,15 +4661,15 @@ function holidayImpact(dates, scope, value) {
   });
   return { porsi, menu };
 }
+function leaveHit(scope, values, c, d) {
+  return values.some(v => holidayMatch({ date: d, scope: scope, value: v }, c, d));
+}
 let holidayModalDates = [];
 function renderHolidayWarn() {
   const el = document.getElementById('holidayWarn');
   if (!el) return;
-  const scopeSel = document.getElementById('holidayScope');
-  const valSel = document.getElementById('holidayValue');
-  const scope = scopeSel ? scopeSel.value : 'all';
-  const value = scope === 'all' ? '' : ((valSel && valSel.value) || '');
-  const dampak = holidayImpact(holidayModalDates, scope, value);
+  const t = holidayTargets();
+  const dampak = holidayImpact(holidayModalDates, t.scope, t.values);
   el.innerHTML = dampak.porsi || dampak.menu
     ? 'Pesanan yang <strong>ikut terhapus</strong>: ' + dampak.porsi + ' porsi snack/lunch' +
       (dampak.menu ? ' + menu snack/lunch ' + dampak.menu + ' pilihan' : '') +
@@ -4524,30 +4682,58 @@ function renderHolidayValueOptions() {
   const scope = scopeSel.value;
   const field = document.getElementById('holidayValueField');
   const sel = document.getElementById('holidayValue');
-  if (scope === 'all') { field.hidden = true; sel.innerHTML = ''; renderHolidayWarn(); return; }
-  field.hidden = false;
+  const peopleField = document.getElementById('holidayPeopleField');
+  const people = document.getElementById('holidayPeople');
+  const banyak = scope === 'person';
+  field.hidden = banyak || scope === 'all';
+  peopleField.hidden = !banyak;
+  if (banyak) { renderHolidayPeople(); renderHolidayWarn(); return; }
+  if (scope === 'all') { sel.innerHTML = ''; renderHolidayWarn(); return; }
   const pilih = sel.value;
   let opts = [];
   if (scope === 'class') opts = [...new Set(db.customers.map(c => (c.className || '').trim()).filter(Boolean))].sort().map(v => [v, v]);
-  else if (scope === 'cohort') opts = [...new Set(db.customers.map(c => cohortOf(c.className)).filter(Boolean))].sort().map(v => [v, v]);
-  else if (scope === 'person') opts = db.customers.filter(c => c.active).sort(sortCustomers).map(c => [c.id, c.name + (c.className ? (' — ' + c.className) : '')]);
+  else opts = [...new Set(db.customers.map(c => cohortOf(c.className)).filter(Boolean))].sort().map(v => [v, v]);
   sel.innerHTML = opts.length ? opts.map(o => '<option value="' + escapeHtml(o[0]) + '">' + escapeHtml(o[1]) + '</option>').join('') : '<option value="">(tidak ada data)</option>';
   if (opts.some(o => o[0] === pilih)) sel.value = pilih;
   renderHolidayWarn();
 }
+/* Daftar centang anak — tetap tercentang saat kata kunci dicari, dan urutannya tidak berubah */
+function renderHolidayPeople() {
+  const box = document.getElementById('holidayPeople');
+  if (!box) return;
+  const dipilih = new Set(Array.from(box.querySelectorAll('input:checked')).map(i => i.value));
+  const anak = db.customers.filter(c => c.active).sort(sortCustomers);
+  box.innerHTML = anak.length ? anak.map(c => {
+    const label = c.name + (c.className ? (' — ' + c.className) : '');
+    return '<label class="hp-row" data-hay="' + escapeHtml((label + ' ' + (c.parent || '')).toLowerCase()) + '">' +
+      '<input type="checkbox" data-hp="1" value="' + escapeHtml(c.id) + '"' + (dipilih.has(c.id) ? ' checked' : '') + '>' + escapeHtml(label) + '</label>';
+  }).join('') : '<p class="muted tiny">Belum ada pelanggan aktif.</p>';
+  filterHolidayPeople();
+}
+function filterHolidayPeople() {
+  const q = ((document.getElementById('holidayPeopleQ') || {}).value || '').trim().toLowerCase();
+  let tampil = 0;
+  document.querySelectorAll('#holidayPeople .hp-row').forEach(r => {
+    const cocok = !q || r.dataset.hay.indexOf(q) >= 0;
+    r.hidden = !cocok;
+    if (cocok) tampil++;
+  });
+  const cnt = document.getElementById('holidayPeopleCount');
+  const n = document.querySelectorAll('#holidayPeople input:checked').length;
+  if (cnt) cnt.textContent = n ? n + ' anak dipilih' : (tampil ? 'Belum ada yang dicentang — centang satu atau beberapa anak' : 'Tidak ada yang cocok dengan pencarian');
+}
 /* Menandai libur benar-benar mengosongkan hari itu — bukan hanya menyembunyikannya.
    Semua orang libur: pesanan snack+lunch tanggal itu dibuang dan menu snack/lunch-nya
    ikut dihapus (baris PO dipertahankan). Libur sebagian: hanya anak yang kena. */
-function clearOrdersForHoliday(dates, scope, value) {
+function clearOrdersForHoliday(dates, scope, values) {
   const semua = scope === 'all';
   let porsi = 0, menu = 0;
   dates.forEach(d => {
-    const h = { date: d, scope: scope, value: value };
     ['snack', 'lunch'].forEach(t => {
       const recs = db[t][d];
       if (!recs) return;
       Object.keys(recs).forEach(id => {
-        if (!semua && !holidayMatch(h, customerById(id), d)) return;
+        if (!semua && !leaveHit(scope, values, customerById(id), d)) return;
         if (recs[id].ordered) porsi++;
         delete recs[id];
       });
@@ -4563,24 +4749,27 @@ function clearOrdersForHoliday(dates, scope, value) {
   return { porsi, menu };
 }
 function saveHoliday(mode) {
-  const scopeSel = document.getElementById('holidayScope');
-  const scope = scopeSel ? scopeSel.value : 'all';
-  const valSel = document.getElementById('holidayValue');
-  const value = scope === 'all' ? '' : ((valSel && valSel.value) || '');
-  if (scope !== 'all' && !value) { toast('Pilih dulu target liburnya'); return; }
+  const t = holidayTargets();
+  const scope = t.scope;
+  const values = scope === 'all' ? [''] : t.values.filter(Boolean);
+  if (scope !== 'all' && !values.length) { toast(scope === 'person' ? 'Centang dulu anak yang libur' : 'Pilih dulu target liburnya'); return; }
   const note = ((document.getElementById('holidayNote') || {}).value || '').trim();
   const dates = holidayDates(mode);
   let added = 0;
   dates.forEach(d => {
-    if (db.holidays.some(h => h.date === d && h.scope === scope && (h.value || '') === value)) return;
-    db.holidays.push({ id: uid(), date: d, scope: scope, value: value, note: note });
+    const baru = values.filter(v => !db.holidays.some(h => h.date === d && h.scope === scope && (h.value || '') === v));
+    if (!baru.length) return;
     added++;
+    baru.forEach(v => db.holidays.push({ id: uid(), date: d, scope: scope, value: v, note: note }));
   });
   closeModal();
   if (!added) { toast('Tanggal itu sudah ditandai libur'); return; }
-  const bersih = clearOrdersForHoliday(dates, scope, value);
+  const bersih = clearOrdersForHoliday(dates, scope, values.length ? values : ['']);
+  const siapa = scope === 'all' ? '' : (scope === 'person'
+    ? ' · ' + (values.length <= 3 ? values.map(v => ((customerById(v) || {}).name) || v).join(', ') : values.length + ' anak')
+    : ' (' + values[0] + ')');
   logAction('libur', 'Libur ' + (dates.length > 1 ? 'seminggu ' + dates[0] + ' s/d ' + dates[6] : dates[0]) +
-    ' — ' + (SCOPE_LABEL[scope] || scope) + (value ? ' (' + (scope === 'person' ? ((customerById(value) || {}).name || value) : value) + ')' : '') +
+    ' — ' + (SCOPE_LABEL[scope] || scope) + siapa +
     (note ? ' · ' + note : '') +
     (bersih.porsi ? ' · ' + bersih.porsi + ' porsi snack/lunch dihapus' : '') +
     (bersih.menu ? ' · menu snack/lunch ' + bersih.menu + ' item dibuang' : ''));
@@ -4589,19 +4778,22 @@ function saveHoliday(mode) {
   renderWeekMenu();
   renderHomeHoliday();
   toast(added + ' tanggal ditandai libur' +
+    (scope === 'person' ? ' untuk ' + values.length + ' anak' : '') +
     (bersih.porsi ? ' · ' + bersih.porsi + ' pesanan snack/lunch ikut terhapus' : '') +
     (bersih.menu ? ' · menu snack/lunch dikosongkan' : ''), { undo: !!bersih.porsi || !!bersih.menu });
 }
-function removeHoliday(id) {
+function removeHoliday(id, quiet) {
   const h = db.holidays.find(x => x.id === id);
-  if (!h) return;
+  if (!h) return false;
   db.holidays = db.holidays.filter(x => x.id !== id);
   logAction('libur', 'Hapus libur ' + h.date + ' (' + (SCOPE_LABEL[h.scope] || h.scope) + ')');
   save();
   renderHomeCalendar();
   renderWeekMenu();
   renderHomeHoliday();
+  if (quiet) return true;
   toast('Libur dihapus — pesanan yang tadi terhapus tidak kembali sendiri, pakai Urungkan bila masih ingin membatalkannya', { undo: true });
+  return true;
 }
 
 /* ---------- Render: Log Aktivitas ---------- */
@@ -4759,11 +4951,12 @@ function renderCustomers() {
   const statusSel = document.getElementById('custStatus');
   if (statusSel && statusSel.value !== st.status) statusSel.value = st.status;
   const onlyActive = document.getElementById('custOnlyActive');
-  if (onlyActive) onlyActive.checked = st.status === 'aktif';
+  if (onlyActive) onlyActive.checked = st.status === 'jalan';
 
   state.custSel = new Set([...state.custSel].filter(id => db.customers.some(c => c.id === id)));
   let list = db.customers.slice();
-  if (CUST_STATUS.indexOf(st.status) >= 0) list = list.filter(c => c.status === st.status);
+  if (st.status === 'jalan') list = list.filter(custJalan);
+  else if (CUST_STATUS.indexOf(st.status) >= 0) list = list.filter(c => c.status === st.status);
   list = list.filter(c => dailyMatch(c, st));
   if (st.q) list = list.filter(c => ((c.name || '') + ' ' + (c.className || '') + ' ' + (c.parent || '') + ' ' + (c.allergy || '')).toLowerCase().includes(st.q));
   list.sort(sortCustomers);
@@ -4771,7 +4964,8 @@ function renderCustomers() {
   const total = db.customers.length;
   const filtered = list.length !== total || st.status !== 'all' || !!st.q || !!st.level || !!st.cohort || !!st.cls;
   const byStatus = s => db.customers.filter(c => c.status === s).length;
-  setText('custNote', total + ' pelanggan · ' + byStatus('aktif') + ' aktif · ' + byStatus('selesai') + ' selesai · ' + byStatus('berhenti') + ' berhenti');
+  setText('custNote', total + ' pelanggan · ' + byStatus('aktif') + ' aktif · ' + byStatus('sekali') + ' beli sekali · ' +
+    byStatus('selesai') + ' selesai · ' + byStatus('berhenti') + ' berhenti');
 
   document.getElementById('customerList').innerHTML = list.map(c =>
     '<tr>' +
@@ -4780,7 +4974,9 @@ function renderCustomers() {
       '<td class="muted">' + escapeHtml(c.className) + '</td>' +
       '<td class="muted">' + escapeHtml(c.parent || '—') + (c.phone ? '<span class="muted tiny block" title="Dikirim ke +' + escapeHtml(waNumber(c.phone)) + '">' + escapeHtml(c.phone) + '</span>' : '') + '</td>' +
       '<td>' + (c.allergy ? allergyBadge(c) : '<span class="muted tiny">—</span>') + '</td>' +
-      '<td>' + (c.period === 'daily' ? ('Harian · ' + daysSummary(c.days)) : periodLabel(c.period)) + '</td>' +
+      '<td>' + (c.status === 'sekali'
+        ? ('Sekali · ' + escapeHtml(c.onceDate ? fmtShortDate(c.onceDate) : 'tanggal belum diisi') + (oncePassed(c) ? ' <span class="muted tiny">(sudah lewat)</span>' : ''))
+        : (c.period === 'daily' ? ('Harian · ' + daysSummary(c.days)) : periodLabel(c.period))) + '</td>' +
       '<td>' + (c.snackDefault ? '✓' : '—') + '</td>' +
       '<td>' + (c.lunchDefault ? '✓' : '—') + '</td>' +
       '<td><span class="badge ' + (STATUS_BADGE[c.status] || 'red') + '" title="' + escapeHtml(STATUS_HINT[c.status] || '') + '">' + (STATUS_LABEL[c.status] || 'Aktif') + '</span></td>' +
@@ -4819,7 +5015,12 @@ function openCustomerModal(c) {
       '<label class="field"><span>No. HP / WA orang tua (untuk pengingat tagihan)</span><input type="text" name="phone" class="input" placeholder="0812… atau 62812…" value="' + escapeHtml(x.phone || '') + '"></label>' +
       '<label class="field"><span>Catatan alergi / preferensi (tampil di daftar harian, kertas konfirmasi &amp; stiker)</span>' +
         '<textarea name="allergy" class="input" rows="2" maxlength="80" placeholder="mis. Alergi kacang &amp; kerang, tidak makan pedas">' + escapeHtml(x.allergy || '') + '</textarea></label>' +
-      '<label class="field"><span>Periode</span><select name="period" id="custPeriod" class="input">' + periodOpts + '</select></label>' +
+      '<label class="field" id="custPeriodField"><span>Periode</span><select name="period" id="custPeriod" class="input">' + periodOpts + '</select></label>' +
+      '<div class="field" id="custOnceField" hidden>' +
+        '<span>Tanggal beli</span>' +
+        '<input type="date" name="onceDate" id="custOnceDate" class="input" value="' + escapeHtml(x.onceDate || '') + '">' +
+        '<span class="muted tiny">Pesanan dibuat satu kali saja pada tanggal ini — snack/lunch mengikuti centang di bawah.</span>' +
+      '</div>' +
       '<div class="field wd-field" id="wdBlock"' + (x.period === 'daily' ? '' : ' hidden') + '>' +
         '<span>Pilih hari (harian)</span>' +
         '<div class="wd-row">' + wdToggles + '</div>' +
@@ -4830,11 +5031,13 @@ function openCustomerModal(c) {
         '<label class="field" id="custSnackPkgField"><span>Paket snack</span><select name="snackPkg" class="input">' + pkgOpts('snack') + '</select></label>' +
         '<label class="field" id="custLunchPkgField"><span>Paket lunch</span><select name="lunchPkg" class="input">' + pkgOpts('lunch') + '</select></label>' +
       '</div>' +
-      '<label class="field"><span>Status langganan</span><select name="status" class="input">' +
-        CUST_STATUS.map(s => '<option value="' + s + '"' + ((x.status || (x.active === false ? 'berhenti' : 'aktif')) === s ? ' selected' : '') + '>' +
+      '<label class="field"><span>Status langganan</span><select name="status" id="custStatusSel" class="input">' +
+        CUST_STATUS.filter(s => isEdit || s === 'aktif' || s === 'sekali').map(s => '<option value="' + s + '"' + ((x.status || (x.active === false ? 'berhenti' : 'aktif')) === s ? ' selected' : '') + '>' +
           STATUS_LABEL[s] + ' — ' + STATUS_HINT[s] + '</option>').join('') +
       '</select></label>' +
-      '<p class="muted tiny">Hanya status <strong>Aktif</strong> yang otomatis mengisi pesanan sampai periode berikutnya (Senin–Jumat, belum dibayar).</p>' +
+      '<p class="muted tiny" id="custStatusNote">' + (isEdit
+        ? 'Status <strong>Aktif</strong> mengisi pesanan sampai periode berikutnya (Senin–Jumat, belum dibayar); <strong>Beli Sekali</strong> hanya satu tanggal.'
+        : 'Anak baru otomatis <strong>Aktif</strong> (mengisi pesanan sampai periode berikutnya) atau <strong>Beli Sekali</strong> (satu tanggal). Status <strong>Selesai</strong> / <strong>Berhenti</strong> diisi nanti lewat halaman Pelanggan.') + '</p>' +
       '<div class="modal-actions">' +
         '<button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
         '<button type="submit" class="btn btn-primary">Simpan</button>' +
@@ -4844,6 +5047,16 @@ function openCustomerModal(c) {
   document.getElementById('custPeriod').addEventListener('change', e => {
     document.getElementById('wdBlock').hidden = e.target.value !== 'daily';
   });
+  /* "Beli Sekali" memakai tanggal, bukan periode — jadi blok periode diganti */
+  const syncStatusFields = () => {
+    const sekali = document.getElementById('custStatusSel').value === 'sekali';
+    document.getElementById('custOnceField').hidden = !sekali;
+    document.getElementById('custPeriodField').hidden = sekali;
+    if (sekali) document.getElementById('wdBlock').hidden = true;
+    else document.getElementById('wdBlock').hidden = document.getElementById('custPeriod').value !== 'daily';
+  };
+  document.getElementById('custStatusSel').addEventListener('change', syncStatusFields);
+  syncStatusFields();
   const syncPkgFields = () => {
     document.getElementById('custSnackPkgField').hidden = !document.getElementById('custSnackChk').checked;
     document.getElementById('custLunchPkgField').hidden = !document.getElementById('custLunchChk').checked;
@@ -4860,6 +5073,10 @@ function openCustomerModal(c) {
     const period = f.get('period');
     const selDays = f.getAll('day').map(Number).sort((a, b) => a - b);
     if (period === 'daily' && selDays.length === 0) { toast('Pilih minimal satu hari untuk langganan harian'); return; }
+    const status = CUST_STATUS.indexOf(String(f.get('status'))) >= 0 ? String(f.get('status')) : 'aktif';
+    const onceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(f.get('onceDate') || '')) ? String(f.get('onceDate')) : '';
+    if (status === 'sekali' && !onceDate) { toast('Isi dulu tanggal untuk beli sekali'); return; }
+    if (status === 'sekali' && !f.get('snackDefault') && !f.get('lunchDefault')) { toast('Centang snack atau lunch — tidak ada yang bisa dipesan'); return; }
     const data = {
       name: f.get('name').trim(), className: (f.get('className') || '').trim(),
       parent: (f.get('parent') || '').trim(),
@@ -4869,17 +5086,33 @@ function openCustomerModal(c) {
       lunchDefault: !!f.get('lunchDefault'),
       snackPkg: f.get('snackDefault') ? (f.get('snackPkg') || '') : '',
       lunchPkg: f.get('lunchDefault') ? (f.get('lunchPkg') || '') : '',
-      status: CUST_STATUS.indexOf(String(f.get('status'))) >= 0 ? String(f.get('status')) : 'aktif'
+      status: status, onceDate: onceDate
     };
-    data.active = data.status === 'aktif';
+    data.active = custActive(data);
     if (!data.name) { toast('Nama wajib diisi'); return; }
     const dup = db.customers.some(x => x !== c && custDupKey(x) === custDupKey(data));
     if (dup && !confirm('Sudah ada pelanggan "' + data.name + '"' + (data.className ? '" di kelas "' + data.className + '"' : '') + '. Tetap simpan?')) return;
     const periodChanged = !isEdit || c.period !== period;
+    const tanggalLama = isEdit ? (c.onceDate || '') : '';
+    const statusLama = isEdit ? c.status : '';
     if (isEdit) Object.assign(c, data);
     else { data.id = uid(); db.customers.push(data); }
-    const filled = periodChanged ? autoFillPeriod(data) : 0;
-    logAction('pelanggan', (isEdit ? 'Ubah ' : 'Tambah ') + data.name + ' (' + (data.className || '-') + ', ' + periodLabel(period) + ')' + (filled ? ' · isi ' + filled + ' tanggal' : ''));
+    const anak = isEdit ? c : data;
+    /* tanggal beli sekali dipindah: pesanan lama yang belum dibayar ikut pindah, bukan menumpuk */
+    let pindah = 0;
+    if (statusLama === 'sekali' && data.status === 'sekali' && tanggalLama && tanggalLama !== data.onceDate) {
+      ['snack', 'lunch'].forEach(t => {
+        const r = (db[t][tanggalLama] || {})[anak.id];
+        if (r && r.ordered && !r.paid && r.method !== 'Gratis') { delete db[t][tanggalLama][anak.id]; pindah++; }
+      });
+    }
+    const perluIsi = periodChanged || data.status === 'sekali' &&
+      (statusLama !== 'sekali' || tanggalLama !== data.onceDate);
+    const filled = perluIsi ? autoFillPeriod(anak) : 0;
+    if (filled) autoPickSingles(null, anak.id);
+    logAction('pelanggan', (isEdit ? 'Ubah ' : 'Tambah ') + data.name + ' (' + (data.className || '-') + ', ' +
+      (data.status === 'sekali' ? 'beli sekali @ ' + fmtShortDate(data.onceDate) : periodLabel(period)) + ')' +
+      (filled ? ' · isi ' + filled + ' tanggal' : '') + (pindah ? ' · ' + pindah + ' pesanan lama dipindah' : ''));
     save(); closeModal(); renderSettings();
     renderDailyMerged(); renderDashboard();
     toast(isEdit ? 'Pelanggan diperbarui' : 'Pelanggan ditambahkan' + (filled ? ' · ' + filled + ' tanggal terisi otomatis' : ''));
@@ -5124,10 +5357,14 @@ function onDocClick(e) {
     case 'week-menu-del': {
       const date = act.dataset.date, idx = +act.dataset.idx;
       const items = menuPlanItems(date).map(it => Object.assign({}, it));
+      const ty = menuTypeOf(items[idx]);
+      if (ty !== 'po') shiftPicksAfterDelete(date, ty, items.filter(x => menuTypeOf(x) === ty).indexOf(items[idx]));
       items.splice(idx, 1);
       writeMenuPlan(date, items);
+      autoPickSingles([date]);
       save(); logAction('menu', 'Hapus satu pilihan menu ' + date);
       renderWeekMenu(); renderPkgShowcase(); renderHomeCalendar();
+      renderDailyMerged(); renderCustom();
       break;
     }
     case 'menu-tab':
@@ -5264,6 +5501,7 @@ function onDocClick(e) {
     case 'sticker-select-all': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = true); stickerPreview(); break;
     case 'sticker-clear': document.querySelectorAll('.sticker-cb').forEach(cb => cb.checked = false); stickerPreview(); break;
     case 'print-mode': state.printMode = act.dataset.mode === 'konfirmasi' ? 'konfirmasi' : 'stiker'; renderPrint(); break;
+    case 'sticker-type': case 'satpam-type': typeSeg(act.dataset.act, act); break;
     case 'sticker-preview': stickerPreview(); break;
     case 'sticker-print': stickerPreview(); setTimeout(() => printFrame(document.getElementById('stickerFrame')), 300); break;
     case 'satpam-preview': satpamPreview(); break;
@@ -5271,11 +5509,37 @@ function onDocClick(e) {
     case 'home-cal-prev': shiftHomeMonth(-1); break;
     case 'home-cal-next': shiftHomeMonth(1); break;
     case 'home-day': { state.menuDate = act.dataset.ymd; state.menuMonth = monthKey(state.menuDate); state.menuDay = weekdayOf(state.menuDate) - 1; renderHomeCalendar(); renderWeekMenu(); renderPkgShowcase(); renderHomeHoliday(); break; }
-    case 'goto-menu': openDailyMenu(act.dataset.date, act.dataset.po === '1'); break;
+    case 'goto-menu':
+      openDailyMenu(act.dataset.date || (act.dataset.week === '1' ? (state.custom.weekStart || mondayOf(todayStr())) : ''),
+        act.dataset.po === '1', act.dataset.tab);
+      break;
+    case 'goto-day':
+      state.currentDate = act.dataset.date;
+      showPage('hari');
+      break;
+    case 'goto-orders': {
+      const oc = customerById(act.dataset.cid);
+      if (!oc) break;
+      state.custom.q = (oc.name || '').toLowerCase();
+      state.custom.weekStart = mondayOf(state.currentDate);
+      showPage('custom');
+      toast('Pesanan Mingguan dibuka pada ' + oc.name);
+      break;
+    }
     case 'holiday-day': openHolidayModal('day'); break;
     case 'holiday-week': openHolidayModal('week'); break;
     case 'holiday-save': saveHoliday(act.dataset.mode === 'week' ? 'week' : 'day'); break;
     case 'holiday-remove': removeHoliday(id); break;
+    case 'holiday-unblock': {
+      const h = db.holidays.find(x => x.id === id);
+      const retry = pendingAfterUnblock; pendingAfterUnblock = null;
+      closeModal();
+      if (!h) { toast('Tanda liburnya sudah tidak ada'); break; }
+      removeHoliday(id, true);
+      toast('Libur ' + fmtShortDate(h.date) + ' dilepas — pesanannya boleh dinyalakan lagi', { undo: true });
+      if (retry) retry();
+      break;
+    }
     case 'log-undo': undoToLog(id); break;
     case 'log-clear': if (db.log.length && confirm('Bersihkan seluruh log aktivitas?')) { db.log = []; logAction('log', 'Log dibersihkan'); save(); renderLog(); toast('Log dibersihkan', { undo: true }); } break;
     case 'customer-add': openCustomerModal(null); break;
@@ -5336,7 +5600,7 @@ function onDocClick(e) {
     case 'csv-parents': exportParentsCSV(); break;
     case 'bill-csv': exportBillCSV(); break;
     case 'cust-filter-reset':
-      state.cust = { q: '', level: '', cohort: '', cls: '', status: 'aktif' };
+      state.cust = { q: '', level: '', cohort: '', cls: '', status: 'jalan' };
       renderCustomers();
       break;
     case 'cust-clear-sel': state.custSel.clear(); renderCustomers(); break;
@@ -5349,7 +5613,7 @@ function onDocClick(e) {
         db.customers = db.customers.filter(c => !state.custSel.has(c.id));
         logAction('pelanggan', 'Hapus massal ' + ids.length + ' pelanggan');
       } else if (CUST_STATUS.indexOf(to) >= 0) {
-        db.customers.forEach(c => { if (state.custSel.has(c.id)) { c.status = to; c.active = to === 'aktif'; } });
+        db.customers.forEach(c => { if (state.custSel.has(c.id)) { c.status = to; c.active = custActive(c); } });
         logAction('pelanggan', 'Ubah status ' + ids.length + ' pelanggan → ' + STATUS_LABEL[to]);
       }
       state.custSel.clear();
@@ -5458,8 +5722,7 @@ function onDocChange(e) {
     updatePoGroupTotal();
     return;
   }
-  if (t.id === 'stickerSize' || t.id === 'stickerContent' || t.id === 'stickerBrand' || t.id === 'stickerLines' || t.id === 'stickerType') {
-    if (t.id === 'stickerType') renderStickerCustomers();
+  if (t.id === 'stickerSize' || t.id === 'stickerContent' || t.id === 'stickerBrand' || t.id === 'stickerLines') {
     stickerPreview();
     return;
   }
@@ -5471,7 +5734,7 @@ function onDocChange(e) {
       t.id === 'stickerMark' || t.id === 'stickerTone') {
     saveStickerStyle(); stickerPreview(); return;
   }
-  if (t.id === 'satpamType' || t.id === 'satpamShowClass') { satpamPreview(); return; }
+  if (t.id === 'satpamShowClass') { satpamPreview(); return; }
   if (t.id === 'rptClass' || t.id === 'rptAllTime' || t.id === 'rptSort') { renderReport(); return; }
   if (t.classList.contains('cust-cb')) {
     if (t.checked) state.custSel.add(t.dataset.id); else state.custSel.delete(t.dataset.id);
@@ -5485,7 +5748,7 @@ function onDocChange(e) {
     return;
   }
   if (t.id === 'custStatus') { state.cust.status = t.value; renderCustomers(); return; }
-  if (t.id === 'custOnlyActive') { state.cust.status = t.checked ? 'aktif' : 'all'; renderCustomers(); return; }
+  if (t.id === 'custOnlyActive') { state.cust.status = t.checked ? 'jalan' : 'all'; renderCustomers(); return; }
   if (t.classList.contains('chk-family')) {
     const ids = (t.dataset.ids || '').split(',').filter(Boolean);
     ids.forEach(id => t.checked ? state.billSel.add(id) : state.billSel.delete(id));
@@ -5521,6 +5784,7 @@ function onDocChange(e) {
   }
   if (t.id === 'holidayScope') { renderHolidayValueOptions(); renderHolidayWarn(); return; }
   if (t.id === 'holidayValue') { renderHolidayWarn(); return; }
+  if (t.dataset.hp === '1') { filterHolidayPeople(); renderHolidayWarn(); return; }
   if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-pkg') || t.classList.contains('wm-price')) {
     applyMenuEdit(t, false);
     return;
@@ -5663,11 +5927,13 @@ function backupReminder() {
   if (!db.customers.length) return;
   const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
   if (days !== null && days < 7) return;
-  toast('Belum ada unduhan cadangan' + (days ? ' sejak ' + days + ' hari lalu' : '') + ' — buka Pengaturan › Backup Data');
+  toast('Belum ada unduhan cadangan' + (days ? ' sejak ' + days + ' hari lalu' : '') + ' — buka Pengaturan › Tampilan & Cadangan Data');
 }
 
 /* ---------- Init ---------- */
 function init() {
+  /* pesanan lama tanpa pilihan makanan di hari yang cuma punya satu pilihan, dirapikan sekali saat dibuka */
+  if (autoPickSingles()) save({ noUndo: true });
   applyTheme(uiPrefs().theme === 'light' ? 'light' : 'dark');
   applySidebar(!!uiPrefs().sidebarCollapsed);
   buildDailyMergedPage();
@@ -5719,6 +5985,7 @@ function init() {
     if (t.id === 'customSearch') { state.custom.q = (t.value || '').trim().toLowerCase(); renderCustom(); }
     if (t.id === 'hariSearch') { state.daily.hari.q = (t.value || '').trim().toLowerCase(); renderDailyMerged(); }
     if (t.id === 'custSearch') { state.cust.q = (t.value || '').trim().toLowerCase(); renderCustomers(); }
+    if (t.id === 'holidayPeopleQ') { filterHolidayPeople(); return; }
     if (t.classList.contains('wm-name')) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 170) + 'px'; applyMenuEdit(t, true); }
     if (t.name === 'allergy') { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 150) + 'px'; }
     if (t.id === 'stickerNameScale') setText('stickerNameScaleVal', t.value + '%');
