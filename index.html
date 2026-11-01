@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#C0272D">
-<title>Catatan Katering — Snack &amp; Lunch Sekolah</title>
+<title>Catatan Katering · Snack &amp; Lunch Sekolah</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -43,7 +43,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="3" y="9" width="18" height="7" rx="2"/><path d="M7 16h10v4H7z"/></svg>
         <span>Cetak</span>
       </button>
-      <button class="nav-item" data-nav="custom" title="Pesanan Mingguan — koreksi pesanan 7 hari">
+      <button class="nav-item" data-nav="custom" title="Pesanan Mingguan: koreksi pesanan 7 hari">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M9 9.5V19M15 9.5V19M3 14.5h18"/></svg>
         <span>Pesanan Mingguan</span>
       </button>
@@ -78,7 +78,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button class="foot-icon" id="exportBtn" type="button" data-act="export" aria-label="Ekspor Backup" title="Ekspor Backup — unduh cadangan JSON">
+      <button class="foot-icon" id="exportBtn" type="button" data-act="export" aria-label="Ekspor Backup" title="Ekspor Backup: unduh cadangan JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       </button>
       <span class="muted tiny" id="saveStatus">Tersimpan otomatis</span>
@@ -148,7 +148,7 @@
             </div>
             <div class="libur-chips" id="liburChips"></div>
             <div class="week-menu" id="weekMenuEditor"></div>
-            <p class="muted tiny" id="menuTabHint">Menu per tanggal — isi paket ditulis satu baris per komponen.</p>
+            <p class="muted tiny" id="menuTabHint">Menu per tanggal. Isi paket ditulis satu baris per komponen.</p>
           </div>
         </div>
 
@@ -187,7 +187,7 @@
 
         <div class="card">
           <div class="card-head"><h3>Belum Lunas</h3><span class="head-tools"><span class="scope-chip" title="Semua periode, bukan hanya bulan ini">sepanjang waktu</span><span class="muted tiny" id="unpaidNote"></span><button class="btn btn-ghost btn-sm" id="unpaidSeeAll" data-act="unpaid-seeall">Buka semua</button></span></div>
-          <p class="muted tiny" style="margin:-6px 0 10px">Dikelompokkan per minggu — klik baris minggu untuk membuka rincian per tanggal.</p>
+          <p class="muted tiny" style="margin:-6px 0 10px">Dikelompokkan per minggu. Klik baris minggu untuk membuka rincian per tanggal.</p>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Nama</th><th>Kelas</th><th class="c">Jenis</th><th>Tanggal</th><th class="num">Nominal</th></tr></thead>
             <tbody id="unpaidList"></tbody>
@@ -198,7 +198,7 @@
         <div class="card">
           <div class="card-head"><h3>Cetak &amp; Bagikan</h3><span class="muted tiny">semua hasil cetak dan unduhan dalam satu tempat</span></div>
           <div class="hub-grid" id="hubGrid"></div>
-          <p class="muted tiny" style="margin:12px 0 0">Yang butuh pilihan (stiker, konfirmasi, invoice, tagihan) memakai setelan terakhir di halamannya — kartu <em>Invoice Kelompok</em> dan <em>Kirim Tagihan</em> membuka halaman itu lebih dulu.</p>
+          <p class="muted tiny" style="margin:12px 0 0">Yang butuh pilihan (stiker, konfirmasi, invoice, tagihan) memakai setelan terakhir di halamannya. Kartu <em>Invoice Kelompok</em> dan <em>Kirim Tagihan</em> membuka halaman itu lebih dulu.</p>
         </div>
       </section>
 
@@ -266,7 +266,7 @@
 
         <div class="card">
           <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span></div>
-          <p class="muted tiny" style="margin:-6px 0 10px">Satu organisasi yang memesan banyak porsi — dicatat per tanggal ambil; uang muka dipakai melunasi tanggal paling awal sampai habis.</p>
+          <p class="muted tiny" style="margin:-6px 0 10px">Satu organisasi yang memesan banyak porsi, dicatat per tanggal ambil. Uang muka dipakai melunasi tanggal paling awal sampai habis.</p>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Kelompok / lembaga</th><th>Tanggal ambil</th><th class="num">Porsi</th><th class="num">Nilai</th><th class="c">Lunas</th><th class="end">Aksi</th></tr></thead>
             <tbody id="poGroupList"></tbody>
@@ -322,7 +322,7 @@
           <div class="card-head"><h3>Tagihan per Orang Tua / Pengenal</h3><span class="muted tiny" id="rptParentCount"></span>
             <button class="btn btn-ghost btn-sm" data-act="csv-parents">Ekspor CSV</button>
           </div>
-          <p class="muted small">Centang nama pengenal untuk memilih semua anaknya sekaligus, atau centang anak tertentu — tagihan yang <strong>belum dibayar</strong> bisa disalin sebagai teks atau disimpan sebagai gambar.</p>
+          <p class="muted small">Centang nama pengenal untuk memilih semua anaknya sekaligus, atau centang anak tertentu. Tagihan yang <strong>belum dibayar</strong> bisa disalin sebagai teks atau disimpan sebagai gambar.</p>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Nama orang tua / pengenal</th><th>Rincian anak (centang)</th><th class="num">Tagihan</th><th class="num">Dibayar</th><th class="num">Sisa</th></tr></thead>
             <tbody id="rptParentList"></tbody>
@@ -341,7 +341,7 @@
 
         <div class="card">
           <div class="card-head"><h3>Pengingat Saya</h3><span class="muted tiny" id="remCount"></span></div>
-          <p class="muted tiny">Buat pengingat sekali, mingguan, atau bulanan — mis. "belanja bahan tiap Jumat", "tagih langganan bulanan tanggal 5", "cek pesanan PO".</p>
+          <p class="muted tiny">Buat pengingat sekali, mingguan, atau bulanan. Mis. "belanja bahan tiap Jumat", "tagih langganan bulanan tanggal 5", "cek pesanan PO".</p>
           <div class="rem-form">
             <input type="text" id="remText" class="input" placeholder="Isi pengingat…" maxlength="120">
             <label class="ctl"><span>Tanggal</span><input type="date" id="remDate" class="input input-sm"></label>
@@ -361,7 +361,7 @@
 
         <div class="card">
           <div class="card-head"><h3>Tagihan Menunggak → WhatsApp</h3><span class="head-tools"><span class="scope-chip" title="Daftar ini menghitung semua periode, bukan hanya bulan terpilih seperti di Laporan">sepanjang waktu</span><span class="muted tiny" id="waCount"></span><button class="btn btn-ghost btn-sm" data-act="wa-copy-all">Salin Semua</button></span></div>
-          <p class="muted tiny">Dihitung dari <strong>sepanjang waktu</strong> (berbeda dari Laporan yang bisa difilter per bulan), digabung per orang tua — pesanan kelompok / lembaga juga ikut ditagih di sini. Tombol Kirim WA membuka WhatsApp dengan pesan siap kirim; kalau No. HP belum diisi, pesan otomatis disalin.</p>
+          <p class="muted tiny">Dihitung dari <strong>sepanjang waktu</strong> (berbeda dari Laporan yang bisa difilter per bulan), digabung per orang tua. Pesanan kelompok / lembaga juga ikut ditagih di sini. Tombol Kirim WA membuka WhatsApp dengan pesan siap kirim; kalau No. HP belum diisi, pesan otomatis disalin.</p>
           <div class="table-wrap"><table class="table wa-table">
             <thead><tr><th>Penunggak</th><th>No. HP</th><th>Periode tunggakan</th><th class="num">Sisa</th><th class="end">Aksi</th></tr></thead>
             <tbody id="waList"></tbody>
@@ -387,12 +387,12 @@
             <label class="ctl ctl-wide"><span>Kelas</span><select id="custClassFilter" class="input input-sm"></select></label>
             <label class="ctl"><span>Status</span>
               <select id="custStatus" class="input input-sm">
-                <option value="jalan">Sedang berjalan — aktif &amp; beli sekali</option>
+                <option value="jalan">Sedang berjalan · aktif &amp; beli sekali</option>
                 <option value="all">Semua status</option>
-                <option value="aktif">Aktif — masih langganan</option>
-                <option value="sekali">Beli Sekali — satu tanggal</option>
-                <option value="selesai">Selesai — sudah tamat</option>
-                <option value="berhenti">Berhenti — tidak pesan dulu</option>
+                <option value="aktif">Aktif · masih langganan</option>
+                <option value="sekali">Beli Sekali · satu tanggal</option>
+                <option value="selesai">Selesai · sudah tamat</option>
+                <option value="berhenti">Berhenti · tidak pesan dulu</option>
               </select>
             </label>
             <label class="check" title="Pusatkan daftar pada anak yang masih berjalan: langganan aktif + beli sekali yang tanggalnya belum lewat"><input type="checkbox" id="custOnlyActive" checked> Hanya yang berjalan</label>
@@ -423,7 +423,7 @@
           <button type="button" class="seg-btn is-on" data-act="print-mode" data-mode="stiker">Stiker Nama</button>
           <button type="button" class="seg-btn" data-act="print-mode" data-mode="konfirmasi">Kertas Konfirmasi</button>
         </div>
-        <p class="muted tiny print-note">Jam dan alamat file di tepi halaman datang dari header/footer browser, bukan dari lembar ini — matikan centang <strong>Header and footers</strong> di dialog cetak untuk hilangkan.</p>
+        <p class="muted tiny print-note">Jam dan alamat file di tepi halaman datang dari header/footer browser, bukan dari lembar ini. Matikan centang <strong>Header and footers</strong> di dialog cetak untuk hilangkan.</p>
         <div class="print-mode" data-mode="stiker">
         <div class="split">
           <div class="card panel sticker-controls">
@@ -453,10 +453,10 @@
             <label class="field">
               <span>Ukuran stiker</span>
               <select id="stickerSize" class="input">
-                <option value="2x7">Besar — 2 kolom × 7 baris</option>
-                <option value="3x8">Sedang — 3 kolom × 8 baris</option>
-                <option value="4x10" selected>Kecil — 4 kolom × 10 baris</option>
-                <option value="5x12">Rapat — 5 kolom × 12 baris</option>
+                <option value="2x7">Besar · 2 kolom × 7 baris</option>
+                <option value="3x8">Sedang · 3 kolom × 8 baris</option>
+                <option value="4x10" selected>Kecil · 4 kolom × 10 baris</option>
+                <option value="5x12">Rapat · 5 kolom × 12 baris</option>
               </select>
               <span class="muted tiny">Font dibuat mengisi kotak; jarak antar stiker nihil agar hemat dan mudah digunting.</span>
             </label>
@@ -468,7 +468,7 @@
                 <option value="namamark">Nama + Kelas + penanda alergi</option>
                 <option value="namealg">Nama + tulisan alergi</option>
               </select>
-              <span class="muted tiny" id="stickerMarkNote">Penanda alergi: garis di bawah nama — isinya tetap bisa dilihat di aplikasi.</span>
+              <span class="muted tiny" id="stickerMarkNote">Penanda alergi: garis di bawah nama, isinya tetap bisa dilihat di aplikasi.</span>
             </label>
             <label class="field">
               <span>Bentuk penanda alergi</span>
@@ -516,7 +516,7 @@
               <p class="muted tiny" id="stickerCellPadNote">Jarak atas-bawah isi dalam setiap sel; font menyesuaikan ruang yang tersisa.</p>
               <div class="stk-font-row">
                 <span class="stk-font-tag">Rapat sel</span>
-                <input type="range" id="stickerCellTight" min="50" max="100" step="5" value="100" title="Tinggi setiap sel sebagai persen dari tinggi otomatis — kecilkan untuk kotak yang lebih pipih" style="grid-column:2/4">
+                <input type="range" id="stickerCellTight" min="50" max="100" step="5" value="100" title="Tinggi setiap sel sebagai persen dari tinggi otomatis. Kecilkan untuk kotak yang lebih pipih" style="grid-column:2/4">
                 <span class="stk-font-val" id="stickerCellTightVal">100%</span>
               </div>
               <p class="muted tiny" id="stickerCellTightNote">Kecilkan kalau kotak terasa terlalu panjang; sisanya jadi jarak antar stiker.</p>
@@ -658,11 +658,11 @@
             <label class="field"><span>Jenis huruf</span>
               <select id="setUiFont" class="input">
                 <option value="default">Bawaan</option>
-                <option value="sans">Sans — Segoe UI</option>
-                <option value="serif">Serif — Georgia</option>
-                <option value="mono">Mono — Consolas</option>
-                <option value="round">Rounded — Trebuchet</option>
-                <option value="narrow">Narrow — Arial Narrow</option>
+                <option value="sans">Sans · Segoe UI</option>
+                <option value="serif">Serif · Georgia</option>
+                <option value="mono">Mono · Consolas</option>
+                <option value="round">Rounded · Trebuchet</option>
+                <option value="narrow">Narrow · Arial Narrow</option>
               </select>
             </label>
             <div class="stk-font">
@@ -695,7 +695,7 @@
 
           <div class="card span-2">
             <div class="card-head"><h3>Paket Harga</h3></div>
-            <p class="muted small">Paket hanya berisi <strong>nama tingkatan + harga</strong> — misalnya Snack Sedang Rp 6.000. Makanannya mengikuti menu harian, jadi satu paket bisa berisi makanan berbeda tiap hari.</p>
+            <p class="muted small">Paket hanya berisi <strong>nama tingkatan + harga</strong>, misalnya Snack Sedang Rp 6.000. Makanannya mengikuti menu harian, jadi satu paket bisa berisi makanan berbeda tiap hari.</p>
             <div class="menu-cat">
               <div class="cat-title">Paket Snack</div>
               <div class="pkg-list" id="pkgSnackList"></div>

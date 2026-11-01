@@ -70,10 +70,10 @@ const CUST_STATUS = ['aktif', 'sekali', 'selesai', 'berhenti'];
 const STATUS_LABEL = { aktif: 'Aktif', sekali: 'Beli Sekali', selesai: 'Selesai', berhenti: 'Berhenti' };
 const STATUS_BADGE = { aktif: 'green', sekali: 'orange', selesai: 'gold', berhenti: 'red' };
 const STATUS_HINT = {
-  aktif: 'masih berlangganan — akan ikut terisi pada pesanan berikutnya',
-  sekali: 'hanya beli satu kali pada tanggal yang dipilih — setelah hari itu lewat ia keluar dari daftar "yang berjalan"',
-  selesai: 'sudah tamat / pindah (mis. lulus) — riwayat tagihan tetap disimpan, tidak ikut pesanan berikutnya',
-  berhenti: 'berhenti sementara — bisa diaktifkan lagi kapan saja'
+  aktif: 'masih berlangganan, akan ikut terisi pada pesanan berikutnya',
+  sekali: 'hanya beli satu kali pada tanggal yang dipilih. Setelah hari itu lewat ia keluar dari daftar "yang berjalan"',
+  selesai: 'sudah tamat / pindah (mis. lulus). Riwayat tagihan tetap disimpan, tidak ikut pesanan berikutnya',
+  berhenti: 'berhenti sementara, bisa diaktifkan lagi kapan saja'
 };
 /* Anak yang masih "berjalan": langganan aktif, atau beli sekali yang tanggalnya belum lewat */
 function oncePassed(c) { return !!c && c.status === 'sekali' && !!c.onceDate && c.onceDate < todayStr(); }
@@ -263,11 +263,11 @@ function makeDemoData() {
   const mk = (name, className, parent, period, days, snack, lunch, extra) =>
     Object.assign({ id: uid(), name, className, parent: parent || '', period, days: days || [], snackDefault: !!snack, lunchDefault: !!lunch, snackPkg: '', lunchPkg: '', allergy: '', active: true, status: 'aktif' }, extra || {});
   const kids = [
-    mk('Alya Ramadhani', '1B', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id, phone: '0812-3400-1122', allergy: 'Alergi kacang — tanpa kue kacang' }),
+    mk('Alya Ramadhani', '1B', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id, phone: '0812-3400-1122', allergy: 'Alergi kacang: tanpa kue kacang' }),
     mk('Bagas Nugraha', '1B', 'Bpk. Hendra', 'weekly', [], true, false, { snackPkg: sSedang.id }),
     mk('Cahaya Illaika', '2A', 'Ibu Sari', 'monthly', [], true, true, { lunchPkg: lBesar.id, phone: '0812-3400-1122' }),
     mk('Dimas Aryo', '2A', 'Bpk. Yusuf', 'daily', [1, 2, 3], true, true, { snackPkg: sMini.id, phone: '0857-2200-3311' }),
-    mk('Elora Suci', '3C', 'Ibu Marni', 'weekly', [], false, true, { lunchPkg: lPrem.id, allergy: 'Intoleransi susu — tanpa keju' }),
+    mk('Elora Suci', '3C', 'Ibu Marni', 'weekly', [], false, true, { lunchPkg: lPrem.id, allergy: 'Intoleransi susu: tanpa keju' }),
     mk('Farhan Maulana', '3C', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sKomplit.id, phone: '0857-2200-3311' }),
     mk('Gadis Puspita', '4A', 'Ibu Endah', 'semester', [], true, true, { snackPkg: sSedang.id, allergy: 'Tidak makan pedas' }),
     mk('Hafiz Ramadhan', '4A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sMini.id, phone: '0821-7788-9001' }),
@@ -275,11 +275,11 @@ function makeDemoData() {
     mk('Jibril Anwar', '5B', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lStandar.id, status: 'berhenti' }),
     mk('Kiran Maheswari', '6A', 'Bpk. Hendra', 'weekly', [], true, true, { snackPkg: sSedang.id, phone: '0821-7788-9001', allergy: 'Alergi seafood' }),
     mk('Luthfi Hakim', '6A', 'Ibu Sari', 'daily', [1, 3, 5], true, true, { lunchPkg: lStandar.id }),
-    mk('Mutiara Zahra', '7C', 'Bpk. Yusuf', 'weekly', [], true, true, { snackPkg: sMini.id, allergy: 'Vegetarian — lauk tahu/tempe' }),
+    mk('Mutiara Zahra', '7C', 'Bpk. Yusuf', 'weekly', [], true, true, { snackPkg: sMini.id, allergy: 'Vegetarian, lauk tahu/tempe' }),
     mk('Nabil Prakoso', '8A', 'Ibu Marni', 'weekly', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244' }),
     mk('Oka Sriwibowo', '8A', 'Bpk. Hendra', 'monthly', [], false, true, { lunchPkg: lBesar.id, status: 'selesai' }),
     mk('Puput Arumbani', '9B', 'Ibu Endah', 'weekly', [], true, true, { snackPkg: sKomplit.id }),
-    mk('Qori Amelia', '10A', 'Ibu Sari', 'semester', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244', allergy: 'Maag — hindari asam & pedas' }),
+    mk('Qori Amelia', '10A', 'Ibu Sari', 'semester', [], true, true, { lunchPkg: lPrem.id, phone: '0813-9900-2244', allergy: 'Maag: hindari asam & pedas' }),
     mk('Rafan Syahputra', '10A', 'Bpk. Yusuf', 'weekly', [], true, false, { snackPkg: sSedang.id }),
     mk('Salsabila Azzahra', '11C', 'Ibu Marni', 'weekly', [], true, true, { snackPkg: sMini.id, lunchPkg: lStandar.id }),
     mk('Taufik Hidayat', '11C', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lBesar.id, phone: '0857-2200-3311' }),
@@ -477,13 +477,13 @@ function makeDemoData() {
     { id: uid(), date: shiftDate(today, 2), time: '13:30', text: 'Kirim invoice Panitia Study Tour Kelas 6', repeat: 'once', doneOn: '', ref: gTrip.gid },
     { id: uid(), date: shiftDate(today, 5), time: '09:00', text: 'Masak 120 snack box baksos', repeat: 'once', doneOn: '', ref: gYayasan.gid },
     { id: uid(), date: shiftDate(today, -1), time: '', text: 'Bungkus 26 porsi rapat desa', repeat: 'once', doneOn: shiftDate(today, -1), ref: '' },
-    { id: uid(), date: shiftDate(today, -2), time: '', text: 'Tagih Kantor Desa Sukamaju — jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
+    { id: uid(), date: shiftDate(today, -2), time: '', text: 'Tagih Kantor Desa Sukamaju, jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
   ];
 
   d.log = [
     { id: uid(), ts: new Date().toISOString(), action: 'default', detail: 'Data contoh dimuat untuk demo' },
     { id: uid(), ts: new Date(Date.now() - 2400e3).toISOString(), action: 'menu', detail: 'Harga Mie Ayam hari ini diubah ke Rp 22.000' },
-    { id: uid(), ts: new Date(Date.now() - 6600e3).toISOString(), action: 'kustomisasi', detail: 'Pilih snack Alya Ramadhani — menu A+B' },
+    { id: uid(), ts: new Date(Date.now() - 6600e3).toISOString(), action: 'kustomisasi', detail: 'Pilih snack Alya Ramadhani · menu A+B' },
     { id: uid(), ts: new Date(Date.now() - 15000e3).toISOString(), action: 'po', detail: 'Tambah pesanan kelompok Yayasan Citra Bangsa' },
     { id: uid(), ts: new Date(Date.now() - 132000e3).toISOString(), action: 'pelanggan', detail: 'Catatan alergi Qori Amelia diperbarui' }
   ];
@@ -581,7 +581,7 @@ function undoLast() {
 /* Urungkan kembali sampai satu entri log — perubahan yang lebih baru ikut dibatalkan */
 function undoToLog(logId) {
   const idx = undoStack.findIndex(s => s.refLog === logId);
-  if (idx < 0) { toast('Langkah itu tidak ada di daftar urungkan — terlalu lama atau sudah pernah dibatalkan'); return; }
+  if (idx < 0) { toast('Langkah itu tidak ada di daftar urungkan, terlalu lama atau sudah pernah dibatalkan'); return; }
   const steps = undoStack.length - idx, s = undoStack[idx];
   if (!confirm('Urungkan "' + s.label + '"?' + (steps > 1 ? '\n\n' + steps + ' perubahan yang lebih baru juga ikut dibatalkan.' : ''))) return;
   redoStack.push({ label: s.label, refLog: s.refLog, json: lastSaved });
@@ -1489,11 +1489,11 @@ function menuItemsHtml(date) {
       const shown = (+it.price > 0) ? +it.price : (def || '');
       harga = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
         '" value="' + shown + '" placeholder="harga" title="Harga per porsi PO ini' +
-        (m ? ' — terbawa dari menu PO ' + escapeHtml(m.item) + ' di halaman Pre-Order (' + fmtIDR(def) + ')' : ' — belum ada menu PO dengan nama ini di halaman Pre-Order, isi sendiri') +
+        (m ? ' · terbawa dari menu PO ' + escapeHtml(m.item) + ' di halaman Pre-Order (' + fmtIDR(def) + ')' : ' · belum ada menu PO dengan nama ini di halaman Pre-Order, isi sendiri') +
         '.">';
     } else if (raw === 'snack-spesial' || raw === 'lunch-spesial') {
       harga = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
-        '" value="' + (it.price || '') + '" placeholder="harga" title="Harga menu spesial hari ini — semua anak yang memilih makanan ini membayar harga ini, berapa pun paketnya.">';
+        '" value="' + (it.price || '') + '" placeholder="harga" title="Harga menu spesial hari ini. Semua anak yang memilih makanan ini membayar harga ini, berapa pun paketnya.">';
     } else {
       harga = '<span class="wm-noprice" title="Baris biasa tidak punya harga: tiap anak membayar sesuai paket porsinya sendiri, diatur di Pesanan Mingguan">paket anak</span>';
     }
@@ -1501,7 +1501,7 @@ function menuItemsHtml(date) {
       '<select class="input input-sm wm-type" data-date="' + date + '" data-idx="' + idx + '" title="Jenis makanan pada hari ini">' +
         MENU_TYPES.map(t => '<option value="' + t + '"' + (t === raw ? ' selected' : '') + '>' + MENU_TYPE_LABEL[t] + '</option>').join('') +
       '</select>' + harga +
-      '<textarea class="input input-sm wm-name" rows="1" data-date="' + date + '" data-idx="' + idx + '" placeholder="Nama menu / isi paket — tekan Enter untuk baris baru">' + escapeHtml(it.name) + '</textarea>' +
+      '<textarea class="input input-sm wm-name" rows="1" data-date="' + date + '" data-idx="' + idx + '" placeholder="Nama menu / isi paket. Tekan Enter untuk baris baru">' + escapeHtml(it.name) + '</textarea>' +
       '<button type="button" class="icon-act danger" data-act="week-menu-del" data-date="' + date + '" data-idx="' + idx + '" title="Hapus pilihan">×</button>' +
     '</div>';
   }).join('');
@@ -1542,7 +1542,7 @@ function renderWeekMenu() {
     const idx = menuDayIndex();
     const date = shiftDate(mon, idx);
     setText('menuWeekLabel', 'harian · ' + fmtShortDate(date));
-    if (hint) hint.textContent = 'Filter menu mingguan per hari — pilih hari untuk melihat atau mengubah menu tanggal itu.';
+    if (hint) hint.textContent = 'Filter menu mingguan per hari. Pilih hari untuk melihat atau mengubah menu tanggal itu.';
     el.innerHTML = '<div class="wm-days">' + WEEKDAYS.map((w, i) => {
       const d = shiftDate(mon, i);
       return '<button type="button" class="day-chip' + (i === idx ? ' is-on' : '') + '" data-act="menu-day" data-ymd="' + d + '">' +
@@ -1552,7 +1552,7 @@ function renderWeekMenu() {
         '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
           WEEKDAYS[idx] + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
         '<div class="wm-items">' +
-          (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu — tekan + Pilihan.</p>') +
+          (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu. Tekan + Pilihan.</p>') +
           addBtn(date) +
         '</div>' +
       '</div>';
@@ -1563,14 +1563,14 @@ function renderWeekMenu() {
 
   const mon = mondayOf(state.menuDate || todayStr());
   setText('menuWeekLabel', fmtShortDate(mon) + ' – ' + fmtShortDate(shiftDate(mon, 6)));
-  if (hint) hint.textContent = 'Menu per tanggal — isi paket ditulis satu baris per komponen (Enter untuk baris baru).';
+  if (hint) hint.textContent = 'Menu per tanggal. Isi paket ditulis satu baris per komponen (Enter untuk baris baru).';
   el.innerHTML = WEEKDAYS.map((w, i) => {
     const date = shiftDate(mon, i);
     return '<div class="wm-row">' +
       '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
         w + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
       '<div class="wm-items">' +
-        (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu — tekan + Pilihan.</p>') +
+        (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu. Tekan + Pilihan.</p>') +
         addBtn(date) +
       '</div>' +
     '</div>';
@@ -1835,7 +1835,7 @@ function downloadPreview() {
   const a = document.createElement('a');
   a.href = p.url; a.download = p.file;
   document.body.appendChild(a); a.click(); a.remove();
-  toast('Foto diunduh — tinggal dibagikan');
+  toast('Foto diunduh, tinggal dibagikan');
 }
 function sharePreview() {
   const p = state.preview;
@@ -1903,8 +1903,8 @@ function renderPkgShowcase() {
     }).join('');
     return '<div class="pkg-group"><div class="pkg-group-title">' + (type === 'snack' ? 'Snack' : 'Lunch') +
       '<span class="muted tiny"> · ' + total + ' porsi</span></div>' +
-      '<div class="pkg-chips">' + (chips || '<span class="muted small">Belum ada paket — tambah di Pengaturan.</span>') + '</div>' +
-      '<p class="muted tiny pkg-note">Makanan di bawah berlaku untuk semua paket — tiap anak bayar sesuai paketnya sendiri, kecuali yang bertanda Spesial.</p>' +
+      '<div class="pkg-chips">' + (chips || '<span class="muted small">Belum ada paket. Tambah di Pengaturan.</span>') + '</div>' +
+      '<p class="muted tiny pkg-note">Makanan di bawah berlaku untuk semua paket. Tiap anak bayar sesuai paketnya sendiri, kecuali yang bertanda Spesial.</p>' +
       '<div class="pkg-menu">' + (menu || '<span class="pm-none">belum ada menu pada tanggal ini</span>') + '</div></div>';
   }).join('');
 }
@@ -1980,7 +1980,7 @@ function foodTip(k, it, extra) {
 }
 function foodChips(type, date, rec, cid) {
   const items = menuItemsFor(type, date);
-  if (!items.length) return '<span class="muted tiny" title="Belum ada menu ' + type + ' pada tanggal ini — atur di Beranda › Menu Mingguan">tidak ada menu</span>';
+  if (!items.length) return '<span class="muted tiny" title="Belum ada menu ' + type + ' pada tanggal ini. Atur di Beranda › Menu Mingguan">tidak ada menu</span>';
   const picks = rec && rec.ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
   const label = it => shortTxt(menuLines(it.name)[0] || it.name, 16);
   if (!cid) {
@@ -2089,7 +2089,7 @@ function dailyFoodCell(type, date, c, r) {
   const btn = showBtn
     ? '<button type="button" class="cs-plain' + (r.ordered ? ' is-on' : '') + (leave && !r.ordered ? ' is-blocked' : '') +
       '" data-act="daily-plain" data-type="' + type + '" data-cid="' + escapeHtml(c.id) + '" title="' +
-      (r.ordered ? 'Batalkan pesanan ' + type + ' hari ini' : leave ? 'Libur — lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan ' + type + ' hari ini — paket mengikuti default pelanggan') + '">' +
+      (r.ordered ? 'Batalkan pesanan ' + type + ' hari ini' : leave ? 'Libur: lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan ' + type + ' hari ini · paket mengikuti default pelanggan') + '">' +
       (r.ordered ? '✓ pesan' : 'pesan') + '</button>'
     : '';
   const pk = r.ordered ? pkgFor(type, r, c) : null;
@@ -2108,16 +2108,16 @@ function openDayPayModal(cid, date) {
   const c = customerById(cid);
   const s = daySummary(cid, date);
   if (!c || !s.ordered) { toast('Anak ini belum memesan apa-apa pada tanggal itu'); return; }
-  const msel = '<select id="dpmMethod" class="input"><option value="">— belum dipilih —</option>' +
+  const msel = '<select id="dpmMethod" class="input"><option value="">belum dipilih</option>' +
     db.settings.paymentMethods.map(m => '<option value="' + escapeHtml(m) + '"' + (s.method === m ? ' selected' : '') + '>' + escapeHtml(m) + '</option>').join('') + '</select>';
   const line = (t, id) => {
     const r = s.recs[t];
     if (!r.ordered) return '<p class="muted tiny">' + TYPE_LABEL[t] + ': tidak pesan</p>';
     return '<label class="check"><input type="checkbox" id="' + id + '"' + ((r.paid || r.method === 'Gratis') ? ' checked' : '') + '> ' +
-      TYPE_LABEL[t] + ' — <strong>' + fmtIDR(effPrice(t, r, c, date)) + '</strong> ' +
+      TYPE_LABEL[t] + ' · <strong>' + fmtIDR(effPrice(t, r, c, date)) + '</strong> ' +
       (r.method === 'Gratis' ? '<span class="badge gold">Gratis</span>' : '<span class="muted tiny">sudah lunas</span>') + '</label>';
   };
-  openModal('<h3>Pembayaran — ' + escapeHtml(c.name) + '</h3>' +
+  openModal('<h3>Pembayaran · ' + escapeHtml(c.name) + '</h3>' +
     '<p class="muted small">' + escapeHtml(fmtLong(date)) + ' · total ' + fmtIDR(s.value) +
       (s.unpaid > 0 ? ' · sisa ' + fmtIDR(s.unpaid) : ' · semua sudah lunas') + '</p>' +
     '<label class="field"><span>Metode (berlaku untuk snack &amp; lunch hari ini)</span>' + msel + '</label>' +
@@ -2136,7 +2136,7 @@ function saveDayPay(cid, date) {
     if (meth) r.method = meth;
     r.paid = meth === 'Gratis' ? true : !!want[t];
   });
-  logAction('bayar', 'Atur pembayaran ' + c.name + ' @ ' + date + ' — ' + (meth || 'metode tetap'));
+  logAction('bayar', 'Atur pembayaran ' + c.name + ' @ ' + date + ' · ' + (meth || 'metode tetap'));
   save();
   closeModal();
   syncMergedRow(document.querySelector('#hariList tr[data-cid="' + cid + '"]'));
@@ -2229,10 +2229,10 @@ function renderDailyQuick(date, shown) {
     'Buat menu di Beranda › Menu Harian</button>';
   const btn = '<button type="button" class="btn btn-ghost btn-sm" data-nav="customers">Tambah pelanggan</button>';
   let msg = '';
-  if (isFullHoliday(date)) msg = '<span>Tanggal ini libur untuk semua orang — tidak ada snack &amp; lunch, dan menusinya sudah dikosongkan.</span>' +
+  if (isFullHoliday(date)) msg = '<span>Tanggal ini libur untuk semua orang. Tidak ada snack &amp; lunch, dan menusinya sudah dikosongkan.</span>' +
     '<button type="button" class="btn btn-ghost btn-sm" data-nav="dashboard">Ubah libur di Beranda</button>';
   else if (!shown) msg = '<span>Belum ada pelanggan aktif untuk hari ini.</span>' + btn;
-  else if (missing.length) msg = '<span>Menu ' + missing.join(' & ') + ' belum dibuat untuk tanggal ini — pilihannya masih kosong di semua halaman.</span>' + go;
+  else if (missing.length) msg = '<span>Menu ' + missing.join(' & ') + ' belum dibuat untuk tanggal ini. Pilihannya masih kosong di semua halaman.</span>' + go;
   box.innerHTML = msg;
   box.hidden = !msg;
 }
@@ -2301,7 +2301,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan — klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti pilihan pertama — paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em> — paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan, klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2393,7 +2393,7 @@ function askUnblockLeave(c, date, retry) {
   openModal('<h3>Tanggal itu libur</h3>' +
     '<p class="muted small">' + escapeHtml(fmtLong(date)) + ' ditandai libur untuk <strong>' + escapeHtml(SCOPE_LABEL[h.scope] || h.scope) +
     (siapa ? ' · ' + escapeHtml(siapa) : '') + (h.note ? ' · ' + escapeHtml(h.note) : '') + '.</p>' +
-    '<p class="muted small">Pesanan snack/lunch ' + escapeHtml(c.name) + ' tidak bisa dinyalakan pada hari libur — <strong>pre-order (PO) tetap boleh</strong>. ' +
+    '<p class="muted small">Pesanan snack/lunch ' + escapeHtml(c.name) + ' tidak bisa dinyalakan pada hari libur. <strong>Pre-order (PO) tetap boleh</strong>. ' +
     'Menandai libur menghapus pesanan hari itu, jadi menyalakannya lagi berarti memesan ulang dari awal.</p>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-danger" data-act="holiday-unblock" data-id="' + escapeHtml(h.id) + '">Lepas libur lalu pesan</button></div>');
@@ -2414,7 +2414,7 @@ function setCustomFood(cid, date, mi, typeIn) {
   if (had) picks = picks.filter(x => x !== mi);
   else if (type === 'snack') {
     picks = picks.length >= 2 ? [mi] : picks.concat(mi).sort((a, b) => a - b);
-    if (picks.length === 2) toast('Snack: ' + LETTERS[picks[0]] + ' + ' + LETTERS[picks[1]] + ' — harga mengikuti pilihan ' + LETTERS[picks[0]]);
+    if (picks.length === 2) toast('Snack: ' + LETTERS[picks[0]] + ' + ' + LETTERS[picks[1]] + ' · harga mengikuti pilihan ' + LETTERS[picks[0]]);
   } else picks = [mi];
   rec.mis = picks;
   rec.mi = picks.length ? picks[0] : undefined;
@@ -2424,7 +2424,7 @@ function setCustomFood(cid, date, mi, typeIn) {
     const primary = items[picks[0]];
     if (!rec.pkg) { const p = pkgFor(type, rec, c); if (p) rec.pkg = p.id; }
     if (!rec.method) rec.method = defaultMethod();
-    logAction('kustomisasi', 'Pilih ' + type + ' ' + c.name + ' @ ' + date + ' menu ' + picks.map(k => LETTERS[k]).join('+') + ' — ' + (menuLines(primary.name)[0] || ''));
+    logAction('kustomisasi', 'Pilih ' + type + ' ' + c.name + ' @ ' + date + ' menu ' + picks.map(k => LETTERS[k]).join('+') + ' · ' + (menuLines(primary.name)[0] || ''));
   } else {
     rec.ordered = false; rec.paid = false;
     logAction('kustomisasi', 'Batalkan ' + type + ' ' + c.name + ' @ ' + date + ' (menu ' + LETTERS[mi] + ')');
@@ -2511,7 +2511,7 @@ function renderCustom() {
       if (!items.length) {
         return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
           '<button type="button" class="cs-plain' + (ordered ? ' is-on' : '') + (leave && !ordered ? ' is-blocked' : '') + '" data-act="custom-plain" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" title="' +
-          (ordered ? 'Batalkan pesanan hari ini' : leave ? 'Libur — lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan hari ini — paket mengikuti default pelanggan, ubah paketnya di sel ini') + '">' +
+          (ordered ? 'Batalkan pesanan hari ini' : leave ? 'Libur: lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan hari ini · paket mengikuti default pelanggan, ubah paketnya di sel ini') + '">' +
           (ordered ? '✓ pesan' : 'pesan') + '</button>' +
           '<div class="cs-pkg' + (ordered ? ' is-manual' : ' is-off') + '">' + escapeHtml(ordered ? customPkgNote(type, rec, c) : 'belum pesan') + '</div></td>';
       }
@@ -2519,9 +2519,9 @@ function renderCustom() {
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
         '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) =>
           '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '" data-tip="' +
-          foodTip(k, it, (spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ' — berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
+          foodTip(k, it, (spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ', berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
         '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
-        escapeHtml(picks.length > 1 ? ('2 pilihan — harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu — harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
+        escapeHtml(picks.length > 1 ? ('2 pilihan · harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu, harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
         escapeHtml(picks.length || ordered ? customPkgNote(type, rec, c, picks.length ? items[picks[0]] : null) : 'belum pesan') + '</div>' +
         '</td>';
     }).join('');
@@ -2799,8 +2799,8 @@ function openPoBuyerModal(menu, po) {
       status: f.get('status') === 'siap' || f.get('status') === 'kirim' ? f.get('status') : '',
       note: (f.get('note') || '').trim()
     };
-    if (isEdit) { Object.assign(po, data); logAction('po', 'Ubah pembeli PO ' + data.name + ' — ' + data.item); }
-    else { data.id = uid(); db.po.push(data); logAction('po', 'Tambah pembeli PO ' + data.name + ' — ' + data.item); }
+    if (isEdit) { Object.assign(po, data); logAction('po', 'Ubah pembeli PO ' + data.name + ' · ' + data.item); }
+    else { data.id = uid(); db.po.push(data); logAction('po', 'Tambah pembeli PO ' + data.name + ' · ' + data.item); }
     save(); closeModal(); renderPO(); toast(isEdit ? 'Pembeli diperbarui' : 'Pembeli ditambahkan');
   });
 }
@@ -2838,8 +2838,8 @@ function openPoModal(po) {
       method: f.get('method'), paid: !!f.get('paid'), note: (f.get('note') || '').trim()
     };
     if (data.method === 'Gratis') { data.price = 0; data.paid = true; }
-    if (isEdit) { Object.assign(po, data); logAction('po', 'Ubah PO ' + data.name + ' — ' + data.item); }
-    else { data.id = uid(); db.po.push(data); logAction('po', 'Tambah PO ' + data.name + ' — ' + data.item); }
+    if (isEdit) { Object.assign(po, data); logAction('po', 'Ubah PO ' + data.name + ' · ' + data.item); }
+    else { data.id = uid(); db.po.push(data); logAction('po', 'Tambah PO ' + data.name + ' · ' + data.item); }
     save(); closeModal(); renderPO(); toast(isEdit ? 'PO diperbarui' : 'PO ditambahkan');
   });
   const methodSel = document.querySelector('#poForm [name="method"]');
@@ -2897,7 +2897,7 @@ function renderPoGroups() {
       '<td class="num">' + g.qty + '</td>' +
       '<td class="num">' + fmtIDR(g.nilai) + (g.bayar > 0 && g.bayar < g.nilai ? '<div class="muted tiny">barunya ' + fmtIDR(g.bayar) + '</div>' : '') + '</td>' +
       '<td class="c"><button class="badge ' + (g.sisa > 0 ? 'red' : 'green') + '" data-act="po-group-paid" data-id="' + g.id + '" title="' +
-        (g.sisa > 0 ? 'Tandai lunas — sisa ' + fmtIDR(g.sisa) : 'Batalkan penandaan lunas') + '">' +
+        (g.sisa > 0 ? 'Tandai lunas · sisa ' + fmtIDR(g.sisa) : 'Batalkan penandaan lunas') + '">' +
         (g.sisa > 0 ? 'Belum' : 'Lunas') + '</button>' +
         (g.sisa > 0 ? '<div class="muted tiny danger-text po-gd-sisa">sisa ' + fmtIDR(g.sisa) + '</div>' : '') + '</td>' +
       '<td class="end"><div class="row-actions">' +
@@ -2930,7 +2930,7 @@ function openPoGroupDetail(id) {
     '<p class="muted small">' + (g.pic ? ('PIC: ' + escapeHtml(g.pic) + (g.contact ? ' · ' + escapeHtml(g.contact) : '') + ' · ') : '') +
       escapeHtml(g.item) + ' · ' + fmtIDR(g.unit) + ' / porsi' + (g.note ? ' · ' + escapeHtml(g.note) : '') +
       (g.invNo ? '<div class="muted tiny">nomor invoice ' + escapeHtml(g.invNo) + ' · ' : '') +
-      (g.due ? '<br>Jatuh tempo ' + escapeHtml(fmtLong(g.due)) + (late ? ' — <span class="danger-text">sudah lewat, sisa masih ' + fmtIDR(g.sisa) + '</span>' : '') : '') + '</p>' +
+      (g.due ? '<br>Jatuh tempo ' + escapeHtml(fmtLong(g.due)) + (late ? ' · <span class="danger-text">sudah lewat, sisa masih ' + fmtIDR(g.sisa) + '</span>' : '') : '') + '</p>' +
     '<div class="table-wrap"><table class="table">' +
       '<thead><tr><th>Tanggal ambil</th><th class="num">Porsi</th><th class="num">Nilai</th><th class="c">Lunas</th><th class="c">Status</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table></div>' +
@@ -2982,7 +2982,7 @@ function poGroupInvoicePrint(id) {
       '<tr><th>Nilai pesanan</th><td class="r">' + fmtIDR(g.nilai) + '</td></tr>' +
       '<tr><th>Dibayar / uang muka</th><td class="r">' + fmtIDR(g.bayar) + '</td></tr>' +
       '<tr><th>Sisa tagihan</th><td class="r"><strong>' + fmtIDR(g.sisa) + '</strong></td></tr>' +
-      (bank ? '<tr><th>Transfer ke</th><td>' + escapeHtml(bank) + ' — cantumkan nomor ' + escapeHtml(no) + '</td></tr>' : '') +
+      (bank ? '<tr><th>Transfer ke</th><td>' + escapeHtml(bank) + ', cantumkan nomor ' + escapeHtml(no) + '</td></tr>' : '') +
     '</tbody></table>' +
     '<div class="sign"><div class="col">Petugas<div class="line">( ___________________ )</div></div><div class="col">' +
       escapeHtml(db.settings.businessName) + '<div class="line">( ___________________ )</div></div></div>';
@@ -3174,7 +3174,7 @@ function updatePoGroupTotal() {
   const a = poAllocate(sched, price, dp, gratis);
   let txt = sched.length + ' tanggal ambil · ' + portions + ' porsi · ' +
     (gratis ? 'GRATIS (kompensasi)' : 'total ' + fmtIDR(total) + ' · DP ' + fmtIDR(dp) + ' → ' + a.lunas + ' tanggal lunas · sisa ' + fmtIDR(total - a.bayar));
-  if (!gratis && a.left > 0 && a.lunas < sched.length) txt += ' — DP ' + fmtIDR(a.left) + ' belum terpakai, kecilkan DP atau tandai manual nanti';
+  if (!gratis && a.left > 0 && a.lunas < sched.length) txt += ' · DP ' + fmtIDR(a.left) + ' belum terpakai, kecilkan DP atau tandai manual nanti';
   setText('poGroupTotal', txt);
 }
 function openPoGroupModal(group) {
@@ -3185,7 +3185,7 @@ function openPoGroupModal(group) {
     price: group.unit, method: first ? first.method : '', note: group.note, dp: group.bayar,
     menuId: first ? first.menuId : '', due: group.due || ''
   } : { org: '', pic: '', contact: '', item: '', price: 0, method: defaultMethod(), note: '', dp: 0, menuId: '', due: '' };
-  const menuOpts = '<option value="">— tulis sendiri —</option>' +
+  const menuOpts = '<option value="">tulis sendiri</option>' +
     db.poMenus.slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(m =>
       '<option value="' + escapeHtml(m.id) + '"' + (g.menuId === m.id ? ' selected' : '') + '>' +
       escapeHtml(m.item) + ' · ' + fmtIDR(m.price) + ' · ' + fmtShortDate(m.date) + '</option>').join('');
@@ -3204,7 +3204,7 @@ function openPoGroupModal(group) {
         '<label class="field"><span>Item / menu</span><input type="text" name="item" class="input" value="' + escapeHtml(g.item) + '" required></label>' +
         '<label class="field"><span>Harga satuan (Rp)</span><input type="number" name="price" class="input" min="0" value="' + g.price + '" required></label>' +
       '</div>' +
-      '<div class="field"><span>Jadwal ambil — tanggal + jumlah porsi</span>' +
+      '<div class="field"><span>Jadwal ambil: tanggal + jumlah porsi</span>' +
         '<div class="po-sched" id="poSched">' + sched.join('') + '</div>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-act="po-sched-add">+ Tanggal ambil</button>' +
       '</div>' +
@@ -3266,11 +3266,11 @@ function openPoGroupModal(group) {
     if (due && f.get('mkrem') && total - paidSum > 0) {
       db.reminders.push({
         id: uid(), date: due, time: '', repeat: 'once', doneOn: '', ref: gid,
-        text: 'Tagih ' + org + ' — sisa ' + fmtIDR(total - paidSum)
+        text: 'Tagih ' + org + ' · sisa ' + fmtIDR(total - paidSum)
       });
       remNote = ' + pengingat tagihan ' + fmtShortDate(due);
     }
-    logAction('po', (isEdit ? 'Ubah' : 'Tambah') + ' pesanan kelompok ' + org + ' — ' +
+    logAction('po', (isEdit ? 'Ubah' : 'Tambah') + ' pesanan kelompok ' + org + ' · ' +
       list.reduce((s, x) => s + x.qty, 0) + ' porsi (' + list.length + ' tanggal)' + (due ? ' (jatuh tempo ' + due + ')' : ''));
     save(); closeModal(); renderPO(); toast('Pesanan kelompok disimpan' + remNote);
   });
@@ -3412,7 +3412,7 @@ function renderReport() {
         '<span><strong>' + escapeHtml(g.parent) + '</strong>' + (g.kids.length > 1 ? ' <span class="badge orange" title="jumlah anak">' + g.kids.length + ' anak</span>' : '') + '</span></label></td>' +
       '<td class="muted small">' + g.kids.map(k =>
         '<label class="bill-kid"><input type="checkbox" class="chk-kid" data-cid="' + escapeHtml(k.c.id) + '"' + (state.billSel.has(k.c.id) ? ' checked' : '') + '>' +
-        '<span>' + escapeHtml(k.c.name) + ' — ' + escapeHtml(k.c.className || '-') + ': ' + fmtIDR(k.tagihan) +
+        '<span>' + escapeHtml(k.c.name) + ' · ' + escapeHtml(k.c.className || '-') + ': ' + fmtIDR(k.tagihan) +
         (k.sisa > 0 ? ' <span class="danger-text">(sisa ' + fmtIDR(k.sisa) + ')</span>' : ' (lunas)') + '</span></label>'
       ).join('') + '</td>' +
       '<td class="num">' + fmtIDR(g.tagihan) + '</td>' +
@@ -3498,14 +3498,14 @@ function renderBillPanel() {
 }
 function billText() {
   const kids = billSelection();
-  const out = [db.settings.businessName + ' — Tagihan Belum Dibayar', ''];
+  const out = [db.settings.businessName + ' · Tagihan Belum Dibayar', ''];
   let grand = 0;
   for (const k of kids) {
-    out.push((k.c.parent ? k.c.parent + ' — ' : '') + k.c.name + (k.c.className ? ' (' + k.c.className + ')' : ''));
+    out.push((k.c.parent ? k.c.parent + ' · ' : '') + k.c.name + (k.c.className ? ' (' + k.c.className + ')' : ''));
     if (!k.lines.length) out.push('  Tidak ada tagihan tertunda');
     groupByWeek(k.lines).forEach(g => {
       out.push('  Minggu ' + weekRangeLabel(g.monday));
-      g.lines.forEach(l => out.push('    · ' + fmtShortDate(l.date) + ' ' + l.label + ' — ' + fmtIDR(l.amount)));
+      g.lines.forEach(l => out.push('    · ' + fmtShortDate(l.date) + ' ' + l.label + ' · ' + fmtIDR(l.amount)));
       out.push('    Subtotal minggu: ' + fmtIDR(g.total));
     });
     out.push('  Subtotal: ' + fmtIDR(k.total));
@@ -3616,7 +3616,7 @@ function billImage() {
     const kTotal = fmtIDR(k.total);
     const kTotalW = g.measureText(kTotal).width;
     g.textAlign = 'left'; g.fillStyle = th.text;
-    const head = (k.c.parent ? k.c.parent + ' — ' : '') + k.c.name + (k.c.className ? ' (' + k.c.className + ')' : '');
+    const head = (k.c.parent ? k.c.parent + ' · ' : '') + k.c.name + (k.c.className ? ' (' + k.c.className + ')' : '');
     g.fillText(clipText(g, head, W - pad * 2 - kTotalW - 12), pad, y);
     g.textAlign = 'right';
     g.fillText(kTotal, W - pad, y);
@@ -3755,7 +3755,7 @@ function customerRincianImage(cid) {
   let y = headH;
   if (!groups.length) {
     g.fillStyle = th.ok; g.font = '700 12px Segoe UI, sans-serif';
-    g.fillText('Tidak ada tagihan tertunda — semua sudah lunas.', pad, y);
+    g.fillText('Tidak ada tagihan tertunda, semua sudah lunas.', pad, y);
     y += lineH;
   }
   groups.forEach(gr => {
@@ -3803,7 +3803,7 @@ function customerRincianImage(cid) {
   g.fillText('Dibuat otomatis oleh ' + db.settings.businessName + ' · ' + fmtLong(todayStr()), pad, y + 76);
 
   openImagePreview(cv, 'rincian-' + (c.name || 'pelanggan').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' + todayStr() + '.png',
-    'Rincian Tagihan — ' + c.name);
+    'Rincian Tagihan · ' + c.name);
 }
 
 function openReportDetail(cid) {
@@ -3831,7 +3831,7 @@ function openReportDetail(cid) {
   ).join('');
 
   openModal(
-    '<h3>Rincian — ' + escapeHtml(c.name) + ' <span class="muted" style="font-weight:400">(' + escapeHtml(c.className) + ')</span></h3>' +
+    '<h3>Rincian · ' + escapeHtml(c.name) + ' <span class="muted" style="font-weight:400">(' + escapeHtml(c.className) + ')</span></h3>' +
     '<p class="muted small">Periode: ' + escapeHtml(scope) + ' · Langganan ' + periodLabel(c.period) + '</p>' +
     '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">' +
       statCard('Tagihan', fmtIDR(rep.tagihan)) +
@@ -4079,7 +4079,7 @@ function syncStickerControls() {
     const full = +(STICKER_SHEET_H / o.rows).toFixed(1);
     tightNote.textContent = st.tight >= 100
       ? 'Sel memakai tinggi penuh ' + mmLabel(full) + ' mm. Kecilkan untuk mempertebal jarak antar stiker tanpa memperbesar tulisan.'
-      : 'Tinggi sel ' + mmLabel(o.rowH) + ' mm dari ' + mmLabel(full) + ' mm — sisa ruang jadi jarak antar stiker, tulisan ikut mengecil.';
+      : 'Tinggi sel ' + mmLabel(o.rowH) + ' mm dari ' + mmLabel(full) + ' mm. Sisa ruang jadi jarak antar stiker, tulisan ikut mengecil.';
   }
   set('stickerMark', st.mark);
   set('stickerTone', st.tone);
@@ -4100,7 +4100,7 @@ function syncStickerControls() {
       markNote.textContent = 'Isi alergi ditulis langsung di bawah nama; warnanya mengikuti warna penanda, bentuk penanda tidak dipakai di sini.';
     } else {
       markNote.textContent = st.mark === 'none'
-        ? 'Anak dengan alergi tidak diberi tanda pada stiker — catatannya tetap ada di aplikasi.'
+        ? 'Anak dengan alergi tidak diberi tanda pada stiker, catatannya tetap ada di aplikasi.'
         : 'Penanda alergi: ' + STK_MARKS[st.mark] + '. Sengaja tanpa tanda seru agar tidak terbaca sebagai rambu bahaya.';
     }
   }
@@ -4129,7 +4129,7 @@ function stickerPreview() {
   document.getElementById('stickerFrame').srcdoc = buildStickerHTML(selected, o);
   const size = document.getElementById('stickerSize').value;
   document.getElementById('stickerCount').textContent = selected.length + ' stiker · ' + size.replace('x', ' × ') + ' per lembar';
-  if (selected.length > o.cols * o.rows) toast('Jumlah melebihi 1 lembar — otomatis dibuat beberapa halaman.');
+  if (selected.length > o.cols * o.rows) toast('Jumlah melebihi 1 lembar, otomatis dibuat beberapa halaman.');
 }
 
 /* ---------- Render: Kertas Konfirmasi ---------- */
@@ -4199,7 +4199,7 @@ function buildSatpamHTML(date, type, showClass) {
     'td.pick.off{background:#f1efe9}' +
     '</style></head><body>' +
     '<div class="head"><h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
-    '<div class="sub">Lembar Konfirmasi / Penerimaan — ' + typeLabel + '</div>' +
+    '<div class="sub">Lembar Konfirmasi / Penerimaan · ' + typeLabel + '</div>' +
     '<div class="sub">Tanggal: ' + fmtLong(date) + '</div></div>' +
     menuHtml +
     caption +
@@ -4318,7 +4318,7 @@ function renderNotif() {
       ? items.map(it => '<button type="button" class="notif-row is-' + it.tone + '" data-nav="' + it.nav + '">' +
           '<span class="nr-dot" aria-hidden="true"></span><span class="nr-body"><span class="nr-title">' + escapeHtml(it.title) + '</span>' +
           (it.sub ? '<span class="nr-sub">' + escapeHtml(it.sub) + '</span>' : '') + '</span></button>').join('')
-      : '<p class="notif-none">Semua beres — tidak ada pengingat, tagihan, atau pesanan yang menunggu.</p>';
+      : '<p class="notif-none">Semua beres: tidak ada pengingat, tagihan, atau pesanan yang menunggu.</p>';
   }
   if (!items.length) closeNotif();
 }
@@ -4462,7 +4462,7 @@ function waNumber(raw) {
   return digits;
 }
 function waRincian(g) {
-  return g.weeks.map(w => '• Minggu ' + weekRangeLabel(w.monday) + ' — ' + fmtIDR(w.total)).join('\n') +
+  return g.weeks.map(w => '• Minggu ' + weekRangeLabel(w.monday) + ' · ' + fmtIDR(w.total)).join('\n') +
     '\n   (' + g.lines.length + ' tagihan sejak ' + fmtShortDate(g.oldest) + ')';
 }
 function bankText() {
@@ -4511,7 +4511,7 @@ function renderWaList() {
         '<button class="btn btn-ghost btn-sm" data-act="wa-open" data-i="' + i + '">' + (g.groupId ? 'Detail PO' : 'Rincian') + '</button>' +
         (g.groupId ? '<button class="btn btn-ghost btn-sm" data-act="po-group-invoice" data-id="' + escapeHtml(g.groupId) + '">Invoice</button>' : '') +
         '<button class="icon-act bell" data-act="rem-prefill"' + (g.groupId ? ' data-id="' + escapeHtml(g.groupId) + '"' : '') +
-          ' data-text="' + escapeHtml('Tagih ' + g.who + ' — sisa ' + fmtIDR(g.total)) +
+          ' data-text="' + escapeHtml('Tagih ' + g.who + ' · sisa ' + fmtIDR(g.total)) +
           '" data-date="' + (g.due || shiftDate(todayStr(), 7)) + '" title="Buat pengingat menagih penunggak ini">' + ICO_BELL + '</button>' +
       '</div></td>' +
     '</tr>';
@@ -4540,7 +4540,7 @@ function reminderNudge() {
   const due = reminderDue();
   if (!due.length) return;
   const late = due.filter(v => v.overdue).length;
-  toast(due.length + ' pengingat perlu diperhatikan' + (late ? ' (' + late + ' terlambat)' : '') + ' — buka halaman Pengingat');
+  toast(due.length + ' pengingat perlu diperhatikan' + (late ? ' (' + late + ' terlambat)' : '') + ' · buka halaman Pengingat');
 }
 function saveWaSettings() {
   db.settings.waCountry = (document.getElementById('setWaCountry').value || '').replace(/\D/g, '') || '62';
@@ -4642,13 +4642,13 @@ function openHolidayModal(mode) {
       Object.keys(SCOPE_LABEL).map(k => '<option value="' + k + '">' + SCOPE_LABEL[k] + '</option>').join('') +
     '</select></label>' +
     '<label class="field" id="holidayValueField"><span>Pilih target</span><select id="holidayValue" class="input"></select></label>' +
-    '<div class="field" id="holidayPeopleField" hidden><span>Pilih anak — boleh lebih dari satu</span>' +
+    '<div class="field" id="holidayPeopleField" hidden><span>Pilih anak, boleh lebih dari satu</span>' +
       '<input type="text" id="holidayPeopleQ" class="input input-sm" placeholder="cari nama atau kelas…" autocomplete="off">' +
       '<div class="hp-list" id="holidayPeople"></div>' +
       '<span class="muted tiny" id="holidayPeopleCount"></span></div>' +
     '<label class="field"><span>Catatan (opsional)</span><input type="text" id="holidayNote" class="input" placeholder="cth: libur nasional"></label>' +
     '<p class="muted tiny" id="holidayWarn"></p>' +
-    '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Mingguan</em> — tidak perlu ditandai libur di sini.</p>' +
+    '<p class="muted tiny">Sakit atau tidak masuk satu anak cukup dimatikan pesanannya di <em>Pesanan Mingguan</em>, tidak perlu ditandai libur di sini.</p>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="holiday-save" data-mode="' + (mode === 'week' ? 'week' : 'day') + '">Simpan libur</button></div>');
   holidayModalDates = dates;
@@ -4696,7 +4696,7 @@ function renderHolidayWarn() {
   el.innerHTML = dampak.porsi || dampak.menu
     ? 'Pesanan yang <strong>ikut terhapus</strong>: ' + dampak.porsi + ' porsi snack/lunch' +
       (dampak.menu ? ' + menu snack/lunch ' + dampak.menu + ' pilihan' : '') +
-      ' — bisa dikembalikan dengan <em>Urungkan</em>.'
+      '. Bisa dikembalikan dengan <em>Urungkan</em>.'
     : 'Pilihan ini tidak menimpa pesanan snack/lunch yang ada, jadi tidak ada yang terhapus.';
 }
 function renderHolidayValueOptions() {
@@ -4727,7 +4727,7 @@ function renderHolidayPeople() {
   const dipilih = new Set(Array.from(box.querySelectorAll('input:checked')).map(i => i.value));
   const anak = db.customers.filter(c => c.active).sort(sortCustomers);
   box.innerHTML = anak.length ? anak.map(c => {
-    const label = c.name + (c.className ? (' — ' + c.className) : '');
+    const label = c.name + (c.className ? (' · ' + c.className) : '');
     return '<label class="hp-row" data-hay="' + escapeHtml((label + ' ' + (c.parent || '')).toLowerCase()) + '">' +
       '<input type="checkbox" data-hp="1" value="' + escapeHtml(c.id) + '"' + (dipilih.has(c.id) ? ' checked' : '') + '>' + escapeHtml(label) + '</label>';
   }).join('') : '<p class="muted tiny">Belum ada pelanggan aktif.</p>';
@@ -4743,7 +4743,7 @@ function filterHolidayPeople() {
   });
   const cnt = document.getElementById('holidayPeopleCount');
   const n = document.querySelectorAll('#holidayPeople input:checked').length;
-  if (cnt) cnt.textContent = n ? n + ' anak dipilih' : (tampil ? 'Belum ada yang dicentang — centang satu atau beberapa anak' : 'Tidak ada yang cocok dengan pencarian');
+  if (cnt) cnt.textContent = n ? n + ' anak dipilih' : (tampil ? 'Belum ada yang dicentang, centang satu atau beberapa anak' : 'Tidak ada yang cocok dengan pencarian');
 }
 /* Menandai libur benar-benar mengosongkan hari itu — bukan hanya menyembunyikannya.
    Semua orang libur: pesanan snack+lunch tanggal itu dibuang dan menu snack/lunch-nya
@@ -4792,7 +4792,7 @@ function saveHoliday(mode) {
     ? ' · ' + (values.length <= 3 ? values.map(v => ((customerById(v) || {}).name) || v).join(', ') : values.length + ' anak')
     : ' (' + values[0] + ')');
   logAction('libur', 'Libur ' + (dates.length > 1 ? 'seminggu ' + dates[0] + ' s/d ' + dates[6] : dates[0]) +
-    ' — ' + (SCOPE_LABEL[scope] || scope) + siapa +
+    ' · ' + (SCOPE_LABEL[scope] || scope) + siapa +
     (note ? ' · ' + note : '') +
     (bersih.porsi ? ' · ' + bersih.porsi + ' porsi snack/lunch dihapus' : '') +
     (bersih.menu ? ' · menu snack/lunch ' + bersih.menu + ' item dibuang' : ''));
@@ -4815,7 +4815,7 @@ function removeHoliday(id, quiet) {
   renderWeekMenu();
   renderHomeHoliday();
   if (quiet) return true;
-  toast('Libur dihapus — pesanan yang tadi terhapus tidak kembali sendiri, pakai Urungkan bila masih ingin membatalkannya', { undo: true });
+  toast('Libur dihapus. Pesanan yang tadi terhapus tidak kembali sendiri, pakai Urungkan bila masih ingin membatalkannya', { undo: true });
   return true;
 }
 
@@ -4903,7 +4903,7 @@ function renderPackages() {
         (sample.length ? '<div class="pkg-sample">menu 7 hari ke depan: ' + escapeHtml(sample.slice(0, 4).join(', ')) + (sample.length > 4 ? ' +' + (sample.length - 4) + ' lagi' : '') + '</div>' : '<div class="pkg-sample muted">belum dipakai menu 7 hari ke depan</div>') +
       '</div>';
     }).join('')
-      : '<p class="muted small">Belum ada paket — tambah di form bawah agar harga tiap porsi terhitung.</p>';
+      : '<p class="muted small">Belum ada paket. Tambah di form bawah agar harga tiap porsi terhitung.</p>';
   }
 }
 function editPackage(id, field, value) {
@@ -4913,7 +4913,7 @@ function editPackage(id, field, value) {
     const raw = String(value == null ? '' : value).trim();
     const n = Number(raw);
     if (raw === '' || !isFinite(n) || n < 0) {
-      toast('Harga kosong atau tidak valid — dikembalikan ke ' + fmtIDR(+p.price || 0));
+      toast('Harga kosong atau tidak valid, dikembalikan ke ' + fmtIDR(+p.price || 0));
       renderPackages();
       return;
     }
@@ -4924,7 +4924,7 @@ function editPackage(id, field, value) {
     if (field === 'name' && !v) { toast('Nama paket tidak boleh kosong'); renderPackages(); return; }
     p[field] = v;
   }
-  logAction('pengaturan', 'Ubah paket ' + p.type + ': ' + p.name + ' — ' + fmtIDR(p.price));
+  logAction('pengaturan', 'Ubah paket ' + p.type + ': ' + p.name + ' · ' + fmtIDR(p.price));
   save();
   renderPackages(); renderDailyMerged(); renderDashboard();
 }
@@ -5046,7 +5046,7 @@ function openCustomerModal(c) {
     '<form id="custForm">' +
       '<label class="field"><span>Nama</span><input type="text" name="name" class="input" value="' + escapeHtml(x.name) + '" required></label>' +
       '<label class="field"><span>Kelas</span><input type="text" name="className" class="input" placeholder="mis. 2C, 11B, 12A" value="' + escapeHtml(x.className) + '"></label>' +
-      '<label class="field"><span>Nama orang tua / pengenal (opsional — digabung bila satu orang tua punya beberapa anak)</span><input type="text" name="parent" class="input" value="' + escapeHtml(x.parent || '') + '"></label>' +
+      '<label class="field"><span>Nama orang tua / pengenal (opsional, digabung bila satu orang tua punya beberapa anak)</span><input type="text" name="parent" class="input" value="' + escapeHtml(x.parent || '') + '"></label>' +
       '<label class="field"><span>No. HP / WA orang tua (untuk pengingat tagihan)</span><input type="text" name="phone" class="input" placeholder="0812… atau 62812…" value="' + escapeHtml(x.phone || '') + '"></label>' +
       '<label class="field"><span>Catatan alergi / preferensi (tampil di daftar harian, kertas konfirmasi &amp; stiker)</span>' +
         '<textarea name="allergy" class="input" rows="2" maxlength="80" placeholder="mis. Alergi kacang &amp; kerang, tidak makan pedas">' + escapeHtml(x.allergy || '') + '</textarea></label>' +
@@ -5054,7 +5054,7 @@ function openCustomerModal(c) {
       '<div class="field" id="custOnceField" hidden>' +
         '<span>Tanggal beli</span>' +
         '<input type="date" name="onceDate" id="custOnceDate" class="input" value="' + escapeHtml(x.onceDate || '') + '">' +
-        '<span class="muted tiny">Pesanan dibuat satu kali saja pada tanggal ini — snack/lunch mengikuti centang di bawah.</span>' +
+        '<span class="muted tiny">Pesanan dibuat satu kali saja pada tanggal ini. Snack/lunch mengikuti centang di bawah.</span>' +
       '</div>' +
       '<div class="field wd-field" id="wdBlock"' + (x.period === 'daily' ? '' : ' hidden') + '>' +
         '<span>Pilih hari (harian)</span>' +
@@ -5068,7 +5068,7 @@ function openCustomerModal(c) {
       '</div>' +
       '<label class="field"><span>Status langganan</span><select name="status" id="custStatusSel" class="input">' +
         CUST_STATUS.filter(s => isEdit || s === 'aktif' || s === 'sekali').map(s => '<option value="' + s + '"' + ((x.status || (x.active === false ? 'berhenti' : 'aktif')) === s ? ' selected' : '') + '>' +
-          STATUS_LABEL[s] + ' — ' + STATUS_HINT[s] + '</option>').join('') +
+          STATUS_LABEL[s] + ' · ' + STATUS_HINT[s] + '</option>').join('') +
       '</select></label>' +
       '<p class="muted tiny" id="custStatusNote">' + (isEdit
         ? 'Status <strong>Aktif</strong> mengisi pesanan sampai periode berikutnya (Senin–Jumat, belum dibayar); <strong>Beli Sekali</strong> hanya satu tanggal.'
@@ -5111,7 +5111,7 @@ function openCustomerModal(c) {
     const status = CUST_STATUS.indexOf(String(f.get('status'))) >= 0 ? String(f.get('status')) : 'aktif';
     const onceDate = /^\d{4}-\d{2}-\d{2}$/.test(String(f.get('onceDate') || '')) ? String(f.get('onceDate')) : '';
     if (status === 'sekali' && !onceDate) { toast('Isi dulu tanggal untuk beli sekali'); return; }
-    if (status === 'sekali' && !f.get('snackDefault') && !f.get('lunchDefault')) { toast('Centang snack atau lunch — tidak ada yang bisa dipesan'); return; }
+    if (status === 'sekali' && !f.get('snackDefault') && !f.get('lunchDefault')) { toast('Centang snack atau lunch, tidak ada yang bisa dipesan'); return; }
     const data = {
       name: f.get('name').trim(), className: (f.get('className') || '').trim(),
       parent: (f.get('parent') || '').trim(),
@@ -5217,7 +5217,7 @@ function renderBackups() {
   const total = list.reduce((s, b) => s + (b.json || '').length, 0);
   setText('backupNote', (list.length
     ? list.length + ' cadangan harian tersimpan di perangkat ini (' + backupSize(total) + ')'
-    : 'Belum ada cadangan — dibuat otomatis setiap hari begitu ada perubahan data') +
+    : 'Belum ada cadangan. Dibuat otomatis setiap hari begitu ada perubahan data') +
     (last ? ' · unduhan manual terakhir ' + fmtShortDate(new Date(last).toISOString().slice(0, 10)) : ' · belum pernah unduh manual'));
   el.innerHTML = list.map((b, i) =>
     '<div class="backup-item">' +
@@ -5269,7 +5269,7 @@ function money(n) { return String(Math.round(+n || 0)); }
 function applyBrand() {
   document.getElementById('brandName').textContent = db.settings.businessName;
   document.getElementById('brandTagline').textContent = db.settings.tagline;
-  document.title = db.settings.businessName + ' — Catatan Usaha Catering';
+  document.title = db.settings.businessName + ' · Catatan Usaha Catering';
 }
 /* Jenis huruf + skala teks seluruh aplikasi. Hanya memengaruhi layar, bukan hasil cetak. */
 function applyUiStyle() {
@@ -5467,7 +5467,7 @@ function onDocClick(e) {
       }
       break;
     }
-    case 'po-delete': { const p = db.po.find(x => x.id === id); if (p && confirm('Hapus PO ini?')) { db.po = db.po.filter(x => x.id !== id); logAction('po', 'Hapus PO ' + p.name + ' — ' + p.item); save(); renderPO(); toast('PO dihapus', { undo: true }); } break; }
+    case 'po-delete': { const p = db.po.find(x => x.id === id); if (p && confirm('Hapus PO ini?')) { db.po = db.po.filter(x => x.id !== id); logAction('po', 'Hapus PO ' + p.name + ' · ' + p.item); save(); renderPO(); toast('PO dihapus', { undo: true }); } break; }
     case 'po-toggle-paid': { const p = db.po.find(x => x.id === id); if (p) { p.paid = !p.paid; logAction('bayar', 'PO ' + p.name + ' ' + (p.paid ? 'lunas' : 'belum') + ' @ ' + p.date); save(); renderPO(); } break; }
     case 'po-toggle-status': {
       const p = db.po.find(x => x.id === id);
@@ -5494,7 +5494,7 @@ function onDocClick(e) {
     case 'rem-prefill': {
       const g = id ? poGroups().find(x => x.id === id) : null;
       if (id && !g) { toast('Pesanan kelompok tidak ditemukan'); break; }
-      const text = act.dataset.text || (g ? 'Tagih ' + g.org + (g.sisa > 0 ? ' — sisa ' + fmtIDR(g.sisa) : ' — sudah lunas') : '');
+      const text = act.dataset.text || (g ? 'Tagih ' + g.org + (g.sisa > 0 ? ' · sisa ' + fmtIDR(g.sisa) : ' · sudah lunas') : '');
       if (!text) { toast('Tidak ada yang perlu diingatkan'); break; }
       const date = act.dataset.date || (g ? (g.due || g.dates[g.dates.length - 1] || todayStr()) : todayStr());
       prefillReminder(text, date);
@@ -5512,7 +5512,7 @@ function onDocClick(e) {
         });
         logAction('bayar', 'PO kelompok ' + g.org + ' → ' + (toPaid ? 'lunas' : 'kembali ke status sebelumnya'));
         save(); closeModal(); renderPO();
-        toast(toPaid ? 'Semua tanggal ditandai lunas' : 'Penandaan lunas dibatalkan — status tiap tanggal dikembalikan');
+        toast(toPaid ? 'Semua tanggal ditandai lunas' : 'Penandaan lunas dibatalkan, status tiap tanggal dikembalikan');
       }
       break;
     }
@@ -5572,7 +5572,7 @@ function onDocClick(e) {
       closeModal();
       if (!h) { toast('Tanda liburnya sudah tidak ada'); break; }
       removeHoliday(id, true);
-      toast('Libur ' + fmtShortDate(h.date) + ' dilepas — pesanannya boleh dinyalakan lagi', { undo: true });
+      toast('Libur ' + fmtShortDate(h.date) + ' dilepas, pesanannya boleh dinyalakan lagi', { undo: true });
       if (retry) retry();
       break;
     }
@@ -5682,11 +5682,11 @@ function onDocClick(e) {
       const num = waNumber(g.phone);
       if (!num) {
         copyText(msg);
-        toast('No. HP ' + g.who + ' belum diisi — pesan disalin, tempel manual di WhatsApp');
+        toast('No. HP ' + g.who + ' belum diisi. Pesan disalin, tempel manual di WhatsApp');
         break;
       }
       window.open('https://wa.me/' + encodeURIComponent(num) + '?text=' + encodeURIComponent(msg), '_blank');
-      logAction('pengingat', 'Kirim WA ' + g.who + ' — sisa ' + fmtIDR(g.total));
+      logAction('pengingat', 'Kirim WA ' + g.who + ' · sisa ' + fmtIDR(g.total));
       save();
       break;
     }
@@ -5703,8 +5703,8 @@ function onDocClick(e) {
     case 'wa-copy-all': {
       const gs = debtors();
       if (!gs.length) { toast('Tidak ada tagihan tertunda'); break; }
-      copyText(db.settings.businessName + ' — daftar tagihan belum dibayar (' + gs.length + ' penunggak)\n\n' +
-        gs.map(g => '• ' + g.who + ' — ' + fmtIDR(g.total) + ' (' + g.kids.join(', ') + ', ' + g.days + ' hari)').join('\n') +
+      copyText(db.settings.businessName + ' · daftar tagihan belum dibayar (' + gs.length + ' penunggak)\n\n' +
+        gs.map(g => '• ' + g.who + ' · ' + fmtIDR(g.total) + ' (' + g.kids.join(', ') + ', ' + g.days + ' hari)').join('\n') +
         '\n\nTOTAL: ' + fmtIDR(gs.reduce((s, g) => s + g.total, 0)));
       break;
     }
@@ -5714,7 +5714,7 @@ function onDocClick(e) {
     case 'report-print': printRecap(); break;
     case 'hub-print-report': renderReport(); printRecap(); break;
     case 'hub-csv-report': renderReport(); exportReportCSV(); break;
-    case 'hub-nav': showPage(act.dataset.page); toast(act.dataset.t + ' — ' + act.dataset.h); break;
+    case 'hub-nav': showPage(act.dataset.page); toast(act.dataset.t + ' · ' + act.dataset.h); break;
     case 'open-cal': {
       const field = act.dataset.field;
       if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDots(ymd, false) });
@@ -5963,7 +5963,7 @@ function backupReminder() {
   if (!db.customers.length) return;
   const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
   if (days !== null && days < 7) return;
-  toast('Belum ada unduhan cadangan' + (days ? ' sejak ' + days + ' hari lalu' : '') + ' — buka Pengaturan › Tampilan & Cadangan Data');
+  toast('Belum ada unduhan cadangan' + (days ? ' sejak ' + days + ' hari lalu' : '') + ' · buka Pengaturan › Tampilan & Cadangan Data');
 }
 
 /* ---------- Init ---------- */
