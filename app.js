@@ -1,5 +1,5 @@
 /* =========================================================
-   Catatan Katering — pencatat snack & lunch sekolah (offline)
+   Catatan Katering: pencatat snack & lunch sekolah (offline)
    Data tersimpan di localStorage perangkat ini.
    ========================================================= */
 
@@ -22,7 +22,7 @@ function migrateStoreKeys() {
       if (oldVal === null) return;
       const newVal = localStorage.getItem(to);
       /* kunci lama hanya dibuang kalau isinya sudah aman tersalin (atau memang sama);
-         kalau beda, biarkan — jangan musnahkan data yang tidak bisa dibalik lagi */
+         kalau beda, biarkan. Jangan musnahkan data yang tidak bisa dibalik lagi */
       if (newVal === null) localStorage.setItem(to, oldVal);
       if (newVal === null || newVal === oldVal) localStorage.removeItem(from);
     });
@@ -32,7 +32,7 @@ migrateStoreKeys();
 const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const MONTHS_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-/* Pilihan font untuk stiker — key => stack CSS */
+/* Pilihan font untuk stiker: key => stack CSS */
 const STK_FONTS = {
   sans: '"Segoe UI",system-ui,sans-serif',
   serif: 'Georgia,"Times New Roman",serif',
@@ -55,7 +55,7 @@ const STK_TONES = {
   gold: { fg: '#B8862F', label: 'Kuning kayu' },
   red: { fg: '#C0272D', label: 'Merah' }
 };
-/* Pilihan font untuk seluruh aplikasi — key => stack CSS ('default' = ikut styles.css) */
+/* Pilihan font untuk seluruh aplikasi: key => stack CSS ('default' = ikut styles.css) */
 const UI_FONTS = {
   default: '',
   sans: '"Segoe UI",system-ui,sans-serif',
@@ -92,9 +92,9 @@ function defaultData() {
       tagline: 'Catatan Snack & Lunch',
       priceSnack: 5000,
       priceLunch: 15000,
-      packages: [], // { id, type:'snack'|'lunch', name, price } — paket = tingkatan harga; makanannya dari menu harian
+      packages: [], // { id, type:'snack'|'lunch', name, price }: paket = tingkatan harga; makanannya dari menu harian
       defaultPeriod: 'weekly',
-      bankName: '', bankNumber: '', bankHolder: '', // rekening usaha — dicetak di invoice
+      bankName: '', bankNumber: '', bankHolder: '', // rekening usaha: dicetak di invoice
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
@@ -110,10 +110,10 @@ function defaultData() {
     snack: {},   // { 'YYYY-MM-DD': { customerId: {ordered,paid,method,note,pkg} } }
     lunch: {},
     menu: { snack: {}, lunch: {} },   // { 'YYYY-MM-DD': 'nama menu' }
-    menuPlan: {}, // { 'YYYY-MM-DD': [{name,type,pkg}] } — menu mingguan per hari; name boleh multiline (isi paket)
+    menuPlan: {}, // { 'YYYY-MM-DD': [{name,type,pkg}] }: menu mingguan per hari; name boleh multiline (isi paket)
     holidays: [], // { id, date, scope:'all'|'class'|'cohort'|'person', value, note }
     reminders: [], // { id, date, time, text, repeat:'once'|'weekly'|'monthly', doneOn }
-    poMenus: [], // { id, date, item, price, note } — menu PO beserta tanggal
+    poMenus: [], // { id, date, item, price, note }: menu PO beserta tanggal
     po: [],      // { id, menuId?, date, name, item, qty, price, method, paid, note }
     log: []      // { id, ts, action, detail }
   };
@@ -136,7 +136,7 @@ function normalize(d) {
   /* padV = jarak atas-bawah isi dalam satu sel stiker (mm); gantikan rowH lama */
   const pv = +sk.padV;
   sk.padV = Number.isFinite(pv) ? Math.min(10, Math.max(0, pv)) : 2.6;
-  /* tight = persen tinggi sel terhadap tinggi otomatis — memperkecil kotak tanpa mengubah font manual */
+  /* tight = persen tinggi sel terhadap tinggi otomatis, memperkecil kotak tanpa mengubah font manual */
   const tg = +sk.tight;
   sk.tight = Number.isFinite(tg) ? Math.min(100, Math.max(50, tg)) : 100;
   sk.mark = STK_MARKS[sk.mark] ? sk.mark : 'bar';
@@ -159,7 +159,7 @@ function normalize(d) {
   if (!d.menu || typeof d.menu !== 'object') d.menu = { snack: {}, lunch: {} };
   if (!d.menu.snack || typeof d.menu.snack !== 'object') d.menu.snack = {};
   if (!d.menu.lunch || typeof d.menu.lunch !== 'object') d.menu.lunch = {};
-  /* Baris biasa tidak punya harga lagi — harganya ikut paket anak. Harga di baris = hari spesial. */
+  /* Baris biasa tidak punya harga lagi, harganya ikut paket anak. Harga di baris = hari spesial. */
   const normMenu = arr => (Array.isArray(arr) ? arr : []).map(it => {
     if (typeof it === 'string') return { name: it, type: 'snack', price: '' };
     let t = MENU_TYPES.includes(it && it.type) ? it.type : 'snack';
@@ -229,7 +229,7 @@ function normalize(d) {
 }
 
 /* ---------- Data contoh (demo) ---------- */
-/* Nama usaha contoh — dipilih acak tiap kali data contoh dimuat */
+/* Nama usaha contoh, dipilih acak tiap kali data contoh dimuat */
 const BRAND_NAMES = [
   ['Dapur Nusantara', 'Katering & snack sekolah'],
   ['Dapur Mbak Yuni', 'Masakan rumahan harian'],
@@ -286,14 +286,14 @@ function makeDemoData() {
     mk('Ulva Hanum', '12A', 'Bpk. Hendra', 'monthly', [], true, true, { allergy: 'Alergi telur' }),
     mk('Wira Santoso', '12A', 'Ibu Sari', 'weekly', [], true, true, { snackPkg: sKomplit.id, lunchPkg: lPrem.id, phone: '0821-7788-9001' }),
     mk('Yolanda Putri', '12B', 'Ibu Marni', 'daily', [2, 4, 6], true, false, { snackPkg: sSedang.id }),
-    /* nama kembar sengaja ada dua — memperlihatkan daftar pelanggan dengan nama sama tetap dibedakan kelasnya */
+    /* nama kembar sengaja ada dua, memperlihatkan daftar pelanggan dengan nama sama tetap dibedakan kelasnya */
     mk('Zaki Maulana', '2A', 'Bpk. Yusuf', 'weekly', [], true, true, {}),
     mk('Zaki Maulana', '9B', 'Ibu Endah', 'weekly', [], false, true, { lunchPkg: lStandar.id })
   ];
   d.customers = kids;
 
   const today = todayStr();
-  /* contoh libur sengaja berada di luar minggu berjalan — minggu ini tetap penuh pesanan
+  /* contoh libur sengaja berada di luar minggu berjalan, minggu ini tetap penuh pesanan
       supaya halaman pertama tidak kosong (dan penanda libur tidak menghapus isi minggu ini) */
   const sen = mondayOf(today);
   const offAll = shiftDate(sen, -10);      // Jumat dua minggu lalu
@@ -302,7 +302,7 @@ function makeDemoData() {
   const leavePerson = shiftDate(sen, 8);   // Selasa minggu depan
   const methods = ['Tunai', 'Transfer', 'QRIS'];
 
-  /* tiga rotasi menu mingguan — paket sama, makanan berbeda; dua hari berisi menu spesial dengan harganya sendiri */
+  /* tiga rotasi menu mingguan: paket sama, makanan berbeda; dua hari berisi menu spesial dengan harganya sendiri */
   const mi = (name, type, pkg, price) => ({ name, type, pkg: '', price: /-spesial$/.test(type) ? (price || '') : '' });
   const W1 = [
     [mi('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', sMini.id), mi('Susu Cokelat\nBiskuit', 'snack', sSedang.id)],
@@ -345,7 +345,7 @@ function makeDemoData() {
       if (tpl[i].length) d.menuPlan[date] = tpl[i].map(x => Object.assign({}, x));
     }
   }
-  /* tanggal libur semua orang dibiarkan hanya berisi baris PO — sama seperti hasil menandai libur di Beranda */
+  /* tanggal libur semua orang dibiarkan hanya berisi baris PO, sama seperti hasil menandai libur di Beranda */
   if (d.menuPlan[offAll]) {
     const poOnly = d.menuPlan[offAll].filter(x => x.type === 'po');
     if (poOnly.length) d.menuPlan[offAll] = poOnly; else delete d.menuPlan[offAll];
@@ -362,14 +362,14 @@ function makeDemoData() {
     }
     return { items, mis };
   };
-  /* dua anak cukup beli sekali — satu tanggal pilihan, bukan rangkaian hari */
+  /* dua anak cukup beli sekali: satu tanggal pilihan, bukan rangkaian hari */
   const hariKerja = (dari, langkah) => { let x = shiftDate(dari, langkah); while (weekdayOf(x) > 5) x = shiftDate(x, langkah); return x; };
   const sekali = [
     { c: kids[7], type: 'snack', date: hariKerja(today, -2) },  // tanggalnya sudah lewat → tidak muncul di "yang berjalan"
     { c: kids[15], type: 'lunch', date: hariKerja(today, 2) }   // masih berjalan
   ];
   sekali.forEach(x => { x.c.status = 'sekali'; x.c.onceDate = x.date; x.c.active = true; });
-  /* 42 hari ke belakang + seminggu ke depan — langganan asli juga sudah terisi ke depan,
+  /* 42 hari ke belakang + seminggu ke depan, langganan asli juga sudah terisi ke depan,
      jadi akhir pekan pun halaman Cetak / Pesanan Mingguan tidak kosong */
   for (let i = 41; i >= -7; i--) {
     const date = shiftDate(today, -i);
@@ -459,7 +459,7 @@ function makeDemoData() {
   const gYayasan = groupOrder('Yayasan Citra Bangsa', 'Ibu Endah', '0857-2200-3311', 'Baksos Snack Box', 9500,
     'Kemas per 50 kotak (contoh)', [[shiftDate(today, 12), 120], [shiftDate(today, 13), 80]], 500000,
     shiftDate(today, 15), ['', '']);
-  /* satu kelompok sudah diterbitkan invoice-nya, dua lainnya belum — memperlihatkan dua keadaan nomor invoice */
+  /* satu kelompok sudah diterbitkan invoice-nya, dua lainnya belum, untuk memperlihatkan dua keadaan nomor invoice */
   d.po.forEach(p => { if (p.groupId === gDesa.gid) p.invNo = 'INV/' + today.slice(0, 4) + '/' + today.slice(5, 7) + '/023'; });
 
   d.holidays = [
@@ -500,7 +500,7 @@ function load() {
 function clockedTime(d) {
   return (d || new Date()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
-/* Kaki sidebar: jam simpan terakhir — saat baru dibuka memakai waktu aksi terakhir di Log */
+/* Kaki sidebar: jam simpan terakhir, saat baru dibuka memakai waktu aksi terakhir di Log */
 function setSaveStatus(txt) {
   const st = document.getElementById('saveStatus');
   if (!st) return;
@@ -526,7 +526,7 @@ function save(opts) {
   updateUndoBtn();
 }
 
-/* ---------- Urungkan / Ulangi — snapshot disimpan terpisah agar bisa dipakai dari Log Aktivitas ---------- */
+/* ---------- Urungkan / Ulangi: snapshot disimpan terpisah agar bisa dipakai dari Log Aktivitas ---------- */
 const UNDO_MAX = 12;
 const UNDO_BUDGET = 900000; // maksimum karakter JSON untuk satu tumpukan snapshot
 const undoStack = [];
@@ -578,7 +578,7 @@ function undoLast() {
   persistUndo(); persistStack(REDO_KEY, redoStack);
   if (restoreSnapshot(s)) toast('Dibatalkan: ' + s.label, { redo: true });
 }
-/* Urungkan kembali sampai satu entri log — perubahan yang lebih baru ikut dibatalkan */
+/* Urungkan kembali sampai satu entri log, perubahan yang lebih baru ikut dibatalkan */
 function undoToLog(logId) {
   const idx = undoStack.findIndex(s => s.refLog === logId);
   if (idx < 0) { toast('Langkah itu tidak ada di daftar urungkan, terlalu lama atau sudah pernah dibatalkan'); return; }
@@ -717,7 +717,7 @@ function pkgFor(type, rec, cust) {
   return pkgList(type)[0] || null;
 }
 /* Harga satu porsi: menu spesial memakai harga yang diketik di barisnya (sama untuk semua anak),
-   menu biasa memakai harga paket anak itu — porsinya yang menentukan, bukan makanannya. */
+   menu biasa memakai harga paket anak itu, porsinya yang menentukan, bukan makanannya. */
 function effPrice(type, rec, cust, date) {
   const p = pkgFor(type, rec, cust);
   const base = p ? +p.price || 0 : basePrice(type);
@@ -1280,7 +1280,7 @@ function renderPrint() {  const mode = state.printMode === 'konfirmasi' ? 'konfi
   if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
   else satpamPreview();
 }
-/* Tombol Snack | Lunch berdampingan (stiker & konfirmasi) — sama seperti pemilih jenis lain */
+/* Tombol Snack | Lunch berdampingan (stiker & konfirmasi), sama seperti pemilih jenis lain */
 function syncTypeSeg(act, type) {
   document.querySelectorAll('[data-act="' + act + '"]').forEach(b => b.classList.toggle('is-on', b.dataset.type === type));
 }
@@ -1467,7 +1467,7 @@ function spesialPrice(it) { return isSpesial(it) && +it.price > 0 ? +it.price : 
 function menuItemsFor(type, date) {
   return menuFor(date).filter(it => menuTypeOf(it) === type);
 }
-/* Menu PO dicatat dua kali (nama di rencana menu, harga di db.poMenus) — dicari atas nama yang sama */
+/* Menu PO dicatat dua kali (nama di rencana menu, harga di db.poMenus), dicari atas nama yang sama */
 function poMenuFor(date, name) {
   const n = String(name || '').trim().toLowerCase();
   if (!n) return null;
@@ -1996,7 +1996,7 @@ function foodChips(type, date, rec, cid) {
   }).join('');
 }
 
-/* Dialog kecil saat chip makanan disorot/difokus — baris pertama = nama makanan, sisanya isi paket */
+/* Dialog kecil saat chip makanan disorot/difokus: baris pertama = nama makanan, sisanya isi paket */
 let foodTipEl = null;
 function showFoodTip(chip) {
   const lines = String(chip.dataset.tip || '').split('\n').filter(Boolean);
@@ -2103,7 +2103,7 @@ function dayTotalHTML(s) {
   return '<button type="button" class="pay-total" data-act="daily-pay-cfg" title="Atur metode pembayaran dan lunasi ' + escapeHtml(s.name) + '">' + fmtIDR(s.value) + '</button>';
 }
 
-/* Pembayaran satu anak satu hari — kolom lunas/metode tidak lagi di tabel */
+/* Pembayaran satu anak satu hari, kolom lunas/metode tidak lagi di tabel */
 function openDayPayModal(cid, date) {
   const c = customerById(cid);
   const s = daySummary(cid, date);
@@ -2183,7 +2183,7 @@ function renderDailyMerged() {
   renderDailyQuick(date, customers.length);
 }
 
-/* Perbarui baris tanpa render ulang — fokus input catatan tidak hilang */
+/* Perbarui baris tanpa render ulang, fokus input catatan tidak hilang */
 function syncMergedRow(tr) {
   if (!tr) return;
   const cid = tr.dataset.cid, date = state.currentDate;
@@ -2197,7 +2197,7 @@ function syncMergedRow(tr) {
   if (tot) tot.innerHTML = dayTotalHTML(s);
 }
 
-/* Ringkasan kecil di judul tabel — kartu statistikanya sendiri sudah dihapus dari halaman Hari Ini */
+/* Ringkasan kecil di judul tabel, kartu statistikanya sendiri sudah dihapus dari halaman Hari Ini */
 function renderDailyStats() {
   const date = state.currentDate;
   const f = state.daily.hari;
@@ -2434,7 +2434,7 @@ function setCustomFood(cid, date, mi, typeIn) {
   renderDailyMerged(); renderDashboard();
 }
 function customType() { return state.custom.type === 'lunch' ? 'lunch' : 'snack'; }
-/* Hari yang belum punya menu: satu tombol "pesan" saja — paket mengikuti default pelanggan */
+/* Hari yang belum punya menu: satu tombol "pesan" saja, paket mengikuti default pelanggan */
 function togglePlainOrder(cid, date, typeIn) {
   const type = typeIn === 'snack' || typeIn === 'lunch' ? typeIn : customType();
   const c = customerById(cid);
@@ -2999,7 +2999,7 @@ function poGroupInvoiceImage(id) {
   const bank = [db.settings.bankName, db.settings.bankNumber].filter(Boolean).join('  ');
   const holder = db.settings.bankHolder || db.settings.businessName;
   const headH = 156, sumH = 118;
-  /* tinggi kanvas dihitung dari alur gambar yang sama — tidak ada ruang kosong di bawah ringkasan */
+  /* tinggi kanvas dihitung dari alur gambar yang sama, tidak ada ruang kosong di bawah ringkasan */
   const bodyY = headH + 24 + 16 + (g.note ? 12 : 0) + 12 + 7 + 17 + g.rows.length * rowH + 2 + 16 + 12 + 18 + 22 + 2 + 26;
   const payY = bodyY + 28;
   const h = payY + (bank ? 46 : 0) + 26;
@@ -3377,7 +3377,7 @@ function renderReport() {
 
   document.getElementById('rptScope').textContent = allTime ? 'Semua waktu' : fmtShortDate(mode.month + '-01');
 
-  /* "Gratis" sengaja tidak ditampilkan di tabel rekap — hanya muncul di rincian */
+  /* "Gratis" sengaja tidak ditampilkan di tabel rekap, hanya muncul di rincian */
   document.getElementById('rptList').innerHTML = rows.map(r =>
     '<tr>' +
       '<td><strong>' + escapeHtml(r.c.name) + '</strong></td>' +
@@ -3665,7 +3665,7 @@ function billImage() {
   g.font = '800 16px Segoe UI, sans-serif';
   const tAmtW = g.measureText(tAmt).width;
   const tGap = 12, tStart = pad + (W - pad * 2 - (tLblW + tGap + tAmtW)) / 2;
-  /* kotak total punya tinggi 38 mulai y-6 — pakai baseline tengah agar angkanya tidak naik sendiri */
+  /* kotak total punya tinggi 38 mulai y-6, pakai baseline tengah agar angkanya tidak naik sendiri */
   g.textBaseline = 'middle';
   g.textAlign = 'left'; g.fillStyle = th.muted; g.font = '700 13px Segoe UI, sans-serif';
   g.fillText('TOTAL', tStart, y + 13);
@@ -4022,7 +4022,7 @@ function buildStickerHTML(customers, o) {
       const br = o.brand ? '<div class="brand">' + escapeHtml(brandName) + '</div>' : '';
       return '<div class="label' + (cornerMark ? ' has-mark' : '') + '">' + cornerMark + '<div class="name">' + escapeHtml(c.name) + '</div>' + underMark + cls + br + '</div>';
     }).join('');
-    /* berhenti di baris terakhir yang terisi — tidak ada kotak kosong di bawahnya */
+    /* berhenti di baris terakhir yang terisi, tidak ada kotak kosong di bawahnya */
     const usedRows = Math.ceil(page.length / cols);
     return '<div class="sheet" style="grid-template-columns:repeat(' + cols + ',1fr);' +
       (usedRows ? 'grid-template-rows:repeat(' + usedRows + ',' + rowHmm.toFixed(2) + 'mm)' : '') + '">' + items + '</div>';
@@ -4220,7 +4220,7 @@ function satpamPreview() {
   setText('satpamDateText', fmtLong(date));
 }
 function printFrame(frame) {
-  /* judul dokumen ikut tercetak sebagai header browser — kosongkan selama dialog cetak terbuka */
+  /* judul dokumen ikut tercetak sebagai header browser, kosongkan selama dialog cetak terbuka */
   const prev = document.title;
   document.title = ' ';
   try { frame.contentWindow.focus(); frame.contentWindow.print(); }
@@ -4272,7 +4272,7 @@ function updateReminderBadge() {
   el.textContent = n > 9 ? '9+' : String(n);
 }
 
-/* ---------- Notifikasi top bar — rangkuman hal yang menunggu perhatian ---------- */
+/* ---------- Notifikasi top bar: rangkuman hal yang menunggu perhatian ---------- */
 function notifItems() {
   const out = [];
   const today = todayStr();
@@ -4554,7 +4554,7 @@ function saveWaSettings() {
 
 /* ---------- Libur (dikelola dari Beranda) ---------- */
 const SCOPE_LABEL = { all: 'Semua orang', cohort: 'Angkatan', class: 'Kelas', person: 'Orang' };
-/* kotak merah hanya untuk libur seluruhnya — libur sebagian cukup ditandai titik merah */
+/* kotak merah hanya untuk libur seluruhnya, libur sebagian cukup ditandai titik merah */
 function isFullHoliday(ymd) { return holidayKind(ymd) === 'all'; }
 /* 'all' = seluruhnya libur · 'some' = hanya orang / kelas / angkatan tertentu */
 function holidayKind(ymd) {
@@ -4611,7 +4611,7 @@ function renderHomeHoliday() {
     ? daftar.length + ' tanggal libur ' + (daily ? 'hari ini' : 'minggu ini')
     : 'Tidak ada libur ' + (daily ? 'hari ini' : 'minggu ini');
   if (!chips) return;
-  /* tab Harian: agenda libur dipisah dari kalender — di bawah menu, menyamping,
+  /* tab Harian: agenda libur dipisah dari kalender, di bawah menu, menyamping,
      dan hanya berisi libur tanggal terpilih (tidak ada pesan kalau kosong) */
   const editor = document.getElementById('weekMenuEditor');
   const hint = document.getElementById('menuTabHint');
@@ -4666,7 +4666,7 @@ function holidayTargets() {
   const valSel = document.getElementById('holidayValue');
   return { scope: scope, values: [((valSel && valSel.value) || '')] };
 }
-/* Hitungan dampak tanpa mengubah data — dipakai peringatan di dialog sebelum menyimpan */
+/* Hitungan dampak tanpa mengubah data, dipakai peringatan di dialog sebelum menyimpan */
 function holidayImpact(dates, scope, values) {
   const semua = scope === 'all';
   let porsi = 0, menu = 0;
@@ -4720,7 +4720,7 @@ function renderHolidayValueOptions() {
   if (opts.some(o => o[0] === pilih)) sel.value = pilih;
   renderHolidayWarn();
 }
-/* Daftar centang anak — tetap tercentang saat kata kunci dicari, dan urutannya tidak berubah */
+/* Daftar centang anak: tetap tercentang saat kata kunci dicari, dan urutannya tidak berubah */
 function renderHolidayPeople() {
   const box = document.getElementById('holidayPeople');
   if (!box) return;
@@ -4745,7 +4745,7 @@ function filterHolidayPeople() {
   const n = document.querySelectorAll('#holidayPeople input:checked').length;
   if (cnt) cnt.textContent = n ? n + ' anak dipilih' : (tampil ? 'Belum ada yang dicentang, centang satu atau beberapa anak' : 'Tidak ada yang cocok dengan pencarian');
 }
-/* Menandai libur benar-benar mengosongkan hari itu — bukan hanya menyembunyikannya.
+/* Menandai libur benar-benar mengosongkan hari itu, bukan hanya menyembunyikannya.
    Semua orang libur: pesanan snack+lunch tanggal itu dibuang dan menu snack/lunch-nya
    ikut dihapus (baris PO dipertahankan). Libur sebagian: hanya anak yang kena. */
 function clearOrdersForHoliday(dates, scope, values) {
@@ -5082,7 +5082,7 @@ function openCustomerModal(c) {
   document.getElementById('custPeriod').addEventListener('change', e => {
     document.getElementById('wdBlock').hidden = e.target.value !== 'daily';
   });
-  /* "Beli Sekali" memakai tanggal, bukan periode — jadi blok periode diganti */
+  /* "Beli Sekali" memakai tanggal, bukan periode, jadi blok periode diganti */
   const syncStatusFields = () => {
     const sekali = document.getElementById('custStatusSel').value === 'sekali';
     document.getElementById('custOnceField').hidden = !sekali;
@@ -5099,7 +5099,7 @@ function openCustomerModal(c) {
   document.getElementById('custSnackChk').addEventListener('change', syncPkgFields);
   document.getElementById('custLunchChk').addEventListener('change', syncPkgFields);
   syncPkgFields();
-  /* catatan alergi tinggi mengikuti isinya — hanya tumbuh ke bawah */
+  /* catatan alergi tinggi mengikuti isinya, hanya tumbuh ke bawah */
   const algTa = document.querySelector('#custForm textarea[name="allergy"]');
   if (algTa) { algTa.style.height = 'auto'; algTa.style.height = Math.min(algTa.scrollHeight + 2, 150) + 'px'; }
   document.getElementById('custForm').addEventListener('submit', e => {
@@ -5833,7 +5833,7 @@ function onDocChange(e) {
     const cid = tr.dataset.cid;
     const date = state.currentDate;
     if (t.classList.contains('inp-note')) {
-      /* satu catatan untuk seluruh hari — ditulis ke semua pesanan yang aktif */
+      /* satu catatan untuk seluruh hari, ditulis ke semua pesanan yang aktif */
       let touched = 0;
       DAY_TYPES.forEach(ty => {
         const rr = (db[ty][date] || {})[cid];
@@ -5850,7 +5850,7 @@ function onDocChange(e) {
 /* ---------- Kalender besar ---------- */
 let cal = { open: false, mode: 'day', field: null, year: 0, month: 1, selected: '', dotFn: null };
 const WEEKDAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-/* Urutan kolom kalender dimulai Minggu — beda dengan daftar hari (menu, tabel) yang tetap Senin */
+/* Urutan kolom kalender dimulai Minggu, beda dengan daftar hari (menu, tabel) yang tetap Senin */
 const CAL_WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }

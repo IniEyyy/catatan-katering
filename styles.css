@@ -1,5 +1,5 @@
 /* =========================================================
-   Catatan Katering — tema (gelap default + mode terang)
+   Catatan Katering: tema (gelap default + mode terang)
    ========================================================= */
 :root{
   color-scheme:light;
@@ -128,7 +128,7 @@ body.theme-dark input[type=time]::-webkit-calendar-picker-indicator{
 body.theme-dark input[type=date]::-webkit-calendar-picker-indicator:hover,
 body.theme-dark input[type=time]::-webkit-calendar-picker-indicator:hover,
 body.theme-dark input[type=month]::-webkit-calendar-picker-indicator:hover{opacity:1}
-/* input angka: tanpa panah naik/turun — nilainya diketik langsung, bukan di-klik panahnya */
+/* input angka: tanpa panah naik/turun, nilainya diketik langsung, bukan di-klik panahnya */
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none;margin:0;display:none}
@@ -380,7 +380,7 @@ body.theme-dark .stat-card{background:linear-gradient(160deg,rgba(255,255,255,.0
 /* ===== Table ===== */
 .table-wrap{overflow:auto;max-height:min(88vh,900px);border-radius:14px;border:1px solid var(--border);background:var(--surface)}
 body.theme-dark .table-wrap{background:rgba(255,255,255,.012)}
-/* seluruh kepala tabel menempel — termasuk baris judul Snack/Lunch/Hari Ini di atas baris kedua */
+/* seluruh kepala tabel menempel, termasuk baris judul Snack/Lunch/Hari Ini di atas baris kedua */
 .table thead{position:sticky;top:0;z-index:4}
 .table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
 .table th{
@@ -537,7 +537,7 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
   background:var(--grad);color:#fff;border-color:transparent;
   box-shadow:0 8px 20px rgba(216,38,47,.35);
 }
-/* tanggal hari ini yang sedang dipilih ikut merah — merah menang atas hijau (permintaan pemilik) */
+/* tanggal hari ini yang sedang dipilih ikut merah, merah menang atas hijau (permintaan pemilik) */
 .cal-dots{position:absolute;bottom:7px;left:0;right:0;display:flex;justify-content:center;gap:3px}
 .cal-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)}
 /* hijau = ada snack/lunch · merah = hanya sebagian orang libur · kuning = ada pre-order */
@@ -636,7 +636,7 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .wm-item .wm-name{min-width:0;min-height:34px;line-height:1.35;padding:7px 10px;resize:vertical;overflow:hidden;font-family:inherit}
 .wm-item .wm-type,.wm-item .wm-price,.wm-item .icon-act{margin-top:1px}
 .wm-item .wm-price{width:100%;text-align:right;font-variant-numeric:tabular-nums}
-/* baris biasa tidak punya harga — slotnya diisi keterangan supaya nama tetap sejajar antar baris */
+/* baris biasa tidak punya harga, slotnya diisi keterangan supaya nama tetap sejajar antar baris */
 .wm-noprice{display:flex;align-items:center;justify-content:flex-end;height:34px;font-size:11px;color:var(--muted);border-bottom:1px dashed var(--border-strong);padding-right:3px}
 .wm-item .icon-act{width:32px;height:32px;margin-top:1px}
 .wm-items .btn-sm{align-self:flex-start}
@@ -905,7 +905,7 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 }
 
 /* ===== Responsive ===== */
-/* kalender di atas menu lebih awal — kolom menu tetap cukup lebar untuk baris paket + harga */
+/* kalender di atas menu lebih awal, kolom menu tetap cukup lebar untuk baris paket + harga */
 @media (max-width:1200px){
   .split{grid-template-columns:1fr}
 }
