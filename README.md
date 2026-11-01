@@ -6,13 +6,13 @@ Dijalankan cukup dengan **membuka `index.html`** di browser (Chrome/Edge). Tidak
 
 ![Pratinjau aplikasi](preview.gif)
 
-Video tur seluruh halaman (± 61 detik, 1280px, tanpa suara): **[preview.mp4](https://github.com/IniEyyy/catatan-katering/releases/download/preview/preview.mp4)**
+*Cuplikan 14 detik dari tur seluruh halaman (± 71 detik, tanpa suara).*
 
 ## Langkah setup
 
 ![Tutorial langkah setup](tutorial.gif)
 
-Rekaman langkah-langkah di bawah dari keadaan kosong (± 64 detik, tanpa suara): **[tutorial.mp4](https://github.com/IniEyyy/catatan-katering/releases/download/preview/tutorial.mp4)**
+*Cuplikan 14 detik dari rekaman langkah-langkah di bawah, dimulai dari keadaan kosong (± 64 detik, tanpa suara).*
 
 1. **Klik dua kali `index.html`** — tidak ada instalasi, tidak ada server. Data pertama yang muncul adalah **data contoh** (25 anak, 6 paket, pesanan ± 6 minggu, PO kelompok + invoice) supaya tampilan bisa langsung dicoba.
 2. **Mulai dari kosong**: *Pengaturan › Tampilan & Cadangan Data* → tombol merah **Reset semua data** di dasar kartu itu.
