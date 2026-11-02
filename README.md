@@ -18,7 +18,7 @@ Rekaman penuhnya ada di [halaman release](https://github.com/IniEyyy/catatan-kat
 
 1. **Klik dua kali `index.html`.** Yang muncul pertama kali adalah data contoh: 25 anak, 6 paket, pesanan ± 6 minggu, beberapa PO kelompok beserta invoice. Tujuannya supaya semua tampilan bisa langsung dicoba sebelum ada data sungguhan.
 2. **Mulai dari kosong.** Buka *Pengaturan › Tampilan & Cadangan Data*, lalu tekan tombol merah **Reset semua data** di bagian bawah kartu itu.
-3. **Identitas usaha** ada di *Pengaturan › Informasi Usaha*: nama usaha, nama bank, nomor rekening, dan atas nama. Nama usaha dipakai di sidebar, stiker, invoice, kertas konfirmasi, dan pesan tagihan. Nomor rekening ikut terkirim di pesan WA lewat placeholder `{rekening}`.
+3. **Identitas usaha** ada di *Pengaturan › Informasi Usaha*: nama usaha, tagline, logo, nama bank, nomor rekening, dan atas nama. Nama usaha dipakai di sidebar, stiker, invoice, kertas konfirmasi, dan pesan tagihan. Nomor rekening ikut terkirim di pesan WA lewat placeholder `{rekening}`.
 4. **Paket harga** dibuat di *Pengaturan › Paket Harga*, misalnya *Snack Sedang* Rp 6.000 dan *Nasi Kotak* Rp 13.000. Isinya cuma nama dan harga, dan paket melekat pada anak, bukan pada menunya. Jadi satu paket yang sama bisa berisi makanan berbeda tiap hari.
 5. **Pelanggan.** Di *Pelanggan › + Tambah Pelanggan* diisi nama, kelas, nama orang tua, No. WA, catatan alergi, dan periode langganan. Angka di depan kelas menentukan jenjang: `3A` berarti SD, `11B` berarti SMA. Kalau periodenya mingguan, bulanan, atau semester, pesanan anak itu langsung terisi ke depan sampai akhir periode, Senin sampai Jumat, dan tanggal libur dilewati. Untuk anak yang hanya beli sehari, pilih status **Beli Sekali** lalu isi tanggalnya. Pesanannya dibuat satu baris pada tanggal itu saja, dan setelah hari itu lewat anak tersebut tidak muncul lagi di daftar "yang berjalan".
 6. **Menu.** Buka *Beranda › Menu Harian* (atau *Menu Mingguan*) lalu tekan **+ Pilihan**. Isi makanan ditulis per baris, kemudian jenisnya dipilih: Snack, Snack Spesial, Lunch, Lunch Spesial, atau PO. Baris snack/lunch biasa tidak punya paket maupun kolom harga, karena tiap anak membayar sesuai paket porsinya sendiri. Baris spesial punya kotak harga sendiri yang berlaku untuk semua anak yang memilihnya hari itu. Kalau satu baris dihapus, pilihan anak yang menunjuk baris itu dilepas dan nomor baris di bawahnya ikut bergeser, jadi tidak ada anak yang tiba-tiba mendapat makanan lain.
@@ -27,6 +27,12 @@ Rekaman penuhnya ada di [halaman release](https://github.com/IniEyyy/catatan-kat
 9. **Cadangkan.** Tekan ikon unduh di kaki sidebar, atau *Beranda › Cetak & Bagikan › Cadangan JSON*. Berkas itu satu-satunya salinan data kalau browser dibersihkan atau laptop diganti.
 
 Semua perubahan tersimpan otomatis di browser yang sama. Jam simpan terakhir terlihat di kaki sidebar, dan setiap aksi tercatat di *Log Aktivitas* lengkap dengan tombol **Urungkan**.
+
+## Logo usaha
+
+Logo diunggah dari *Pengaturan › Informasi Usaha* lewat tombol **Pilih gambar**. Berkas yang diterima PNG, JPG, WEBP, atau SVG. Gambar dikecilkan otomatis ke sisi terpanjang 512 px sebelum disimpan, jadi berkas besar tidak membuat cadangan membengkak; berkas aslinya tidak diubah dan tetap aman di folder asal.
+
+Di bawah unggahan ada pilihan tempat logo dicetak. **Stiker** menaruh logo di bawah nama anak dan menggantikan teks nama usaha; tingginya menyesuaikan ruang sel, jadi nama dua baris tetap utuh. **Kertas konfirmasi** dan **Laporan & rekap** menaruh logo di kop dokumen A4, dengan tinggi yang diatur lewat angka **Tinggi di kop** (8 sampai 30 mm). **Dokumen PO** berlaku untuk invoice, resi, dan rekap pre-order. Logo tersimpan bersama data lain di cadangan JSON dan tetap tampil tanpa internet.
 
 ## Halaman
 
@@ -41,7 +47,7 @@ Semua perubahan tersimpan otomatis di browser yang sama. Jam simpan terakhir ter
 | Pre-Order (PO) | Pesanan per tanggal: menu PO beserta pembelinya, dan pesanan kelompok (lembaga) dengan invoice bernomor. Grafik nilai PO per bulan dan per tahun berdampingan. Tiap menu PO punya pintasan Beranda yang membuka Menu Harian tanggal itu dan menyiapkan baris PO kosong |
 | Pelanggan | Daftar anak dengan filter jenjang, angkatan, kelas, dan status. Bawaannya "Hanya yang berjalan", yaitu anak aktif ditambah anak beli sekali yang tanggalnya belum lewat. Di sini juga ada catatan alergi, periode langganan, aksi massal, dan tombol rekap yang membuka anak itu di Laporan |
 | Log Aktivitas | Semua aksi yang pernah dilakukan. Dari sini perubahan lama masih bisa dibatalkan |
-| Pengaturan | Informasi usaha, rekening, template WA, metode pembayaran, paket harga, dan satu kartu Tampilan & Cadangan Data yang menggabungkan pengaturan font serta ukuran teks dengan unduh/pulihkan JSON, cadangan harian, dan reset |
+| Pengaturan | Informasi usaha, logo, rekening, template WA, metode pembayaran, paket harga, dan satu kartu Tampilan & Cadangan Data yang menggabungkan pengaturan font serta ukuran teks dengan unduh/pulihkan JSON, cadangan harian, dan reset |
 
 Lonceng di kanan atas mengumpulkan hal yang sedang menunggu: pengingat yang jatuh tempo, penunggak tagihan, pesanan hari ini yang belum dipilih makanannya, dan menu yang belum diisi. Klik salah satu barisnya untuk langsung membuka halamannya.
 
@@ -89,7 +95,7 @@ Beli Sekali hanya menawarkan satu tanggal. Pilihan Selesai dan Berhenti sengaja 
 
 - Vanilla HTML/CSS/JS dalam tiga berkas: `index.html`, `styles.css`, `app.js`. Tidak ada framework, tidak ada npm.
 - Data disimpan di `localStorage` pada origin `file://`: `catatan_katering_data_v1` untuk data, `_ui_v1` untuk tema dan font, `_backups_v1` untuk cadangan otomatis, serta `_undo_v1` dan `_redo_v1`. Kunci lama dari versi sebelumnya dipindahkan otomatis saat aplikasi dibuka.
-- Cetak dan PDF memakai iframe tersembunyi dan `window.print()`, dengan "Simpan sebagai PDF" dipilih di dialog cetak browser. Jam, judul, dan alamat file yang muncul di tepi halaman adalah header/footer browser, bukan bagian dokumen. Judul dokumen dikosongkan selama dialog cetak terbuka, sisanya dimatikan lewat centang *Header and footers* di dialog tersebut. Setiap dokumen cetak diberi `Content-Security-Policy: default-src 'none'` sehingga dokumen itu tidak bisa menjalankan skrip atau menghubungi internet.
+- Cetak dan PDF memakai iframe tersembunyi dan `window.print()`, dengan "Simpan sebagai PDF" dipilih di dialog cetak browser. Jam, judul, dan alamat file yang muncul di tepi halaman adalah header/footer browser, bukan bagian dokumen. Judul dokumen dikosongkan selama dialog cetak terbuka, sisanya dimatikan lewat centang *Header and footers* di dialog tersebut. Setiap dokumen cetak diberi `Content-Security-Policy: default-src 'none'` dengan pengecualian gaya sebaris dan logo `data:` URL, sehingga dokumen itu tidak bisa menjalankan skrip atau menghubungi internet.
 - Grafik digambar sendiri di `<canvas>`, tanpa library.
 - Input angka tidak menampilkan panah naik-turun. Nilainya tetap bisa digeser dengan tombol ↑/↓ atau diketik langsung.
 - Tema terang/gelap dan ukuran font diatur dari Pengaturan › Tampilan & Cadangan Data. Tata letak menyesuaikan sampai lebar 620px: di bawah 1200px kalender turun ke atas menu, dan di bawah 640px nama makanan turun ke baris kedua.

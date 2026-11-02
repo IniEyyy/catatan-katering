@@ -95,6 +95,8 @@ function defaultData() {
       packages: [], // { id, type:'snack'|'lunch', name, price }: paket = tingkatan harga; makanannya dari menu harian
       defaultPeriod: 'weekly',
       bankName: '', bankNumber: '', bankHolder: '', // rekening usaha: dicetak di invoice
+      logo: '', // logo usaha sebagai data URL, kosong = tidak ada
+      logoOpts: { stiker: true, konfirmasi: true, laporan: true, invoice: true, headMm: 14 }, // pilihan cetak logo
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
@@ -223,6 +225,13 @@ function normalize(d) {
   d.settings.bankName = String(d.settings.bankName || '').trim().slice(0, 30);
   d.settings.bankNumber = String(d.settings.bankNumber || '').replace(/[^\d-]/g, '').slice(0, 30);
   d.settings.bankHolder = String(d.settings.bankHolder || '').trim().slice(0, 40);
+  /* logo hanya diterima sebagai data URL gambar; berkas lain dibuang supaya cadangan tetap aman */
+  d.settings.logo = (typeof d.settings.logo === 'string' && d.settings.logo.length < 1200000 &&
+    /^data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(d.settings.logo)) ? d.settings.logo : '';
+  const lo = Object.assign({}, def.settings.logoOpts, d.settings.logoOpts || {});
+  ['stiker', 'konfirmasi', 'laporan', 'invoice'].forEach(k => { lo[k] = !!lo[k]; });
+  lo.headMm = Math.min(30, Math.max(8, Math.round(+lo.headMm || 14)));
+  d.settings.logoOpts = lo;
   d.settings.invSeq = Math.max(0, Math.min(999999, Math.round(+d.settings.invSeq || 0)));
   if (!Array.isArray(d.poMenus)) d.poMenus = [];
   return d;
@@ -567,6 +576,7 @@ function restoreSnapshot(s) {
   try { db = normalize(JSON.parse(s.json)); }
   catch (e) { toast('Gagal membatalkan perubahan'); return false; }
   undoing = true; save(); undoing = false;
+  loadLogoImage();
   applyBrand(); applyUiStyle(); showPage(state.page);
   return true;
 }
@@ -2682,7 +2692,7 @@ function buildPoResiHTML(p) {
       '<tr><th>Total</th><td class="r"><strong>' + fmtIDR(total) + '</strong></td></tr>' +
     '</tbody></table>' +
     '<div class="sign"><div class="col">Penerima<div class="line">( ___________________ )</div></div><div class="col">' +
-      escapeHtml(db.settings.businessName) + '<div class="line">( ___________________ )</div></div></div>');
+      escapeHtml(db.settings.businessName) + '<div class="line">( ___________________ )</div></div></div>', 'invoice');
 }
 function buildPoMonthHTML(month) {
   const list = db.po.filter(p => !month || monthKey(p.date) === month)
@@ -2710,7 +2720,7 @@ function buildPoMonthHTML(month) {
     '<h4>Daftar pembeli</h4>' +
     '<table><thead><tr><th>Tanggal</th><th>Nama</th><th>Menu</th><th class="r">Jumlah</th><th class="r">Nilai</th><th class="c">Lunas</th><th class="c">Status ambil</th></tr></thead>' +
     '<tbody>' + (buyRows || '<tr><td colspan="7" class="c">Belum ada PO pada periode ini.</td></tr>') + '</tbody>' +
-    '<tfoot><tr><td colspan="3">Total</td><td class="r">' + totQty + '</td><td class="r">' + fmtIDR(totNilai) + '</td><td class="c" colspan="2">Belum dibayar: ' + fmtIDR(totBelum) + '</td></tr></tfoot></table>');
+    '<tfoot><tr><td colspan="3">Total</td><td class="r">' + totQty + '</td><td class="r">' + fmtIDR(totNilai) + '</td><td class="c" colspan="2">Belum dibayar: ' + fmtIDR(totBelum) + '</td></tr></tfoot></table>', 'invoice');
 }
 
 function openPoMenuModal(menu) {
@@ -2986,7 +2996,7 @@ function poGroupInvoicePrint(id) {
     '</tbody></table>' +
     '<div class="sign"><div class="col">Petugas<div class="line">( ___________________ )</div></div><div class="col">' +
       escapeHtml(db.settings.businessName) + '<div class="line">( ___________________ )</div></div></div>';
-  printPoDoc(printableDoc('Invoice ' + no, 'Diterbitkan ' + fmtLong(todayStr()), inner));
+  printPoDoc(printableDoc('Invoice ' + no, 'Diterbitkan ' + fmtLong(todayStr()), inner, 'invoice'));
 }
 function poGroupInvoiceImage(id) {
   const g = poGroups().find(x => x.id === id);
@@ -3013,9 +3023,18 @@ function poGroupInvoiceImage(id) {
   c.fillStyle = grad; c.fillRect(0, 0, W, 6);
 
   const no = ensureInvoiceNo(g);
+  /* logo digambar di depan nama usaha; gambar sudah dimuat sebelumnya lewat loadLogoImage() */
+  let nameX = pad;
+  if (db.settings.logo && (db.settings.logoOpts || {}).invoice && state.logoImg && state.logoImg.complete && state.logoImg.naturalWidth) {
+    const lh = 34, lw = Math.min(76, lh * (state.logoImg.naturalWidth / state.logoImg.naturalHeight));
+    c.save();
+    c.drawImage(state.logoImg, pad, 20, lw, lh);
+    c.restore();
+    nameX = pad + lw + 12;
+  }
   c.textAlign = 'left'; c.fillStyle = th.text; c.font = '800 21px Segoe UI, sans-serif';
-  c.fillText(clipText(c, db.settings.businessName, W - pad - 170), pad, 44);
-  if (db.settings.tagline) { c.fillStyle = th.muted; c.font = '11.5px Segoe UI, sans-serif'; c.fillText(clipText(c, db.settings.tagline, W - pad - 170), pad, 63); }
+  c.fillText(clipText(c, db.settings.businessName, W - nameX - 170), nameX, 44);
+  if (db.settings.tagline) { c.fillStyle = th.muted; c.font = '11.5px Segoe UI, sans-serif'; c.fillText(clipText(c, db.settings.tagline, W - nameX - 170), nameX, 63); }
   c.textAlign = 'right';
   c.fillStyle = th.strip[0]; c.font = '800 17px Segoe UI, sans-serif';
   c.fillText('INVOICE', W - pad, 40);
@@ -3849,8 +3868,16 @@ function openReportDetail(cid) {
 }
 
 /* Dokumen cetak cukup butuh gaya: tanpa skrip dan tanpa permintaan jaringan apa pun. */
-const DOC_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">';
-function printableDoc(title, subtitle, inner) {
+/* img-src data: hanya untuk logo yang disimpan sebagai data URL, tetap tanpa jaringan */
+const DOC_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">';
+/* Logo untuk kop dokumen A4. `where` = kunci di settings.logoOpts. */
+function logoFor(where) {
+  const src = db.settings.logo, o = db.settings.logoOpts || {};
+  if (!src || !o[where]) return '';
+  return '<img class="doc-logo" src="' + src + '" alt="" style="height:' + (+o.headMm || 14) + 'mm">';
+}
+
+function printableDoc(title, subtitle, inner, logoTarget) {
   return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4 portrait;margin:12mm}' +
     'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:12px}' +
@@ -3876,8 +3903,9 @@ function printableDoc(title, subtitle, inner) {
     '.sign{display:flex;justify-content:space-between;margin-top:14mm}' +
     '.sign .col{text-align:center;width:45%}' +
     '.sign .line{border-top:1px solid #555;margin-top:14mm;padding-top:2mm}' +
+    '.doc-logo{display:block;margin:0 auto 2.5mm;max-width:60mm;object-fit:contain}' +
     '</style></head><body>' +
-    '<div class="head"><h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
+    '<div class="head">' + logoFor(logoTarget || 'laporan') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
     '<div class="sub">' + escapeHtml(title) + '</div>' +
     (subtitle ? '<div class="sub">' + escapeHtml(subtitle) + '</div>' : '') +
     '</div>' + inner + '</body></html>';
@@ -3973,10 +4001,15 @@ function buildStickerHTML(customers, o) {
   const innerW = Math.max(20, cellWpx - padPx * 2), innerH = Math.max(20, cellHpx - padPx * 2);
   const autoName = Math.max(12, Math.min(40, innerW / 4.2, innerH / 3.8));
   const autoCls = Math.max(10, Math.min(34, innerW / 3.6, innerH / 4.4));
+  const logoSrc = (db.settings.logo && db.settings.logoOpts && db.settings.logoOpts.stiker) ? db.settings.logo : '';
+  /* logo dapat slot lebih tinggi dari teks nama usaha supaya tetap terbaca di sel kecil */
+  const logoSize = logoSrc ? Math.max(16, Math.min(38, innerH * 0.3 * (style.brandScale / 100))) : 0;
   const brandSize = Math.max(5, Math.min(30, autoName * 0.3 * (style.brandScale / 100)));
+  const slotSize = logoSrc ? logoSize : brandSize;
+  const brandSlot = !!(o.brand || logoSrc);
   let nameSize = autoName * (style.nameScale / 100);
   let clsSize = autoCls * (style.clsScale / 100);
-  const stack = nameSize + clsSize + (o.brand ? brandSize + 2 : 0);
+  const stack = nameSize + clsSize + (brandSlot ? slotSize + 2 : 0);
   const budget = innerH * 0.92;
   if (stack > budget) { const k = budget / stack; nameSize *= k; clsSize *= k; }
   const nameFont = STK_FONTS[style.nameFont] || STK_FONTS.sans;
@@ -3998,7 +4031,7 @@ function buildStickerHTML(customers, o) {
       let cls = '';
       if (o.content === 'namealg' && c.allergy) {
         const len = Math.max(8, c.allergy.length);
-        const availH = Math.max(14, innerH * 0.8 - nameSize - (o.brand ? brandSize + 2 : 0));
+        const availH = Math.max(14, innerH * 0.8 - nameSize - (brandSlot ? slotSize + 2 : 0));
         let best = { sz: 0, lines: 1 };
         for (let ln = 1; ln <= 5; ln++) {
           const s = Math.min(clsSize, ln * innerW / (0.72 * len), availH / (1.12 * ln));
@@ -4019,7 +4052,9 @@ function buildStickerHTML(customers, o) {
           ? '<span class="mk mk-bar" style="background:' + markFg + '" title="' + escapeHtml(c.allergy) + '"></span>'
           : '<span class="mk mk-word" style="color:' + markFg + ';font-size:' + wordPx.toFixed(1) + 'px">alergi</span>')
         : '';
-      const br = o.brand ? '<div class="brand">' + escapeHtml(brandName) + '</div>' : '';
+      const br = logoSrc
+        ? '<img class="brand-logo" src="' + logoSrc + '" alt="">'
+        : (o.brand ? '<div class="brand">' + escapeHtml(brandName) + '</div>' : '');
       return '<div class="label' + (cornerMark ? ' has-mark' : '') + '">' + cornerMark + '<div class="name">' + escapeHtml(c.name) + '</div>' + underMark + cls + br + '</div>';
     }).join('');
     /* berhenti di baris terakhir yang terisi, tidak ada kotak kosong di bawahnya */
@@ -4043,11 +4078,12 @@ function buildStickerHTML(customers, o) {
     '.mk-bar{position:static;width:34%;height:1.1mm;border-radius:1mm;margin:.9mm auto 0}' +
     '.mk-word{position:static;display:block;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:.7mm;line-height:1}' +
     '.label.has-mark .brand,.label.has-mark .alg,.label.has-mark .cls{max-width:calc(100% - ' + (markMm + 1).toFixed(1) + 'mm)}' +
-    '.name{font-family:' + nameFont + ';font-weight:700;font-size:' + nameSize.toFixed(1) + 'px;max-width:100%;overflow-wrap:anywhere}' +
-    '.cls{font-family:' + clsFont + ';color:#5F564B;font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.name{flex:0 0 auto;font-family:' + nameFont + ';font-weight:700;font-size:' + nameSize.toFixed(1) + 'px;max-width:100%;overflow-wrap:anywhere}' +
+    '.cls{flex:0 0 auto;font-family:' + clsFont + ';color:#5F564B;font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.alg{font-family:' + clsFont + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;line-height:1.08;max-width:100%;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}' +
     '.alg-dot{display:inline-block;width:1.6mm;height:1.6mm;border-radius:50%;margin-right:1mm;vertical-align:middle}' +
-    '.brand{font-family:' + brandFont + ';color:#C0272D;font-size:' + brandSize.toFixed(1) + 'px;letter-spacing:.3px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.brand{flex:0 0 auto;font-family:' + brandFont + ';color:#C0272D;font-size:' + brandSize.toFixed(1) + 'px;letter-spacing:.3px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.brand-logo{height:' + slotSize.toFixed(1) + 'px;max-width:70%;object-fit:contain;display:block;flex:0 1 auto;min-height:0}' +
     '</style></head><body>' + sheets + '</body></html>';
 }
 function syncStickerControls() {
@@ -4197,8 +4233,9 @@ function buildSatpamHTML(date, type, showClass) {
     'th.pick small{display:block;font-size:8.5px;font-weight:600;color:#555;line-height:1.2;letter-spacing:0;text-transform:none}' +
     'td.pick{font-size:14px;color:#777}' +
     'td.pick.off{background:#f1efe9}' +
+    '.doc-logo{display:block;margin:0 auto 2.5mm;max-width:60mm;object-fit:contain}' +
     '</style></head><body>' +
-    '<div class="head"><h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
+    '<div class="head">' + logoFor('konfirmasi') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
     '<div class="sub">Lembar Konfirmasi / Penerimaan · ' + typeLabel + '</div>' +
     '<div class="sub">Tanggal: ' + fmtLong(date) + '</div></div>' +
     menuHtml +
@@ -4846,6 +4883,72 @@ function renderLog() {
     undoStack.length + ' langkah bisa diurutkan balik';
 }
 
+/* ---------- Logo usaha ---------- */
+function loadLogoImage() {
+  state.logoImg = null;
+  const src = db.settings.logo;
+  if (!src) return;
+  const img = new Image();
+  img.onload = () => { state.logoImg = img; };
+  img.src = src;
+}
+
+/* Kecilkan gambar ke sisi terpanjang 512 px supaya localStorage dan cadangan tetap ringan. */
+function fileToLogo(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\//.test(file.type)) { reject(new Error('Berkas itu bukan gambar')); return; }
+    if (file.size > 8 * 1024 * 1024) { reject(new Error('Gambar terlalu besar, pilih berkas di bawah 8 MB')); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+        const k = Math.min(1, 512 / Math.max(nw, nh));
+        const w = Math.max(1, Math.round(nw * k)), h = Math.max(1, Math.round(nh * k));
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        let out = cv.toDataURL('image/png');
+        if (out.length > 400000) out = cv.toDataURL('image/jpeg', 0.85);
+        URL.revokeObjectURL(url);
+        resolve(out);
+      } catch (e) { URL.revokeObjectURL(url); reject(new Error('Gambar tidak bisa dibaca')); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Gambar tidak bisa dibaca')); };
+    img.src = url;
+  });
+}
+
+async function applyLogoFile(file) {
+  try {
+    db.settings.logo = await fileToLogo(file);
+    logAction('pengaturan', 'Ganti logo usaha');
+    save();
+    loadLogoImage();
+    renderLogoUI();
+    toast('Logo disimpan');
+  } catch (e) {
+    toast(e.message || 'Gambar tidak bisa dipakai');
+  }
+}
+
+function renderLogoUI() {
+  const src = db.settings.logo, o = db.settings.logoOpts || {};
+  const prev = document.getElementById('logoPreview');
+  if (prev) prev.innerHTML = src ? '<img src="' + src + '" alt="Logo usaha">' : '<span class="muted tiny">Belum ada logo</span>';
+  const rm = document.getElementById('logoRemoveBtn');
+  if (rm) rm.disabled = !src;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+  set('logoOnSticker', o.stiker);
+  set('logoOnKonfirmasi', o.konfirmasi);
+  set('logoOnLaporan', o.laporan);
+  set('logoOnInvoice', o.invoice);
+  const mm = document.getElementById('logoHeadMm');
+  if (mm && document.activeElement !== mm) mm.value = String(o.headMm || 14);
+  const block = document.getElementById('logoOptsBlock');
+  if (block) block.classList.toggle('is-off', !src);
+}
+
 /* ---------- Render: Pengaturan ---------- */
 function renderSettings() {
   document.getElementById('setName').value = db.settings.businessName;
@@ -4857,6 +4960,7 @@ function renderSettings() {
   document.getElementById('setWaCountry').value = db.settings.waCountry;
   document.getElementById('setWaTemplate').value = db.settings.waTemplate;
   applyUiStyle();
+  renderLogoUI();
   renderMethods();
   renderPackages();
   renderCustomers();
@@ -5170,7 +5274,7 @@ function importBackup(file) {
   reader.onload = () => {
     try {
       const d = normalize(JSON.parse(reader.result));
-      db = d; save(); applyBrand(); showPage('dashboard');
+      db = d; save(); loadLogoImage(); applyBrand(); showPage('dashboard');
       toast('Data dipulihkan', { undo: true });
     } catch (e) { toast('File tidak valid'); }
   };
@@ -5614,6 +5718,15 @@ function onDocClick(e) {
       toast('Pengaturan disimpan');
       break;
     }
+    case 'logo-pick': document.getElementById('logoFile').click(); break;
+    case 'logo-remove':
+      if (db.settings.logo && confirm('Hapus logo usaha?')) {
+        db.settings.logo = '';
+        logAction('pengaturan', 'Hapus logo usaha');
+        save(); loadLogoImage(); renderLogoUI();
+        toast('Logo dihapus', { undo: true });
+      }
+      break;
     case 'export': exportBackup(); break;
     case 'import': document.getElementById('importFile').click(); break;
     case 'reset': if (confirm('Hapus SEMUA data dan kembali ke pengaturan awal? Tindakan ini tidak bisa dibatalkan.')) { db = defaultData(); save(); applyBrand(); showPage('dashboard'); toast('Data direset'); } break;
@@ -5743,6 +5856,20 @@ function onDocClick(e) {
 
 function onDocChange(e) {
   const t = e.target;
+  if (t.id === 'logoFile') { if (t.files && t.files[0]) applyLogoFile(t.files[0]); t.value = ''; return; }
+  if (t.classList.contains('logo-opt')) {
+    db.settings.logoOpts[t.dataset.key] = t.checked;
+    save();
+    toast((t.checked ? 'Logo dicetak di ' : 'Logo tidak dicetak di ') + (t.dataset.label || t.dataset.key));
+    return;
+  }
+  if (t.id === 'logoHeadMm') {
+    const v = Math.min(30, Math.max(8, Math.round(+t.value || 14)));
+    db.settings.logoOpts.headMm = v;
+    t.value = String(v);
+    save();
+    return;
+  }
   if (t.classList.contains('pkg-edit')) { editPackage(t.dataset.id, t.dataset.field, t.value); return; }
   if (t.id === 'poFilter' || t.id === 'poProcess') { renderPO(); return; }
   if (t.id === 'poGroupMenu') {
@@ -5976,6 +6103,8 @@ function init() {
   buildCustomPage();
   applyBrand();
   applyUiStyle();
+  loadLogoImage();
+  renderLogoUI();
   setTodayBadge();
   setSaveStatus();
   state.currentDate = todayStr();

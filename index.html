@@ -620,6 +620,28 @@
             <div class="card-head"><h3>Informasi Usaha</h3></div>
             <label class="field"><span>Nama usaha</span><input type="text" id="setName" class="input"></label>
             <label class="field"><span>Tagline</span><input type="text" id="setTagline" class="input"></label>
+            <div class="field">
+              <span>Logo usaha</span>
+              <div class="logo-row">
+                <div class="logo-preview" id="logoPreview"><span class="muted tiny">Belum ada logo</span></div>
+                <div class="logo-btns">
+                  <button class="btn btn-ghost btn-sm" type="button" data-act="logo-pick">Pilih gambar</button>
+                  <button class="btn btn-ghost btn-sm" type="button" id="logoRemoveBtn" data-act="logo-remove" disabled>Hapus</button>
+                </div>
+              </div>
+              <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
+            </div>
+            <div class="field" id="logoOptsBlock">
+              <span>Logo dicetak di</span>
+              <div class="logo-opts">
+                <label class="check"><input type="checkbox" class="logo-opt" id="logoOnSticker" data-key="stiker" data-label="stiker"> Stiker</label>
+                <label class="check"><input type="checkbox" class="logo-opt" id="logoOnKonfirmasi" data-key="konfirmasi" data-label="kertas konfirmasi"> Kertas konfirmasi</label>
+                <label class="check"><input type="checkbox" class="logo-opt" id="logoOnLaporan" data-key="laporan" data-label="laporan dan rekap"> Laporan &amp; rekap</label>
+                <label class="check"><input type="checkbox" class="logo-opt" id="logoOnInvoice" data-key="invoice" data-label="dokumen PO" title="Invoice, resi, dan rekap pre-order"> Dokumen PO</label>
+              </div>
+              <label class="logo-size" title="Berlaku untuk kertas konfirmasi, laporan, dan dokumen PO"><span>Tinggi di kop</span><input type="number" id="logoHeadMm" class="input input-sm" min="8" max="30" step="1" value="14"> <span class="muted tiny">mm</span></label>
+            </div>
+            <p class="muted tiny">Logo dan pilihan cetaknya langsung tersimpan. Gambar besar dikecilkan otomatis supaya cadangan tetap ringan.</p>
             <div class="pkg-pair">
               <label class="field"><span>Bank / e-wallet</span><input type="text" id="setBankName" class="input" placeholder="mis. BCA" autocomplete="off"></label>
               <label class="field"><span>No. rekening</span><input type="text" id="setBankNumber" class="input" placeholder="mis. 1234567890" autocomplete="off"></label>
