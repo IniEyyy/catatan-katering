@@ -36,6 +36,16 @@ Di bawah unggahan ada pilihan bawaan tempat logo dicetak. **Stiker** menaruh log
 
 Saat mencetak, tiap halaman punya centang **Pakai logo** atau **Logo**. Centang itu hanya berlaku untuk cetakan berikutnya dan bawaannya mengikuti pilihan di Pengaturan, jadi logo bisa dilepas untuk satu cetakan tanpa mengubah setelan permanen. Logo yang sama juga tampil di sudut sidebar dan sebagai ikon tab browser. Kalau logo dihapus, sidebar kembali memakai ikon bawaan dan ikon tab mengikuti bawaan browser.
 
+## Dapur
+
+Halaman Dapur mengumpulkan bahan untuk menu yang sudah ditulis di Beranda. Pilih minggu lewat tombol tanggal di kiri atas. Kartu **Menu Minggu Ini** mendaftar menu yang muncul pada minggu itu; tombol **Atur bahan** membuka daftar bahannya, dan tombol **Ubah bahan** dipakai untuk mengubah daftar yang sudah ada. Satu bahan ditulis sebagai nama, jumlah, dan satuan (kg, liter, butir, dan seterusnya), lalu **+ Bahan Menu** menambahkan menu lain yang belum ada di daftar. Nama menu dicocokkan tanpa peduli jenis spesial, huruf besar-kecil, atau susunan barisnya, jadi menu yang sama tidak perlu ditulis dua kali.
+
+**Daftar Belanja** menjumlahkan bahan dari semua menu minggu itu. Bahan dengan nama dan satuan sama digabung, misalnya beberapa menu yang memakai beras menjadi satu baris 13 kg. **Salin Daftar** menyalin teksnya, dan **Jadikan Pengingat Beli** membuka halaman Pengingat dengan isi dan tanggal yang sudah terisi, tinggal tekan Tambah. Tombol **Pengingat** di baris Semua Bahan melakukan hal yang sama untuk satu menu saja.
+
+**Acak Menu** mengganti menu snack dan lunch biasa dari Senin sampai Jumat dengan menu lain yang punya bahan. Menu spesial, PO, dan akhir pekan tidak disentuh, dan hari libur dilewati. Centang Snack atau Lunch untuk memilih jenis yang ikut diacak. Hasilnya tetap bisa diubah manual di Beranda dan dicatat di Log Aktivitas.
+
+Halaman ini diletakkan setelah Pesanan Mingguan karena dipakai saat menyiapkan belanja, bukan saat mencatat pesanan. Pintasan **Bahan** juga ada di kepala kartu Menu pada Beranda.
+
 ## Halaman
 
 | Halaman | Isi |
@@ -43,6 +53,7 @@ Saat mencetak, tiap halaman punya centang **Pakai logo** atau **Logo**. Centang 
 | Beranda | Kartu ringkasan. Kalender dimulai hari Minggu; hari ini bertanda hijau dan jadi merah begitu tanggalnya dipilih. Di sebelahnya ada editor menu, dengan baris snack/lunch biasa yang hanya berisi jenis dan nama, sementara Snack/Lunch Spesial dan PO punya kotak harga sendiri. Tombol Libur Harian/Mingguan ada di kanan. Di bawah kalender ada blok paket harga per jenis beserta daftar menu hari itu, grafik omset bulanan dan harian, tiga donat sejajar (per jenis, porsi snack vs lunch, status pembayaran) dengan legenda di samping masing-masing, daftar belum lunas, dan pusat Cetak & Bagikan. Saat tab Menu Harian dibuka, blok Paket pindah menjadi baris sendiri di bawah menu, sebelum grafik, dan melebar ke samping |
 | Hari Ini | Absensi harian, satu baris per anak, snack dan lunch berdampingan. Pilihan makanan A/B/C ditulis dengan nama paket dan harga anak itu di bawahnya; untuk baris spesial tertulis "Spesial · Rp …". Ada kolom catatan dan total yang bisa diklik untuk mengatur pembayaran. Judul Snack / Lunch / Hari Ini dan baris judul di bawahnya tetap menempel saat tabel digulung, dengan tinggi tabel ±88% layar. Tidak ada kartu statistik di bawah filter, ringkasannya satu baris di judul tabel. Kalau menu tanggal itu belum dibuat, muncul pintasan ke Beranda › Menu Harian. Di nama tiap anak ada tautan "7 hari" yang membuka anak itu di Pesanan Mingguan |
 | Pesanan Mingguan | Koreksi pesanan untuk 7 hari sekaligus: paket, pilihan makanan, metode, serta gratis dan kompensasi. Tabelnya setinggi ±88% layar dengan judul kolom menempel, dan judul rata tengah mengikuti isi selnya. Huruf makanan di sel bisa disorot untuk melihat isi lengkapnya. Tanggal pada judul kolom bisa diklik untuk membuka Hari Ini tanggal itu, dan tombol Atur menu melompat ke Beranda › Menu Mingguan minggu tersebut |
+| Dapur | Bahan per menu, daftar belanja mingguan yang menjumlahkan bahan sejenis, pengingat beli, dan acak menu Senin sampai Jumat. Menu spesial, PO, dan akhir pekan tidak ikut diacak |
 | Cetak | Stiker nama A4 untuk kotak bekal, dan kertas konfirmasi porsi. Keduanya memakai kontrol di kiri serta pratinjau A4 di kanan, dengan tombol tanggal ber-popover yang sama. Tidak ada lagi pilihan gabungan "snack & lunch". Tanggal dimajukan otomatis kalau hari itu tidak ada pelanggan. Tinggi baris sel dihitung sendiri; slider Rapat sel memipihkan kotak dan slider Padding sel mengatur jarak isinya. Penanda alergi bawaannya garis di bawah nama, dan bentuk lain (titik, lingkaran huruf A, tulisan, atau tanpa penanda) beserta warnanya tetap bisa dipilih |
 | Laporan | Rekap per anak dan per orang tua: tagihan, dibayar, sisa. Bisa dicetak PDF dan diekspor CSV |
 | Pengingat | Pengingat harian, mingguan, dan bulanan, plus daftar tagihan menunggak yang siap dikirim ke WhatsApp |
@@ -101,7 +112,7 @@ Beli Sekali hanya menawarkan satu tanggal. Pilihan Selesai dan Berhenti sengaja 
 - Grafik digambar sendiri di `<canvas>`, tanpa library.
 - Input angka tidak menampilkan panah naik-turun. Nilainya tetap bisa digeser dengan tombol ↑/↓ atau diketik langsung.
 - Tema terang/gelap dan ukuran font diatur dari Pengaturan › Tampilan & Cadangan Data. Tata letak menyesuaikan sampai lebar 620px: di bawah 1200px kalender turun ke atas menu, dan di bawah 640px nama makanan turun ke baris kedua.
-- Data tidak dikirim ke mana pun. Aplikasi ini sepenuhnya lokal di satu komputer, dan tidak ada satu permintaan jaringan pun saat semua halamannya dibuka (diperiksa otomatis oleh `verify-tools/verify50.js`). Semua teks yang diketik pemilik dikecualikan dari HTML sebelum ditampilkan, jadi nama atau catatan yang berisi `<…>` tetap tampil sebagai tulisan.
+- Data tidak dikirim ke mana pun. Aplikasi ini sepenuhnya lokal di satu komputer, dan tidak ada satu permintaan jaringan pun saat semua halamannya dibuka (diperiksa otomatis oleh suite verifikasi di `verify-tools/`). Semua teks yang diketik pemilik dikecualikan dari HTML sebelum ditampilkan, jadi nama atau catatan yang berisi `<…>` tetap tampil sebagai tulisan.
 - Satu batasan yang perlu diketahui: browser memperlakukan semua berkas lokal sebagai satu sumber yang sama, jadi berkas `.html` asing yang dibuka di profil browser yang sama secara teori bisa membaca isi `localStorage`. Amankan data dengan unduhan cadangan berkala dan hindari membuka berkas HTML kiriman orang lain di profil yang dipakai untuk aplikasi ini.
 
 ## Pengembangan

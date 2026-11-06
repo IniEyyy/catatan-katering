@@ -83,6 +83,8 @@ const LETTERS = 'ABCDEFGH';
 /* Jenis baris menu. "spesial" tetap snack/lunch (kolom, stiker, laporan sama) tapi harganya diketik sendiri. */
 const MENU_TYPES = ['snack', 'snack-spesial', 'lunch', 'lunch-spesial', 'po'];
 const MENU_TYPE_LABEL = { snack: 'Snack', 'snack-spesial': 'Snack Spesial', lunch: 'Lunch', 'lunch-spesial': 'Lunch Spesial', po: 'PO' };
+const RECIPE_TYPE_LABEL = { snack: 'Snack', lunch: 'Lunch', po: 'PO' };
+const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', 'botol', 'kaleng', 'sachet', 'porsi', 'buah'];
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
 function defaultData() {
@@ -117,6 +119,7 @@ function defaultData() {
     reminders: [], // { id, date, time, text, repeat:'once'|'weekly'|'monthly', doneOn }
     poMenus: [], // { id, date, item, price, note }: menu PO beserta tanggal
     po: [],      // { id, menuId?, date, name, item, qty, price, method, paid, note }
+    recipes: [], // { id, name, type:'snack'|'lunch'|'po', ingredients:[{name,qty,unit}], note } bahan per menu
     log: []      // { id, ts, action, detail }
   };
 }
@@ -234,6 +237,25 @@ function normalize(d) {
   d.settings.logoOpts = lo;
   d.settings.invSeq = Math.max(0, Math.min(999999, Math.round(+d.settings.invSeq || 0)));
   if (!Array.isArray(d.poMenus)) d.poMenus = [];
+  if (!Array.isArray(d.recipes)) d.recipes = [];
+  const recipeKeys = new Set();
+  d.recipes = d.recipes.map(r => ({
+    id: r.id || uid(),
+    name: String(r.name || '').trim().slice(0, 220),
+    type: r.type === 'lunch' || r.type === 'po' ? r.type : 'snack',
+    note: String(r.note || '').trim().slice(0, 160),
+    ingredients: (Array.isArray(r.ingredients) ? r.ingredients : []).map(g => ({
+      name: String(g && g.name || '').trim().slice(0, 60),
+      qty: +(g && g.qty) > 0 ? +(g && g.qty) : '',
+      unit: String(g && g.unit || '').trim().slice(0, 16)
+    })).filter(g => g.name)
+  })).filter(r => {
+    if (!r.name) return false;
+    const k = r.type + '|' + flatName(r.name).toLowerCase().replace(/\s+/g, ' ').trim();
+    if (recipeKeys.has(k)) return false;
+    recipeKeys.add(k);
+    return true;
+  });
   return d;
 }
 
@@ -489,6 +511,20 @@ function makeDemoData() {
     { id: uid(), date: shiftDate(today, -2), time: '', text: 'Tagih Kantor Desa Sukamaju, jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
   ];
 
+  const rc = (name, type, items, note) => ({ id: uid(), name, type, ingredients: items.map(([n, qty, unit]) => ({ name: n, qty, unit })), note: note || '' });
+  d.recipes = [
+    rc('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', [['Roti gandum', 3, 'bungkus'], ['Selai nanas', 1, 'botol'], ['Pisang', 2, 'sisir']]),
+    rc('Susu Cokelat\nBiskuit', 'snack', [['Susu UHT', 2, 'liter'], ['Bubuk cokelat', 0.5, 'kg'], ['Biskuit', 2, 'kaleng']]),
+    rc('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 3, 'kg'], ['Bumbu nasi goreng', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Puding', 2, 'bungkus']]),
+    rc('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tahu', 2, 'kg'], ['Buah', 2, 'kg']]),
+    rc('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', [['Beras', 4, 'kg'], ['Ayam', 3, 'kg'], ['Abon', 1, 'kg'], ['Puding', 2, 'bungkus']]),
+    rc('Nasi Goreng Kampung\nTelur\nSayur', 'snack', [['Beras', 3, 'kg'], ['Telur', 1, 'kg'], ['Minyak goreng', 1, 'liter'], ['Bawang merah', 0.5, 'kg'], ['Kecap manis', 1, 'botol'], ['Sayur', 2, 'kg']], 'Bumbu dasar sudah ada di dapur'),
+    rc('Roti Bakar Keju\nSusu', 'snack', [['Roti tawar', 4, 'bungkus'], ['Keju cheddar', 1, 'kg'], ['Susu UHT', 2, 'liter'], ['Mentega', 0.5, 'kg']]),
+    rc('Nasi Ayam Bakar\nSayur\nBuah', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 4, 'kg'], ['Bumbu bakar', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Buah', 3, 'kg']]),
+    rc('Soto Ayam\nNasi\nPerkedel', 'lunch', [['Ayam', 3, 'kg'], ['Beras', 4, 'kg'], ['Bumbu soto', 2, 'bungkus'], ['Kentang', 2, 'kg'], ['Daun bawang', 1, 'ikat']]),
+    rc('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tempe', 2, 'kg'], ['Buah', 2, 'kg']])
+  ];
+
   d.log = [
     { id: uid(), ts: new Date().toISOString(), action: 'default', detail: 'Data contoh dimuat untuk demo' },
     { id: uid(), ts: new Date(Date.now() - 2400e3).toISOString(), action: 'menu', detail: 'Harga Mie Ayam hari ini diubah ke Rp 22.000' },
@@ -650,6 +686,7 @@ const state = {
   satpamType: 'snack',  // jenis kertas konfirmasi yang dibuat: snack | lunch
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
+  dapurWeek: '',        // Senin minggu yang dibuka di halaman Dapur
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
   debtors: [],       // hasil perhitungan penunggak pada halaman Pengingat
@@ -884,9 +921,9 @@ function toast(msg, opts) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.hidden = true; }, opts && (opts.undo || opts.redo) ? 5000 : 2200);
 }
-function openModal(html) {
+function openModal(html, wide) {
   const b = document.getElementById('modalBackdrop');
-  b.innerHTML = '<div class="modal" role="dialog">' + html + '</div>';
+  b.innerHTML = '<div class="modal' + (wide ? ' modal-wide' : '') + '" role="dialog">' + html + '</div>';
   b.hidden = false;
 }
 function closeModal() {
@@ -1242,7 +1279,7 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
 function showPage(name) {
   state.page = name;
@@ -1257,6 +1294,7 @@ function renderPage(name) {
   if (name === 'dashboard') renderDashboard();
   else if (name === 'hari') renderDailyMerged();
   else if (name === 'custom') renderCustom();
+  else if (name === 'dapur') renderDapur();
   else if (name === 'po') renderPO();
   else if (name === 'report') renderReport();
   else if (name === 'pengingat') renderPengingat();
@@ -1472,6 +1510,17 @@ function menuTypeOf(it) {
   const t = it && it.type;
   return t === 'lunch' || t === 'lunch-spesial' ? 'lunch' : t === 'po' ? 'po' : 'snack';
 }
+function recipeBaseType(type) {
+  return type === 'lunch' || type === 'lunch-spesial' ? 'lunch' : type === 'po' ? 'po' : 'snack';
+}
+function recipeKey(type, name) {
+  return recipeBaseType(type) + '|' + flatName(name).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function recipeFor(type, name) {
+  const k = recipeKey(type, name);
+  return db.recipes.find(r => recipeKey(r.type, r.name) === k) || null;
+}
+function recipeForItem(it) { return recipeFor(it && it.type, it && it.name); }
 function isSpesial(it) { return !!(it && /-spesial$/.test(String(it.type))); }
 /* Harga yang diketik di baris spesial; 0 berarti belum diisi (belum ditagih sebagai spesial) */
 function spesialPrice(it) { return isSpesial(it) && +it.price > 0 ? +it.price : 0; }
@@ -4890,6 +4939,255 @@ function renderLog() {
     undoStack.length + ' langkah bisa diurutkan balik';
 }
 
+/* ---------- Render: Dapur (bahan, belanja, acak menu) ---------- */
+function dapurWeekStart() {
+  state.dapurWeek = mondayOf(state.dapurWeek || todayStr());
+  return state.dapurWeek;
+}
+function dapurRangeLabel(start) {
+  return fmtShortDate(start) + ' - ' + fmtShortDate(shiftDate(start, 6));
+}
+function dapurMenuRows(start) {
+  const map = new Map();
+  for (let i = 0; i < 7; i++) {
+    const date = shiftDate(start, i);
+    menuPlanItems(date).forEach((it, idx) => {
+      const key = recipeKey(it.type, it.name);
+      let row = map.get(key);
+      if (!row) {
+        row = { key, name: it.name, type: recipeBaseType(it.type), dates: [], refDate: date, refIdx: idx, recipe: recipeFor(it.type, it.name) };
+        map.set(key, row);
+      }
+      row.dates.push(date);
+      if (!row.recipe) row.recipe = recipeFor(it.type, it.name);
+    });
+  }
+  const order = { snack: 0, lunch: 1, po: 2 };
+  return [...map.values()].sort((a, b) => order[a.type] - order[b.type] || flatName(a.name).localeCompare(flatName(b.name), 'id'));
+}
+function dapurShopping(start) {
+  const by = new Map();
+  let menuCount = 0, withRecipe = 0, without = 0;
+  for (let i = 0; i < 7; i++) {
+    const date = shiftDate(start, i);
+    menuPlanItems(date).forEach(it => {
+      menuCount++;
+      const r = recipeFor(it.type, it.name);
+      if (!r) { without++; return; }
+      withRecipe++;
+      r.ingredients.forEach(g => {
+        const unit = (g.unit || '').trim();
+        const key = g.name.toLowerCase() + '|' + unit.toLowerCase();
+        let x = by.get(key);
+        if (!x) { x = { name: g.name, unit: unit, qty: 0, hasQty: false }; by.set(key, x); }
+        if (+g.qty > 0) { x.qty += +g.qty; x.hasQty = true; }
+      });
+    });
+  }
+  const items = [...by.values()].sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
+  return { items, menuCount, withRecipe, without };
+}
+function fmtQtyNum(q) { return String(Math.round((+q || 0) * 100) / 100).replace('.', ','); }
+function fmtShopQty(x) {
+  if (!x.hasQty) return 'secukupnya';
+  return fmtQtyNum(x.qty) + (x.unit ? ' ' + x.unit : '');
+}
+function dapurShopText(start) {
+  const shop = dapurShopping(start);
+  return 'Daftar belanja ' + dapurRangeLabel(start) + '\n' +
+    shop.items.map(x => '• ' + x.name + ': ' + fmtShopQty(x)).join('\n');
+}
+function renderDapur() {
+  const start = dapurWeekStart();
+  setText('dapurWeekText', dapurRangeLabel(start));
+  const menus = dapurMenuRows(start);
+  const shop = dapurShopping(start);
+  const withRecipe = menus.filter(m => m.recipe).length;
+  const stat = document.getElementById('dapurStats');
+  if (stat) stat.innerHTML =
+    statCard('Menu dengan bahan', withRecipe, 'dari ' + menus.length + ' menu minggu ini', 'primary') +
+    statCard('Bahan unik', shop.items.length, 'siap jadi daftar belanja', 'accent') +
+    statCard('Menu tanpa bahan', Math.max(0, menus.length - withRecipe), 'klik Atur bahan untuk melengkapi', '');
+
+  const list = document.getElementById('dapurMenuList');
+  if (list) list.innerHTML = menus.map(m => {
+    const lines = menuLines(m.name);
+    const days = [...new Set(m.dates.map(d => WEEKDAYS[weekdayOf(d) - 1]))].join(', ');
+    const sub = [lines.slice(1).join(' · '), days].filter(Boolean).join(' · ');
+    const n = m.recipe ? m.recipe.ingredients.length : 0;
+    return '<tr>' +
+      '<td><div class="dapur-menu-name"><strong>' + escapeHtml(lines[0] || flatName(m.name)) + '</strong>' +
+        (sub ? '<small>' + escapeHtml(sub) + '</small>' : '') + '</div></td>' +
+      '<td class="c"><span class="badge ' + (m.type === 'lunch' ? 'green' : m.type === 'po' ? 'gold' : 'orange') + '">' + RECIPE_TYPE_LABEL[m.type] + '</span></td>' +
+      '<td class="num">' + (n ? n + ' bahan' : '<span class="muted">belum</span>') + '</td>' +
+      '<td class="end"><button class="btn btn-ghost btn-sm" data-act="recipe-menu" data-date="' + m.refDate + '" data-idx="' + m.refIdx + '">' +
+        (m.recipe ? 'Ubah bahan' : 'Atur bahan') + '</button></td>' +
+    '</tr>';
+  }).join('');
+  const menuEmpty = document.getElementById('dapurMenuEmpty');
+  if (menuEmpty) menuEmpty.hidden = menus.length > 0;
+  setText('dapurMenuCount', menus.length + ' menu');
+
+  const shopList = document.getElementById('dapurShopList');
+  if (shopList) shopList.innerHTML = shop.items.map(x =>
+    '<div class="shop-row"><strong>' + escapeHtml(x.name) + '</strong><span class="shop-qty">' + escapeHtml(fmtShopQty(x)) + '</span></div>').join('');
+  const shopEmpty = document.getElementById('dapurShopEmpty');
+  if (shopEmpty) shopEmpty.hidden = shop.items.length > 0;
+  setText('dapurShopCount', shop.items.length + ' bahan · ' + shop.withRecipe + ' menu');
+
+  const recipes = db.recipes.slice().sort((a, b) =>
+    ({ snack: 0, lunch: 1, po: 2 })[a.type] - ({ snack: 0, lunch: 1, po: 2 })[b.type] || flatName(a.name).localeCompare(flatName(b.name), 'id'));
+  const recList = document.getElementById('dapurRecipeList');
+  if (recList) recList.innerHTML = recipes.map(r => {
+    const lines = menuLines(r.name);
+    const ing = r.ingredients.map(g => g.name + (+g.qty > 0 ? ' ' + fmtQtyNum(g.qty) + (g.unit ? ' ' + g.unit : '') : '')).join(', ');
+    return '<tr>' +
+      '<td><div class="dapur-menu-name"><strong>' + escapeHtml(lines[0] || r.name) + '</strong>' +
+        (lines.length > 1 ? '<small>' + escapeHtml(lines.slice(1).join(' · ')) + '</small>' : '') + '</div></td>' +
+      '<td class="c"><span class="badge ' + (r.type === 'lunch' ? 'green' : r.type === 'po' ? 'gold' : 'orange') + '">' + RECIPE_TYPE_LABEL[r.type] + '</span></td>' +
+      '<td class="small">' + (ing ? escapeHtml(ing) : '<span class="muted">belum ada bahan</span>') + (r.note ? '<div class="muted tiny">' + escapeHtml(r.note) + '</div>' : '') + '</td>' +
+      '<td class="end"><div class="dapur-row-actions">' +
+        '<button class="btn btn-ghost btn-sm" data-act="recipe-remind" data-id="' + r.id + '" title="Isi pengingat beli bahan menu ini">Pengingat</button>' +
+        '<button class="btn btn-ghost btn-sm" data-act="recipe-edit" data-id="' + r.id + '">Ubah</button>' +
+        '<button class="icon-act danger" data-act="recipe-delete" data-id="' + r.id + '" title="Hapus bahan menu">×</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+  const recEmpty = document.getElementById('dapurEmpty');
+  if (recEmpty) recEmpty.hidden = recipes.length > 0;
+  setText('dapurCount', recipes.length + ' menu');
+
+  const ns = db.recipes.filter(r => r.type === 'snack' && r.ingredients.length).length;
+  const nl = db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length).length;
+  setText('dapurRandInfo', (ns || nl)
+    ? 'Tersedia ' + ns + ' menu snack dan ' + nl + ' menu lunch yang punya bahan.'
+    : 'Belum ada menu dengan bahan. Tambahkan dulu lewat + Bahan Menu.');
+}
+function recipeRowHtml(g) {
+  g = g || {};
+  return '<div class="recipe-row">' +
+    '<input class="input input-sm recipe-ing-name" placeholder="Nama bahan" value="' + escapeHtml(g.name || '') + '">' +
+    '<input class="input input-sm recipe-ing-qty" type="number" min="0" step="any" placeholder="Qty" value="' + (g.qty || '') + '">' +
+    '<input class="input input-sm recipe-ing-unit" list="recipeUnits" placeholder="Satuan" value="' + escapeHtml(g.unit || '') + '">' +
+    '<button type="button" class="icon-act danger" data-act="recipe-row-del" title="Hapus bahan">×</button>' +
+  '</div>';
+}
+function openRecipeModal(opts) {
+  opts = opts || {};
+  const rec = opts.recipeId
+    ? db.recipes.find(r => r.id === opts.recipeId)
+    : (opts.name ? recipeFor(opts.type, opts.name) : null);
+  const type = rec ? rec.type : (RECIPE_TYPE_LABEL[opts.type] ? opts.type : 'snack');
+  const name = rec ? rec.name : (opts.name || '');
+  const ingredients = rec && rec.ingredients.length ? rec.ingredients : [{}];
+  openModal(
+    '<h3>' + (rec ? 'Ubah Bahan Menu' : 'Bahan Menu') + '</h3>' +
+    '<label class="field"><span>Nama menu</span><textarea id="recipeName" class="input" rows="3" placeholder="Nama menu, boleh beberapa baris">' + escapeHtml(name) + '</textarea></label>' +
+    '<div class="pkg-pair">' +
+      '<label class="field"><span>Jenis</span><select id="recipeType" class="input">' +
+        ['snack', 'lunch', 'po'].map(t => '<option value="' + t + '"' + (t === type ? ' selected' : '') + '>' + RECIPE_TYPE_LABEL[t] + '</option>').join('') +
+      '</select></label>' +
+      '<label class="field"><span>Catatan (opsional)</span><input type="text" id="recipeNote" class="input" maxlength="160" value="' + escapeHtml(rec ? rec.note : '') + '"></label>' +
+    '</div>' +
+    '<div class="field"><span>Bahan</span><div id="recipeRows" class="recipe-grid">' + ingredients.map(recipeRowHtml).join('') + '</div>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-act="recipe-row-add">+ Tambah bahan</button></div>' +
+    '<datalist id="recipeUnits">' + RECIPE_UNITS.map(u => '<option value="' + u + '">').join('') + '</datalist>' +
+    '<input type="hidden" id="recipeId" value="' + escapeHtml(rec ? rec.id : '') + '">' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="recipe-save">Simpan Bahan</button></div>', true
+  );
+}
+function saveRecipeModal() {
+  const name = (document.getElementById('recipeName').value || '').trim();
+  const type = document.getElementById('recipeType').value;
+  const note = (document.getElementById('recipeNote').value || '').trim();
+  const id = document.getElementById('recipeId').value;
+  if (!name) { toast('Tulis nama menu dulu'); return; }
+  const ingredients = [...document.querySelectorAll('#recipeRows .recipe-row')].map(row => ({
+    name: (row.querySelector('.recipe-ing-name').value || '').trim(),
+    qty: +row.querySelector('.recipe-ing-qty').value > 0 ? +row.querySelector('.recipe-ing-qty').value : '',
+    unit: (row.querySelector('.recipe-ing-unit').value || '').trim()
+  })).filter(g => g.name);
+  const dup = db.recipes.find(r => r.id !== id && recipeKey(r.type, r.name) === recipeKey(type, name));
+  if (dup) { toast('Bahan untuk menu itu sudah ada di daftar'); return; }
+  const old = id ? db.recipes.find(r => r.id === id) : null;
+  const data = { name, type: ['snack', 'lunch', 'po'].includes(type) ? type : 'snack', note, ingredients };
+  if (old) {
+    Object.assign(old, data);
+    logAction('dapur', 'Ubah bahan ' + flatName(name));
+  } else {
+    db.recipes.push(Object.assign({ id: uid() }, data));
+    logAction('dapur', 'Tambah bahan ' + flatName(name));
+  }
+  save();
+  closeModal();
+  if (state.page === 'dapur') renderDapur();
+  toast(old ? 'Bahan diperbarui' : 'Bahan ditambahkan');
+}
+function recipeReminder(id) {
+  const r = db.recipes.find(x => x.id === id);
+  if (!r) return;
+  const ing = r.ingredients.slice(0, 4).map(g => g.name + (+g.qty > 0 ? ' ' + fmtQtyNum(g.qty) + (g.unit ? ' ' + g.unit : '') : '')).join(', ');
+  const more = r.ingredients.length > 4 ? ', dll' : '';
+  prefillReminder(('Belanja bahan ' + (menuLines(r.name)[0] || r.name) + ': ' + ing + more).slice(0, 120), todayStr());
+}
+function dapurCopyList() {
+  const start = dapurWeekStart();
+  const shop = dapurShopping(start);
+  if (!shop.items.length) { toast('Belum ada bahan untuk minggu ini'); return; }
+  copyText(dapurShopText(start));
+}
+function dapurMakeReminder() {
+  const start = dapurWeekStart();
+  const shop = dapurShopping(start);
+  if (!shop.items.length) { toast('Belum ada bahan untuk minggu ini'); return; }
+  const first = shop.items.slice(0, 3).map(x => x.name + (x.hasQty ? ' ' + fmtShopQty(x) : '')).join(', ');
+  const rest = shop.items.length > 3 ? ', +' + (shop.items.length - 3) + ' bahan lain' : '';
+  const text = ('Belanja bahan ' + dapurRangeLabel(start) + ': ' + first + rest + '. Rincian di halaman Dapur.').slice(0, 120);
+  const due = shiftDate(start, -1);
+  prefillReminder(text, due < todayStr() ? todayStr() : due);
+}
+function shuffleArr(a) {
+  const out = a.slice();
+  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+  return out;
+}
+function randomizeDapurWeek() {
+  const start = dapurWeekStart();
+  const wantSnack = document.getElementById('dapurRandSnack').checked;
+  const wantLunch = document.getElementById('dapurRandLunch').checked;
+  if (!wantSnack && !wantLunch) { toast('Centang Snack atau Lunch dulu'); return; }
+  const pools = {
+    snack: wantSnack ? shuffleArr(db.recipes.filter(r => r.type === 'snack' && r.ingredients.length)) : [],
+    lunch: wantLunch ? shuffleArr(db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length)) : []
+  };
+  if (wantSnack && !pools.snack.length) { toast('Belum ada bahan menu snack'); return; }
+  if (wantLunch && !pools.lunch.length) { toast('Belum ada bahan menu lunch'); return; }
+  if (!confirm('Acak menu ' + dapurRangeLabel(start) + '? Menu biasa snack/lunch akan diganti. Menu spesial dan PO tetap.')) return;
+  let changed = 0, skipped = 0;
+  const pick = { snack: 0, lunch: 0 };
+  for (let i = 0; i < 5; i++) {
+    const date = shiftDate(start, i);
+    if (isFullHoliday(date)) { skipped++; continue; }
+    let items = menuPlanItems(date).slice();
+    ['snack', 'lunch'].forEach(type => {
+      if (!pools[type].length) return;
+      items = items.filter(it => it.type !== type);
+      if (items.length >= WEEK_MENU_MAX) return;
+      const r = pools[type][pick[type] % pools[type].length];
+      pick[type]++;
+      items.push({ name: r.name, type: type, pkg: '', price: '' });
+      changed++;
+    });
+    writeMenuPlan(date, items);
+  }
+  if (!changed) { toast('Tidak ada menu yang bisa diacak'); return; }
+  logAction('dapur', 'Acak menu ' + start + ' · ' + changed + ' menu');
+  save();
+  renderDapur();
+  toast('Menu diacak: ' + changed + ' baris' + (skipped ? ' · ' + skipped + ' hari libur dilewati' : ''));
+}
+
 /* ---------- Logo usaha ---------- */
 function loadLogoImage() {
   state.logoImg = null;
@@ -5555,6 +5853,44 @@ function onDocClick(e) {
       break;
     }
     case 'menu-share': menuShareImage(); break;
+    case 'goto-dapur': showPage('dapur'); break;
+    case 'recipe-add': openRecipeModal({ type: 'snack', name: '' }); break;
+    case 'recipe-menu': {
+      const it = menuPlanItems(act.dataset.date)[+act.dataset.idx];
+      if (it) openRecipeModal({ type: recipeBaseType(it.type), name: it.name });
+      break;
+    }
+    case 'recipe-edit': openRecipeModal({ recipeId: id }); break;
+    case 'recipe-save': saveRecipeModal(); break;
+    case 'recipe-row-add': {
+      const box = document.getElementById('recipeRows');
+      if (box) {
+        box.insertAdjacentHTML('beforeend', recipeRowHtml({}));
+        const rows = box.querySelectorAll('.recipe-row');
+        const last = rows[rows.length - 1];
+        if (last) last.querySelector('.recipe-ing-name').focus();
+      }
+      break;
+    }
+    case 'recipe-row-del': {
+      const row = act.closest('.recipe-row');
+      if (row) row.remove();
+      break;
+    }
+    case 'recipe-delete': {
+      const r = db.recipes.find(x => x.id === id);
+      if (r && confirm('Hapus bahan untuk "' + flatName(r.name) + '"?')) {
+        db.recipes = db.recipes.filter(x => x.id !== id);
+        logAction('dapur', 'Hapus bahan ' + flatName(r.name));
+        save(); renderDapur();
+        toast('Bahan dihapus', { undo: true });
+      }
+      break;
+    }
+    case 'recipe-remind': recipeReminder(id); break;
+    case 'dapur-copy': dapurCopyList(); break;
+    case 'dapur-remind': dapurMakeReminder(); break;
+    case 'dapur-random': randomizeDapurWeek(); break;
     case 'img-download': downloadPreview(); break;
     case 'img-share': sharePreview(); break;
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;
@@ -5865,6 +6201,7 @@ function onDocClick(e) {
     case 'open-cal': {
       const field = act.dataset.field;
       if (field === 'hari') openCalendar({ mode: 'day', field, value: state.currentDate, dotFn: ymd => dayDots(ymd, false) });
+      else if (field === 'dapurWeek') openCalendar({ mode: 'day', field, value: state.dapurWeek && mondayOf(state.dapurWeek) || mondayOf(todayStr()), dotFn: ymd => dayDots(ymd, false) });
       else if (field === 'satpam') openCalendar({ mode: 'day', field, value: state.satpamDate || todayStr(), dotFn: satpamDot });
       else if (field === 'sticker') openCalendar({ mode: 'day', field, value: state.stickerDate || todayStr(), dotFn: satpamDot });
       else if (field === 'poMonth') openCalendar({ mode: 'month', field, value: state.poMonth });
@@ -6123,6 +6460,9 @@ function applyCalPick(v) {
   } else if (f === 'rptMonth') {
     state.rptMonth = v;
     renderReport();
+  } else if (f === 'dapurWeek') {
+    state.dapurWeek = mondayOf(v);
+    if (state.page === 'dapur') renderDapur();
   }
 }
 
