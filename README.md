@@ -32,7 +32,9 @@ Semua perubahan tersimpan otomatis di browser yang sama. Jam simpan terakhir ter
 
 Logo diunggah dari *Pengaturan › Informasi Usaha* lewat tombol **Pilih gambar**. Berkas yang diterima PNG, JPG, WEBP, atau SVG. Gambar dikecilkan otomatis ke sisi terpanjang 512 px sebelum disimpan, jadi berkas besar tidak membuat cadangan membengkak; berkas aslinya tidak diubah dan tetap aman di folder asal.
 
-Di bawah unggahan ada pilihan tempat logo dicetak. **Stiker** menaruh logo di bawah nama anak dan menggantikan teks nama usaha; tingginya menyesuaikan ruang sel, jadi nama dua baris tetap utuh. **Kertas konfirmasi** dan **Laporan & rekap** menaruh logo di kop dokumen A4, dengan tinggi yang diatur lewat angka **Tinggi di kop** (8 sampai 30 mm). **Dokumen PO** berlaku untuk invoice, resi, dan rekap pre-order. Logo tersimpan bersama data lain di cadangan JSON dan tetap tampil tanpa internet.
+Di bawah unggahan ada pilihan bawaan tempat logo dicetak. **Stiker** menaruh logo di bawah nama anak dan menggantikan teks nama usaha; tingginya menyesuaikan ruang sel, jadi nama dua baris tetap utuh. **Kertas konfirmasi** dan **Laporan & rekap** menaruh logo di kop dokumen A4, dengan tinggi yang diatur lewat angka **Tinggi di kop** (8 sampai 30 mm). **Dokumen PO** berlaku untuk invoice, resi, dan rekap pre-order. Logo tersimpan bersama data lain di cadangan JSON dan tetap tampil tanpa internet.
+
+Saat mencetak, tiap halaman punya centang **Pakai logo** atau **Logo**. Centang itu hanya berlaku untuk cetakan berikutnya dan bawaannya mengikuti pilihan di Pengaturan, jadi logo bisa dilepas untuk satu cetakan tanpa mengubah setelan permanen. Logo yang sama juga tampil di sudut sidebar dan sebagai ikon tab browser. Kalau logo dihapus, sidebar kembali memakai ikon bawaan dan ikon tab mengikuti bawaan browser.
 
 ## Halaman
 

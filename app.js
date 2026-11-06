@@ -654,6 +654,7 @@ const state = {
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
   debtors: [],       // hasil perhitungan penunggak pada halaman Pengingat
   preview: null,     // { url, file, title } gambar yang sedang dipratinjau sebelum dibagikan
+  printLogo: { stiker: null, konfirmasi: null, laporan: null, invoice: null }, // pilihan logo khusus cetakan berikutnya; null = ikut Pengaturan
   cust: { q: '', level: '', cohort: '', cls: '', status: 'jalan' }, // 'jalan' = aktif + beli sekali yang belum lewat
   custSel: new Set(), // pelanggan terpilih untuk aksi massal
   menuTab: 'week', // tab kartu Menu di Beranda: 'week' | 'daily'
@@ -3025,7 +3026,7 @@ function poGroupInvoiceImage(id) {
   const no = ensureInvoiceNo(g);
   /* logo digambar di depan nama usaha; gambar sudah dimuat sebelumnya lewat loadLogoImage() */
   let nameX = pad;
-  if (db.settings.logo && (db.settings.logoOpts || {}).invoice && state.logoImg && state.logoImg.complete && state.logoImg.naturalWidth) {
+  if (printLogoOn('invoice') && state.logoImg && state.logoImg.complete && state.logoImg.naturalWidth) {
     const lh = 34, lw = Math.min(76, lh * (state.logoImg.naturalWidth / state.logoImg.naturalHeight));
     c.save();
     c.drawImage(state.logoImg, pad, 20, lw, lh);
@@ -3871,10 +3872,16 @@ function openReportDetail(cid) {
 /* img-src data: hanya untuk logo yang disimpan sebagai data URL, tetap tanpa jaringan */
 const DOC_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">';
 /* Logo untuk kop dokumen A4. `where` = kunci di settings.logoOpts. */
+function printLogoOn(where) {
+  if (!db.settings.logo) return false;
+  const v = state.printLogo ? state.printLogo[where] : null;
+  if (typeof v === 'boolean') return v;
+  return !!(db.settings.logoOpts || {})[where];
+}
 function logoFor(where) {
-  const src = db.settings.logo, o = db.settings.logoOpts || {};
-  if (!src || !o[where]) return '';
-  return '<img class="doc-logo" src="' + src + '" alt="" style="height:' + (+o.headMm || 14) + 'mm">';
+  if (!printLogoOn(where)) return '';
+  const o = db.settings.logoOpts || {};
+  return '<img class="doc-logo" src="' + db.settings.logo + '" alt="" style="height:' + (+o.headMm || 14) + 'mm">';
 }
 
 function printableDoc(title, subtitle, inner, logoTarget) {
@@ -4001,7 +4008,7 @@ function buildStickerHTML(customers, o) {
   const innerW = Math.max(20, cellWpx - padPx * 2), innerH = Math.max(20, cellHpx - padPx * 2);
   const autoName = Math.max(12, Math.min(40, innerW / 4.2, innerH / 3.8));
   const autoCls = Math.max(10, Math.min(34, innerW / 3.6, innerH / 4.4));
-  const logoSrc = (db.settings.logo && db.settings.logoOpts && db.settings.logoOpts.stiker) ? db.settings.logo : '';
+  const logoSrc = printLogoOn('stiker') ? db.settings.logo : '';
   /* logo dapat slot lebih tinggi dari teks nama usaha supaya tetap terbaca di sel kecil */
   const logoSize = logoSrc ? Math.max(16, Math.min(38, innerH * 0.3 * (style.brandScale / 100))) : 0;
   const brandSize = Math.max(5, Math.min(30, autoName * 0.3 * (style.brandScale / 100)));
@@ -4925,11 +4932,23 @@ async function applyLogoFile(file) {
     logAction('pengaturan', 'Ganti logo usaha');
     save();
     loadLogoImage();
+    applyBrand();
     renderLogoUI();
     toast('Logo disimpan');
   } catch (e) {
     toast(e.message || 'Gambar tidak bisa dipakai');
   }
+}
+
+function syncPrintLogoControls() {
+  const has = !!db.settings.logo;
+  [['stickerLogoUse', 'stiker'], ['satpamLogoUse', 'konfirmasi'], ['reportLogoUse', 'laporan'], ['poLogoUse', 'invoice']].forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = printLogoOn(key);
+    el.disabled = !has;
+    el.title = has ? 'Berlaku untuk cetakan berikutnya, tanpa mengubah Pengaturan' : 'Unggah logo di Pengaturan › Informasi Usaha';
+  });
 }
 
 function renderLogoUI() {
@@ -4947,6 +4966,7 @@ function renderLogoUI() {
   if (mm && document.activeElement !== mm) mm.value = String(o.headMm || 14);
   const block = document.getElementById('logoOptsBlock');
   if (block) block.classList.toggle('is-off', !src);
+  syncPrintLogoControls();
 }
 
 /* ---------- Render: Pengaturan ---------- */
@@ -5374,6 +5394,20 @@ function applyBrand() {
   document.getElementById('brandName').textContent = db.settings.businessName;
   document.getElementById('brandTagline').textContent = db.settings.tagline;
   document.title = db.settings.businessName + ' · Catatan Usaha Catering';
+  const brandImg = document.getElementById('brandLogoImg');
+  const brandSvg = document.querySelector('#sidebar .brand-logo svg');
+  if (brandImg) {
+    const src = db.settings.logo || '';
+    if (src && brandImg.getAttribute('src') !== src) brandImg.src = src;
+    brandImg.hidden = !src;
+    if (brandSvg) brandSvg.style.display = src ? 'none' : '';
+  }
+  let fav = document.querySelector('link[rel="icon"]');
+  if (db.settings.logo) {
+    if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+    fav.href = db.settings.logo;
+  } else if (fav) fav.remove();
+  syncPrintLogoControls();
 }
 /* Jenis huruf + skala teks seluruh aplikasi. Hanya memengaruhi layar, bukan hasil cetak. */
 function applyUiStyle() {
@@ -5723,7 +5757,7 @@ function onDocClick(e) {
       if (db.settings.logo && confirm('Hapus logo usaha?')) {
         db.settings.logo = '';
         logAction('pengaturan', 'Hapus logo usaha');
-        save(); loadLogoImage(); renderLogoUI();
+        save(); loadLogoImage(); applyBrand(); renderLogoUI();
         toast('Logo dihapus', { undo: true });
       }
       break;
@@ -5860,7 +5894,14 @@ function onDocChange(e) {
   if (t.classList.contains('logo-opt')) {
     db.settings.logoOpts[t.dataset.key] = t.checked;
     save();
+    syncPrintLogoControls();
     toast((t.checked ? 'Logo dicetak di ' : 'Logo tidak dicetak di ') + (t.dataset.label || t.dataset.key));
+    return;
+  }
+  if (t.classList.contains('print-logo')) {
+    state.printLogo[t.dataset.key] = t.checked;
+    if (t.dataset.key === 'stiker') stickerPreview();
+    else if (t.dataset.key === 'konfirmasi') satpamPreview();
     return;
   }
   if (t.id === 'logoHeadMm') {

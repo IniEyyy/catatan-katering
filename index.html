@@ -22,6 +22,7 @@
           <path d="M3 14h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           <path d="M12 14v6M8 20v-3M16 20v-3"/>
         </svg>
+        <img id="brandLogoImg" alt="" hidden>
       </div>
       <div class="brand-text">
         <strong id="brandName">Nama Usaha</strong>
@@ -265,7 +266,9 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span></div>
+          <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span>
+            <span class="head-tools"><label class="check" style="margin:0" title="Berlaku untuk invoice, resi, dan rekap PO"><input type="checkbox" id="poLogoUse" class="print-logo" data-key="invoice"> Logo</label></span>
+          </div>
           <p class="muted tiny" style="margin:-6px 0 10px">Satu organisasi yang memesan banyak porsi, dicatat per tanggal ambil. Uang muka dipakai melunasi tanggal paling awal sampai habis.</p>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Kelompok / lembaga</th><th>Tanggal ambil</th><th class="num">Porsi</th><th class="num">Nilai</th><th class="c">Lunas</th><th class="end">Aksi</th></tr></thead>
@@ -303,6 +306,7 @@
             <option value="nama">Urutkan: Nama</option>
           </select>
           <span class="spacer"></span>
+          <label class="check" style="margin:0"><input type="checkbox" id="reportLogoUse" class="print-logo" data-key="laporan"> Logo</label>
           <button class="btn btn-ghost btn-sm" data-act="csv-report">Ekspor CSV</button>
           <button class="btn btn-accent btn-sm" data-act="report-print">Cetak Rekap</button>
         </div>
@@ -534,6 +538,9 @@
               <span class="stk-font-val" id="stickerBrandScaleVal">100%</span>
             </div>
             <label class="check">
+              <input type="checkbox" id="stickerLogoUse" class="print-logo" data-key="stiker"> Pakai logo usaha
+            </label>
+            <label class="check">
               <input type="checkbox" id="stickerLines"> Tampilkan garis potong
             </label>
             <div class="stk-font-row" id="stickerLineRow">
@@ -577,6 +584,9 @@
             </div>
             <label class="check">
               <input type="checkbox" id="satpamShowClass" checked> Tampilkan kolom kelas
+            </label>
+            <label class="check">
+              <input type="checkbox" id="satpamLogoUse" class="print-logo" data-key="konfirmasi"> Pakai logo usaha
             </label>
             <div class="sticker-actions">
               <button class="btn btn-primary" data-act="satpam-preview">Perbarui Pratinjau</button>
@@ -632,7 +642,7 @@
               <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
             </div>
             <div class="field" id="logoOptsBlock">
-              <span>Logo dicetak di</span>
+              <span>Bawaan logo dicetak di</span>
               <div class="logo-opts">
                 <label class="check"><input type="checkbox" class="logo-opt" id="logoOnSticker" data-key="stiker" data-label="stiker"> Stiker</label>
                 <label class="check"><input type="checkbox" class="logo-opt" id="logoOnKonfirmasi" data-key="konfirmasi" data-label="kertas konfirmasi"> Kertas konfirmasi</label>
@@ -641,7 +651,7 @@
               </div>
               <label class="logo-size" title="Berlaku untuk kertas konfirmasi, laporan, dan dokumen PO"><span>Tinggi di kop</span><input type="number" id="logoHeadMm" class="input input-sm" min="8" max="30" step="1" value="14"> <span class="muted tiny">mm</span></label>
             </div>
-            <p class="muted tiny">Logo dan pilihan cetaknya langsung tersimpan. Gambar besar dikecilkan otomatis supaya cadangan tetap ringan.</p>
+            <p class="muted tiny">Pilihan ini jadi bawaan tiap cetakan. Logo dan pengaturannya langsung tersimpan; gambar besar dikecilkan otomatis supaya cadangan tetap ringan.</p>
             <div class="pkg-pair">
               <label class="field"><span>Bank / e-wallet</span><input type="text" id="setBankName" class="input" placeholder="mis. BCA" autocomplete="off"></label>
               <label class="field"><span>No. rekening</span><input type="text" id="setBankNumber" class="input" placeholder="mis. 1234567890" autocomplete="off"></label>
