@@ -6,13 +6,13 @@ Cara memakainya: buka `index.html` di Chrome atau Edge. Tidak ada proses install
 
 ![Pratinjau aplikasi](preview.gif)
 
-*Cuplikan 14 detik dari tur seluruh halaman (± 71 detik, tanpa suara).*
+*Cuplikan 14 detik dari tur seluruh halaman (± 91 detik, tanpa suara).*
 
 ## Langkah setup
 
 ![Tutorial langkah setup](tutorial.gif)
 
-*Cuplikan 14 detik dari rekaman langkah-langkah di bawah, dimulai dari keadaan kosong.*
+*Cuplikan 14 detik dari langkah Dapur dan Stok.*
 
 Rekaman penuhnya ada di [halaman release](https://github.com/IniEyyy/catatan-katering/releases/tag/preview): `preview.mp4` untuk tur seluruh halaman dan `tutorial.mp4` untuk langkah setup. Keduanya tanpa suara dan bisa diunduh langsung.
 
@@ -22,9 +22,13 @@ Rekaman penuhnya ada di [halaman release](https://github.com/IniEyyy/catatan-kat
 4. **Paket harga** dibuat di *Pengaturan › Paket Harga*, misalnya *Snack Sedang* Rp 6.000 dan *Nasi Kotak* Rp 13.000. Isinya cuma nama dan harga, dan paket melekat pada anak, bukan pada menunya. Jadi satu paket yang sama bisa berisi makanan berbeda tiap hari.
 5. **Pelanggan.** Di *Pelanggan › + Tambah Pelanggan* diisi nama, kelas, nama orang tua, No. WA, catatan alergi, dan periode langganan. Angka di depan kelas menentukan jenjang: `3A` berarti SD, `11B` berarti SMA. Kalau periodenya mingguan, bulanan, atau semester, pesanan anak itu langsung terisi ke depan sampai akhir periode, Senin sampai Jumat, dan tanggal libur dilewati. Untuk anak yang hanya beli sehari, pilih status **Beli Sekali** lalu isi tanggalnya. Pesanannya dibuat satu baris pada tanggal itu saja, dan setelah hari itu lewat anak tersebut tidak muncul lagi di daftar "yang berjalan".
 6. **Menu.** Buka *Beranda › Menu Harian* (atau *Menu Mingguan*) lalu tekan **+ Pilihan**. Isi makanan ditulis per baris, kemudian jenisnya dipilih: Snack, Snack Spesial, Lunch, Lunch Spesial, atau PO. Baris snack/lunch biasa tidak punya paket maupun kolom harga, karena tiap anak membayar sesuai paket porsinya sendiri. Baris spesial punya kotak harga sendiri yang berlaku untuk semua anak yang memilihnya hari itu. Kalau satu baris dihapus, pilihan anak yang menunjuk baris itu dilepas dan nomor baris di bawahnya ikut bergeser, jadi tidak ada anak yang tiba-tiba mendapat makanan lain.
-7. **Pesanan hari ini** dikerjakan di halaman *Hari Ini*. Klik huruf **A/B/C** untuk memilih makanan anak itu (snack boleh dua), isi catatan, lalu klik **angka total** untuk mengatur metode bayar atau menandai lunas. Kalau hari itu hanya ada satu makanan, pilihan itu langsung terpakai sendiri begitu anak ditandai pesan, tanpa perlu diklik. Membatalkannya cukup dengan klik hurufnya sekali.
-8. **Cetak.** Di halaman *Cetak* pilih tanggal, jenis, dan anaknya. Jenis snack atau lunch dipilih lewat tombol sejajar. Hasilnya stiker A4 untuk ditempel ke kotak bekal, atau kertas konfirmasi untuk satpam. Kalau tanggal yang dibuka tidak punya pelanggan, halaman otomatis maju ke hari berikutnya.
-9. **Cadangkan.** Tekan ikon unduh di kaki sidebar, atau *Beranda › Cetak & Bagikan › Cadangan JSON*. Berkas itu satu-satunya salinan data kalau browser dibersihkan atau laptop diganti.
+7. **Dapur.** Buka *Dapur* lalu tekan **Atur bahan** pada menu minggu itu. Tulis nama, jumlah, dan satuan bahan; **+ Bahan Menu** menambah menu lain yang belum punya bahan. **Daftar Belanja** menjumlahkan bahan sejenis dan mengurangi stok yang ada. **Jadikan Pengingat Beli** membuka halaman Pengingat dengan isi kekurangannya.
+8. **Stok.** Di *Stok* catat bahan dan tempat makan. Tab **Bahan** dan **Tempat Makan** dipisah; tiap item punya stok, satuan, batas minimum, dan status Aman, Menipis, atau Habis. Tombol **+ Stok** menambah jumlah saat belanja datang, dan stok bahan ikut mengurangi daftar belanja Dapur.
+9. **Pengeluaran.** Di *Pengeluaran* catat gas, kemasan, transport, gaji, dan biaya lain. Ringkasannya menampilkan pengeluaran bulan itu, omset dibayar, dan laba kotor, plus grafik omset vs pengeluaran enam bulan terakhir.
+10. **Pesanan hari ini** dikerjakan di halaman *Hari Ini*. Klik huruf **A/B/C** untuk memilih makanan anak itu (snack boleh dua), isi catatan, lalu klik **angka total** untuk mengatur metode bayar atau menandai lunas. Kalau hari itu hanya ada satu makanan, pilihan itu langsung terpakai sendiri begitu anak ditandai pesan, tanpa perlu diklik. Membatalkannya cukup dengan klik hurufnya sekali.
+11. **Cetak.** Di halaman *Cetak* pilih tanggal, jenis, dan anaknya. Jenis snack atau lunch dipilih lewat tombol sejajar. Hasilnya stiker A4 untuk ditempel ke kotak bekal, atau kertas konfirmasi untuk satpam. Kalau tanggal yang dibuka tidak punya pelanggan, halaman otomatis maju ke hari berikutnya.
+12. **Menu sidebar.** Di *Pengaturan › Menu Sidebar*, centang halaman yang ingin ditampilkan dan pakai panah untuk mengatur urutannya. Pengaturan selalu tampil agar tidak terkunci.
+13. **Cadangkan.** Tekan ikon unduh di kaki sidebar, atau *Beranda › Cetak & Bagikan › Cadangan JSON*. Berkas itu satu-satunya salinan data kalau browser dibersihkan atau laptop diganti.
 
 Semua perubahan tersimpan otomatis di browser yang sama. Jam simpan terakhir terlihat di kaki sidebar, dan setiap aksi tercatat di *Log Aktivitas* lengkap dengan tombol **Urungkan**.
 
