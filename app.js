@@ -85,6 +85,8 @@ const MENU_TYPES = ['snack', 'snack-spesial', 'lunch', 'lunch-spesial', 'po'];
 const MENU_TYPE_LABEL = { snack: 'Snack', 'snack-spesial': 'Snack Spesial', lunch: 'Lunch', 'lunch-spesial': 'Lunch Spesial', po: 'PO' };
 const RECIPE_TYPE_LABEL = { snack: 'Snack', lunch: 'Lunch', po: 'PO' };
 const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', 'botol', 'kaleng', 'sachet', 'porsi', 'buah'];
+const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat Makan' };
+const STOCK_UNITS = RECIPE_UNITS.concat(['pcs', 'lusin', 'pack', 'box', 'lembar', 'roll']);
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
 function defaultData() {
@@ -120,6 +122,7 @@ function defaultData() {
     poMenus: [], // { id, date, item, price, note }: menu PO beserta tanggal
     po: [],      // { id, menuId?, date, name, item, qty, price, method, paid, note }
     recipes: [], // { id, name, type:'snack'|'lunch'|'po', ingredients:[{name,qty,unit}], note } bahan per menu
+    stock: { bahan: [], wadah: [] }, // { id, name, unit, qty, min, note } stok bahan dan tempat makan
     log: []      // { id, ts, action, detail }
   };
 }
@@ -255,6 +258,24 @@ function normalize(d) {
     if (recipeKeys.has(k)) return false;
     recipeKeys.add(k);
     return true;
+  });
+  if (!d.stock || typeof d.stock !== 'object') d.stock = {};
+  ['bahan', 'wadah'].forEach(kind => {
+    const keys = new Set();
+    d.stock[kind] = (Array.isArray(d.stock[kind]) ? d.stock[kind] : []).map(x => ({
+      id: x && x.id || uid(),
+      name: String(x && x.name || '').trim().slice(0, 80),
+      unit: String(x && x.unit || '').trim().slice(0, 16) || (kind === 'wadah' ? 'pcs' : ''),
+      qty: Math.max(0, Math.min(999999, +x.qty || 0)),
+      min: Math.max(0, Math.min(999999, +x.min || 0)),
+      note: String(x && x.note || '').trim().slice(0, 160)
+    })).filter(x => {
+      if (!x.name) return false;
+      const k = x.name.toLowerCase() + '|' + x.unit.toLowerCase();
+      if (keys.has(k)) return false;
+      keys.add(k);
+      return true;
+    });
   });
   return d;
 }
@@ -525,6 +546,30 @@ function makeDemoData() {
     rc('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tempe', 2, 'kg'], ['Buah', 2, 'kg']])
   ];
 
+  const st = (kind, name, unit, qty, min, note) => ({ id: uid(), name, unit, qty, min, note: note || '' });
+  d.stock = {
+    bahan: [
+      st('bahan', 'Beras', 'kg', 20, 5),
+      st('bahan', 'Ayam', 'kg', 4, 2),
+      st('bahan', 'Telur', 'kg', 2, 1),
+      st('bahan', 'Minyak goreng', 'liter', 2, 2),
+      st('bahan', 'Biskuit', 'kaleng', 1, 2),
+      st('bahan', 'Susu UHT', 'liter', 3, 2),
+      st('bahan', 'Puding', 'bungkus', 2, 2),
+      st('bahan', 'Santan', 'liter', 1, 1),
+      st('bahan', 'Sayur', 'kg', 1, 1),
+      st('bahan', 'Tepung', 'kg', 2, 1),
+      st('bahan', 'Buah', 'kg', 0, 2, 'Perlu dibeli')
+    ],
+    wadah: [
+      st('wadah', 'Kotak snack', 'pcs', 180, 50),
+      st('wadah', 'Nasi kotak', 'pcs', 90, 40),
+      st('wadah', 'Sendok plastik', 'pcs', 240, 60),
+      st('wadah', 'Kantong kresek', 'pcs', 150, 50),
+      st('wadah', 'Gelas cup', 'pcs', 40, 50, 'Tinggal sedikit')
+    ]
+  };
+
   d.log = [
     { id: uid(), ts: new Date().toISOString(), action: 'default', detail: 'Data contoh dimuat untuk demo' },
     { id: uid(), ts: new Date(Date.now() - 2400e3).toISOString(), action: 'menu', detail: 'Harga Mie Ayam hari ini diubah ke Rp 22.000' },
@@ -687,6 +732,7 @@ const state = {
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
   dapurWeek: '',        // Senin minggu yang dibuka di halaman Dapur
+  stockKind: 'bahan',   // tab halaman Stok: bahan | wadah
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
   debtors: [],       // hasil perhitungan penunggak pada halaman Pengingat
@@ -1279,7 +1325,8 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+
 
 function showPage(name) {
   state.page = name;
@@ -1295,6 +1342,7 @@ function renderPage(name) {
   else if (name === 'hari') renderDailyMerged();
   else if (name === 'custom') renderCustom();
   else if (name === 'dapur') renderDapur();
+  else if (name === 'stok') renderStok();
   else if (name === 'po') renderPO();
   else if (name === 'report') renderReport();
   else if (name === 'pengingat') renderPengingat();
@@ -4985,17 +5033,18 @@ function dapurShopping(start) {
     });
   }
   const items = [...by.values()].sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
-  return { items, menuCount, withRecipe, without };
+  items.forEach(x => {
+    x.stock = stockQtyFor(x.name, x.unit);
+    x.buy = x.hasQty ? Math.max(0, Math.round((x.qty - x.stock) * 100) / 100) : 0;
+  });
+  return { items, menuCount, withRecipe, without, needCount: items.filter(x => !x.hasQty || x.buy > 0).length };
 }
 function fmtQtyNum(q) { return String(Math.round((+q || 0) * 100) / 100).replace('.', ','); }
-function fmtShopQty(x) {
-  if (!x.hasQty) return 'secukupnya';
-  return fmtQtyNum(x.qty) + (x.unit ? ' ' + x.unit : '');
-}
 function dapurShopText(start) {
   const shop = dapurShopping(start);
+  const need = shop.items.filter(x => !x.hasQty || x.buy > 0);
   return 'Daftar belanja ' + dapurRangeLabel(start) + '\n' +
-    shop.items.map(x => '• ' + x.name + ': ' + fmtShopQty(x)).join('\n');
+    need.map(x => '• ' + x.name + ': ' + (!x.hasQty ? 'secukupnya' : fmtQtyNum(x.buy) + (x.unit ? ' ' + x.unit : ''))).join('\n');
 }
 function renderDapur() {
   const start = dapurWeekStart();
@@ -5029,11 +5078,18 @@ function renderDapur() {
   setText('dapurMenuCount', menus.length + ' menu');
 
   const shopList = document.getElementById('dapurShopList');
-  if (shopList) shopList.innerHTML = shop.items.map(x =>
-    '<div class="shop-row"><strong>' + escapeHtml(x.name) + '</strong><span class="shop-qty">' + escapeHtml(fmtShopQty(x)) + '</span></div>').join('');
+  if (shopList) shopList.innerHTML = shop.items.map(x => {
+    const sat = x.unit ? ' ' + x.unit : '';
+    const stockTxt = 'stok ' + (x.stock > 0 ? fmtQtyNum(x.stock) + sat : 'kosong');
+    const main = !x.hasQty ? 'secukupnya' : x.buy > 0 ? 'beli ' + fmtQtyNum(x.buy) + sat : 'cukup';
+    const sub = x.hasQty ? 'perlu ' + fmtQtyNum(x.qty) + sat + ' · ' + stockTxt : stockTxt;
+    return '<div class="shop-row"><strong>' + escapeHtml(x.name) + '</strong><span class="shop-qty">' + escapeHtml(main) + '<small>' + escapeHtml(sub) + '</small></span></div>';
+  }).join('');
   const shopEmpty = document.getElementById('dapurShopEmpty');
   if (shopEmpty) shopEmpty.hidden = shop.items.length > 0;
   setText('dapurShopCount', shop.items.length + ' bahan · ' + shop.withRecipe + ' menu');
+  const covered = shop.items.filter(x => x.hasQty && x.buy === 0).length;
+  setText('dapurShopNote', 'Bahan digabung dari semua menu minggu ini. Stok yang ada dikurangkan otomatis' + (covered ? ' · ' + covered + ' bahan sudah cukup' : '') + '.');
 
   const recipes = db.recipes.slice().sort((a, b) =>
     ({ snack: 0, lunch: 1, po: 2 })[a.type] - ({ snack: 0, lunch: 1, po: 2 })[b.type] || flatName(a.name).localeCompare(flatName(b.name), 'id'));
@@ -5134,15 +5190,17 @@ function recipeReminder(id) {
 function dapurCopyList() {
   const start = dapurWeekStart();
   const shop = dapurShopping(start);
-  if (!shop.items.length) { toast('Belum ada bahan untuk minggu ini'); return; }
+  const need = shop.items.filter(x => !x.hasQty || x.buy > 0);
+  if (!need.length) { toast('Stok bahan minggu ini sudah cukup'); return; }
   copyText(dapurShopText(start));
 }
 function dapurMakeReminder() {
   const start = dapurWeekStart();
   const shop = dapurShopping(start);
-  if (!shop.items.length) { toast('Belum ada bahan untuk minggu ini'); return; }
-  const first = shop.items.slice(0, 3).map(x => x.name + (x.hasQty ? ' ' + fmtShopQty(x) : '')).join(', ');
-  const rest = shop.items.length > 3 ? ', +' + (shop.items.length - 3) + ' bahan lain' : '';
+  const need = shop.items.filter(x => !x.hasQty || x.buy > 0);
+  if (!need.length) { toast('Stok bahan minggu ini sudah cukup'); return; }
+  const first = need.slice(0, 3).map(x => x.name + (x.hasQty ? ' ' + fmtQtyNum(x.buy) + (x.unit ? ' ' + x.unit : '') : '')).join(', ');
+  const rest = need.length > 3 ? ', +' + (need.length - 3) + ' bahan lain' : '';
   const text = ('Belanja bahan ' + dapurRangeLabel(start) + ': ' + first + rest + '. Rincian di halaman Dapur.').slice(0, 120);
   const due = shiftDate(start, -1);
   prefillReminder(text, due < todayStr() ? todayStr() : due);
@@ -5186,6 +5244,139 @@ function randomizeDapurWeek() {
   save();
   renderDapur();
   toast('Menu diacak: ' + changed + ' baris' + (skipped ? ' · ' + skipped + ' hari libur dilewati' : ''));
+}
+
+/* ---------- Stok bahan & tempat makan ---------- */
+function stockKindOf(kind) { return kind === 'wadah' ? 'wadah' : 'bahan'; }
+function stockItems(kind) { return (db.stock && db.stock[stockKindOf(kind)]) || []; }
+function stockById(kind, id) { return stockItems(kind).find(x => x.id === id) || null; }
+function stockQtyFor(name, unit) {
+  const n = String(name || '').trim().toLowerCase();
+  const u = String(unit || '').trim().toLowerCase();
+  return stockItems('bahan')
+    .filter(x => x.name.toLowerCase() === n && x.unit.toLowerCase() === u)
+    .reduce((s, x) => s + (+x.qty || 0), 0);
+}
+function stockStatus(x) {
+  if (+x.qty <= 0) return { label: 'Habis', cls: 'danger' };
+  if (+x.min > 0 && +x.qty <= +x.min) return { label: 'Menipis', cls: 'orange' };
+  return { label: 'Aman', cls: 'green' };
+}
+function fmtStockQty(x) { return fmtQtyNum(x.qty) + (x.unit ? ' ' + x.unit : ''); }
+function renderStok() {
+  const kind = stockKindOf(state.stockKind);
+  state.stockKind = kind;
+  document.querySelectorAll('[data-act="stock-kind"]').forEach(b => b.classList.toggle('is-on', b.dataset.kind === kind));
+  const label = STOCK_KIND_LABEL[kind];
+  setText('stockTitle', 'Stok ' + label);
+  setText('stockAddBtn', '+ ' + label);
+  const list = stockItems(kind).slice().sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
+  const low = list.filter(x => +x.qty > 0 && +x.min > 0 && +x.qty <= +x.min).length;
+  const empty = list.filter(x => +x.qty <= 0).length;
+  const stat = document.getElementById('stockStats');
+  if (stat) stat.innerHTML =
+    statCard('Jenis Tercatat', list.length, 'di ' + label.toLowerCase(), 'primary') +
+    statCard('Menipis', low, 'sudah di batas minimum', 'gold') +
+    statCard('Habis', empty, 'perlu segera dibeli', 'danger');
+  const tb = document.getElementById('stockList');
+  if (tb) tb.innerHTML = list.map(x => {
+    const st = stockStatus(x);
+    return '<tr>' +
+      '<td><div class="dapur-menu-name"><strong>' + escapeHtml(x.name) + '</strong>' +
+        (x.note ? '<small>' + escapeHtml(x.note) + '</small>' : '') + '</div></td>' +
+      '<td class="num">' + escapeHtml(fmtStockQty(x)) + '</td>' +
+      '<td class="num">' + (+x.min > 0 ? escapeHtml(fmtQtyNum(x.min) + (x.unit ? ' ' + x.unit : '')) : '<span class="muted">-</span>') + '</td>' +
+      '<td class="c"><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
+      '<td class="end"><div class="dapur-row-actions">' +
+        '<button class="btn btn-ghost btn-sm" data-act="stock-in" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '">+ Stok</button>' +
+        '<button class="btn btn-ghost btn-sm" data-act="stock-edit" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '">Ubah</button>' +
+        '<button class="icon-act danger" data-act="stock-delete" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '" title="Hapus item">×</button>' +
+      '</div></td></tr>';
+  }).join('');
+  const em = document.getElementById('stockEmpty');
+  if (em) em.hidden = list.length > 0;
+  setText('stockCount', list.length + ' item');
+}
+function openStockItemModal(kind, id) {
+  kind = stockKindOf(kind);
+  const it = id ? stockById(kind, id) : null;
+  openModal(
+    '<h3>' + (it ? 'Ubah' : 'Tambah') + ' Stok ' + STOCK_KIND_LABEL[kind] + '</h3>' +
+    '<input type="hidden" id="stockItemId" value="' + escapeHtml(it ? it.id : '') + '">' +
+    '<input type="hidden" id="stockItemKind" value="' + kind + '">' +
+    '<label class="field"><span>Nama item</span><input type="text" id="stockItemName" class="input" maxlength="80" placeholder="mis. ' + (kind === 'wadah' ? 'Kotak snack' : 'Beras') + '" value="' + escapeHtml(it ? it.name : '') + '"></label>' +
+    '<div class="pkg-pair">' +
+      '<label class="field"><span>Satuan</span><input type="text" id="stockItemUnit" class="input" list="stockUnits" maxlength="16" placeholder="kg" value="' + escapeHtml(it ? it.unit : (kind === 'wadah' ? 'pcs' : 'kg')) + '"></label>' +
+      '<label class="field"><span>Stok saat ini</span><input type="number" id="stockItemQty" class="input" min="0" step="any" value="' + (it ? it.qty : 0) + '"></label>' +
+    '</div>' +
+    '<div class="pkg-pair">' +
+      '<label class="field"><span>Minimum (opsional)</span><input type="number" id="stockItemMin" class="input" min="0" step="any" value="' + (it ? it.min : 0) + '"></label>' +
+      '<label class="field"><span>Catatan (opsional)</span><input type="text" id="stockItemNote" class="input" maxlength="160" value="' + escapeHtml(it ? it.note : '') + '"></label>' +
+    '</div>' +
+    '<datalist id="stockUnits">' + STOCK_UNITS.map(u => '<option value="' + u + '">').join('') + '</datalist>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="stock-save">Simpan</button></div>'
+  );
+}
+function saveStockItemModal() {
+  const kind = stockKindOf(document.getElementById('stockItemKind').value);
+  const id = document.getElementById('stockItemId').value;
+  const name = (document.getElementById('stockItemName').value || '').trim();
+  const unit = (document.getElementById('stockItemUnit').value || '').trim();
+  const qty = Math.max(0, +document.getElementById('stockItemQty').value || 0);
+  const min = Math.max(0, +document.getElementById('stockItemMin').value || 0);
+  const note = (document.getElementById('stockItemNote').value || '').trim();
+  if (!name) { toast('Tulis nama item dulu'); return; }
+  if (!unit) { toast('Isi satuannya dulu'); return; }
+  const dup = stockItems(kind).find(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase() && x.unit.toLowerCase() === unit.toLowerCase());
+  if (dup) { toast('Item dengan nama dan satuan itu sudah ada'); return; }
+  const old = id ? stockById(kind, id) : null;
+  if (old) {
+    Object.assign(old, { name, unit, qty, min, note });
+    logAction('stok', 'Ubah stok ' + name);
+  } else {
+    stockItems(kind).push({ id: uid(), name, unit, qty, min, note });
+    logAction('stok', 'Tambah stok ' + name + ' · ' + fmtQtyNum(qty) + (unit ? ' ' + unit : ''));
+  }
+  save();
+  closeModal();
+  if (state.page === 'stok') renderStok();
+  toast(old ? 'Stok diperbarui' : 'Item stok ditambahkan');
+}
+function openStockMoveModal(kind, id) {
+  kind = stockKindOf(kind);
+  const it = stockById(kind, id);
+  if (!it) return;
+  openModal(
+    '<h3>Tambah Stok</h3>' +
+    '<div class="po-menu-info">' +
+      '<div><span class="po-info-label">Item</span><strong>' + escapeHtml(it.name) + '</strong></div>' +
+      '<div><span class="po-info-label">Stok sekarang</span><strong>' + escapeHtml(fmtStockQty(it)) + '</strong></div>' +
+      '<div><span class="po-info-label">Satuan</span><strong>' + escapeHtml(it.unit || '-') + '</strong></div>' +
+    '</div>' +
+    '<input type="hidden" id="stockMoveKind" value="' + kind + '">' +
+    '<input type="hidden" id="stockMoveId" value="' + escapeHtml(it.id) + '">' +
+    '<label class="field"><span>Jumlah masuk</span><input type="number" id="stockMoveQty" class="input" min="0" step="any" value="" placeholder="0"></label>' +
+    '<label class="field"><span>Catatan (opsional)</span><input type="text" id="stockMoveNote" class="input" maxlength="160" placeholder="mis. beli di pasar"></label>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="stock-move-save">Tambah ke Stok</button></div>'
+  );
+}
+function saveStockMoveModal() {
+  const kind = stockKindOf(document.getElementById('stockMoveKind').value);
+  const id = document.getElementById('stockMoveId').value;
+  const it = stockById(kind, id);
+  const qty = +document.getElementById('stockMoveQty').value || 0;
+  if (!it) { toast('Item stoknya sudah tidak ada'); return; }
+  if (!(qty > 0)) { toast('Isi jumlah stok yang masuk'); return; }
+  it.qty = Math.min(999999, Math.round((+it.qty + qty) * 100) / 100);
+  const note = (document.getElementById('stockMoveNote').value || '').trim();
+  if (note) it.note = note.slice(0, 160);
+  logAction('stok', 'Tambah stok ' + it.name + ' · ' + fmtQtyNum(qty) + (it.unit ? ' ' + it.unit : ''));
+  save();
+  closeModal();
+  if (state.page === 'stok') renderStok();
+  toast('Stok ' + it.name + ' bertambah');
 }
 
 /* ---------- Logo usaha ---------- */
@@ -5891,6 +6082,24 @@ function onDocClick(e) {
     case 'dapur-copy': dapurCopyList(); break;
     case 'dapur-remind': dapurMakeReminder(); break;
     case 'dapur-random': randomizeDapurWeek(); break;
+    case 'goto-stok': state.stockKind = 'bahan'; showPage('stok'); break;
+    case 'stock-kind': state.stockKind = act.dataset.kind === 'wadah' ? 'wadah' : 'bahan'; renderStok(); break;
+    case 'stock-add': openStockItemModal(state.stockKind, ''); break;
+    case 'stock-edit': openStockItemModal(act.dataset.kind, id); break;
+    case 'stock-in': openStockMoveModal(act.dataset.kind, id); break;
+    case 'stock-save': saveStockItemModal(); break;
+    case 'stock-move-save': saveStockMoveModal(); break;
+    case 'stock-delete': {
+      const kind = stockKindOf(act.dataset.kind);
+      const it = stockById(kind, id);
+      if (it && confirm('Hapus item stok "' + it.name + '"?')) {
+        db.stock[kind] = stockItems(kind).filter(x => x.id !== id);
+        logAction('stok', 'Hapus stok ' + it.name);
+        save(); renderStok();
+        toast('Item stok dihapus', { undo: true });
+      }
+      break;
+    }
     case 'img-download': downloadPreview(); break;
     case 'img-share': sharePreview(); break;
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;

@@ -52,6 +52,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M2.5 10h19"/><path d="M9 6.5c0-1 .7-1.4.7-2.3M14.5 6.5c0-1 .7-1.4.7-2.3"/></svg>
         <span>Dapur</span>
       </button>
+      <button class="nav-item" data-nav="stok" title="Stok bahan dan tempat makan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/></svg>
+        <span>Stok</span>
+      </button>
 
       <p class="nav-group">Penjualan</p>
       <button class="nav-item" data-nav="report" title="Laporan">
@@ -223,6 +227,7 @@
             </button>
           </label>
           <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" data-act="goto-stok" title="Buka stok bahan dan tempat makan">Stok</button>
           <button class="btn btn-primary btn-sm" data-act="recipe-add">+ Bahan Menu</button>
         </div>
 
@@ -242,7 +247,7 @@
             <div class="card-head"><h3>Daftar Belanja</h3><span class="muted tiny" id="dapurShopCount"></span></div>
             <div id="dapurShopList" class="shop-list"></div>
             <p class="empty" id="dapurShopEmpty" hidden>Belum ada bahan untuk menu minggu ini.</p>
-            <p class="muted tiny">Bahan digabung dari semua menu yang dijadwalkan minggu ini. Menu tanpa bahan dilewati.</p>
+            <p class="muted tiny" id="dapurShopNote">Bahan digabung dari semua menu yang dijadwalkan minggu ini. Menu tanpa bahan dilewati.</p>
             <div class="sticker-actions">
               <button class="btn btn-ghost btn-sm" data-act="dapur-copy">Salin Daftar</button>
               <button class="btn btn-primary btn-sm" data-act="dapur-remind">Jadikan Pengingat Beli</button>
@@ -269,6 +274,30 @@
             <tbody id="dapurRecipeList"></tbody>
           </table></div>
           <p class="empty" id="dapurEmpty" hidden>Belum ada bahan. Klik + Bahan Menu.</p>
+        </div>
+      </section>
+
+      <!-- ============ STOK: bahan & tempat makan ============ -->
+      <section class="page" id="page-stok">
+        <div class="toolbar toolbar-center">
+          <div class="seg seg-sm">
+            <button class="seg-btn is-on" data-act="stock-kind" data-kind="bahan">Bahan</button>
+            <button class="seg-btn" data-act="stock-kind" data-kind="wadah">Tempat Makan</button>
+          </div>
+          <span class="spacer"></span>
+          <button class="btn btn-primary btn-sm" data-act="stock-add" id="stockAddBtn">+ Bahan</button>
+        </div>
+
+        <div class="stat-grid" id="stockStats"></div>
+
+        <div class="card">
+          <div class="card-head"><h3 id="stockTitle">Stok Bahan</h3><span class="muted tiny" id="stockCount"></span></div>
+          <p class="muted tiny" id="stockHint">Stok dicatat manual. Tombol + Stok dipakai saat belanja datang.</p>
+          <div class="table-wrap"><table class="table">
+            <thead><tr><th>Nama</th><th class="num">Stok</th><th class="num">Minimum</th><th class="c">Status</th><th class="end">Aksi</th></tr></thead>
+            <tbody id="stockList"></tbody>
+          </table></div>
+          <p class="empty" id="stockEmpty" hidden>Belum ada item. Klik tombol tambah di kanan atas.</p>
         </div>
       </section>
 
