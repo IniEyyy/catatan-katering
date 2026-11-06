@@ -87,6 +87,7 @@ const RECIPE_TYPE_LABEL = { snack: 'Snack', lunch: 'Lunch', po: 'PO' };
 const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', 'botol', 'kaleng', 'sachet', 'porsi', 'buah'];
 const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat Makan' };
 const STOCK_UNITS = RECIPE_UNITS.concat(['pcs', 'lusin', 'pack', 'box', 'lembar', 'roll']);
+const EXPENSE_CATEGORIES = ['Belanja pasar', 'Gas & energi', 'Kemasan', 'Transport', 'Gaji', 'Sewa', 'Listrik & air', 'Lainnya'];
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
 function defaultData() {
@@ -123,6 +124,7 @@ function defaultData() {
     po: [],      // { id, menuId?, date, name, item, qty, price, method, paid, note }
     recipes: [], // { id, name, type:'snack'|'lunch'|'po', ingredients:[{name,qty,unit}], note } bahan per menu
     stock: { bahan: [], wadah: [] }, // { id, name, unit, qty, min, note } stok bahan dan tempat makan
+    expenses: [], // { id, date, category, note, amount } pengeluaran operasional
     log: []      // { id, ts, action, detail }
   };
 }
@@ -277,6 +279,14 @@ function normalize(d) {
       return true;
     });
   });
+  if (!Array.isArray(d.expenses)) d.expenses = [];
+  d.expenses = d.expenses.map(e => ({
+    id: e && e.id || uid(),
+    date: e && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') ? e.date : todayStr(),
+    category: String(e && e.category || '').trim().slice(0, 40) || 'Lainnya',
+    note: String(e && e.note || '').trim().slice(0, 160),
+    amount: Math.max(0, Math.min(999999999999, Math.round(+e.amount || 0)))
+  })).filter(e => e.amount > 0);
   return d;
 }
 
@@ -570,6 +580,16 @@ function makeDemoData() {
     ]
   };
 
+  d.expenses = [
+    { date: shiftDate(today, -1), category: 'Belanja pasar', note: 'Beras, ayam, dan sayur', amount: 850000 },
+    { date: shiftDate(today, -3), category: 'Gas & energi', note: 'Gas elpiji 3 kg x 6', amount: 180000 },
+    { date: shiftDate(today, -5), category: 'Kemasan', note: 'Kotak snack dan sendok', amount: 320000 },
+    { date: shiftDate(today, -8), category: 'Transport', note: 'Antar pesanan pagi', amount: 120000 },
+    { date: shiftDate(today, -25), category: 'Gaji', note: 'Bantu dapur minggu ke-2', amount: 450000 },
+    { date: shiftDate(today, -40), category: 'Belanja pasar', note: 'Belanja bulan lalu', amount: 790000 },
+    { date: shiftDate(today, -45), category: 'Listrik & air', note: 'Tagihan bulan lalu', amount: 260000 }
+  ].map(e => Object.assign({ id: uid() }, e));
+
   d.log = [
     { id: uid(), ts: new Date().toISOString(), action: 'default', detail: 'Data contoh dimuat untuk demo' },
     { id: uid(), ts: new Date(Date.now() - 2400e3).toISOString(), action: 'menu', detail: 'Harga Mie Ayam hari ini diubah ke Rp 22.000' },
@@ -733,6 +753,7 @@ const state = {
   menuMonth: monthKey(todayStr()),
   dapurWeek: '',        // Senin minggu yang dibuka di halaman Dapur
   stockKind: 'bahan',   // tab halaman Stok: bahan | wadah
+  expMonth: monthKey(todayStr()), // bulan yang dibuka di halaman Pengeluaran
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
   debtors: [],       // hasil perhitungan penunggak pada halaman Pengingat
@@ -1325,7 +1346,7 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', print: 'Cetak', report: 'Laporan', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', print: 'Cetak', report: 'Laporan', expenses: 'Pengeluaran', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
 
 function showPage(name) {
@@ -1343,6 +1364,7 @@ function renderPage(name) {
   else if (name === 'custom') renderCustom();
   else if (name === 'dapur') renderDapur();
   else if (name === 'stok') renderStok();
+  else if (name === 'expenses') renderExpenses();
   else if (name === 'po') renderPO();
   else if (name === 'report') renderReport();
   else if (name === 'pengingat') renderPengingat();
@@ -1458,7 +1480,7 @@ function renderDashboard() {
 
   const months = lastMonths(6);
   drawLine(document.getElementById('chartMonthly'),
-    months.map(d => MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear()),
+    months.map(d => MONTHS_ID[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2)),
     [{ label: 'Omset', color: '#C0272D', data: months.map(d => byMonth[toMonthKey(d)] || 0) }]);
 
   const days = lastNDates(14);
@@ -5379,6 +5401,88 @@ function saveStockMoveModal() {
   toast('Stok ' + it.name + ' bertambah');
 }
 
+/* ---------- Pengeluaran operasional ---------- */
+function expenseByMonth() {
+  const map = {};
+  db.expenses.forEach(e => { map[monthKey(e.date)] = (map[monthKey(e.date)] || 0) + e.amount; });
+  return map;
+}
+function renderExpenses() {
+  const m = state.expMonth || monthKey(todayStr());
+  setText('expMonthText', monthTitle(m));
+  const list = db.expenses.filter(e => monthKey(e.date) === m).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const total = list.reduce((s, e) => s + e.amount, 0);
+  const income = incomeByMonth()[m] || 0;
+  const net = income - total;
+  const stat = document.getElementById('expStats');
+  if (stat) stat.innerHTML =
+    statCard('Pengeluaran', fmtIDR(total), monthTitle(m), 'danger') +
+    statCard('Omset Dibayar', fmtIDR(income), 'transaksi lunas bulan ini', 'gold') +
+    statCard('Laba Kotor', fmtIDR(net), net >= 0 ? 'omset dikurangi pengeluaran' : 'pengeluaran melebihi omset', net >= 0 ? 'accent' : 'danger') +
+    statCard('Catatan', list.length, 'pengeluaran bulan ini');
+  const tb = document.getElementById('expList');
+  if (tb) tb.innerHTML = list.map(e =>
+    '<tr><td class="muted small">' + escapeHtml(fmtShortDate(e.date)) + '</td>' +
+    '<td><span class="badge orange">' + escapeHtml(e.category) + '</span></td>' +
+    '<td>' + (e.note ? escapeHtml(e.note) : '<span class="muted">-</span>') + '</td>' +
+    '<td class="num">' + escapeHtml(fmtIDR(e.amount)) + '</td>' +
+    '<td class="end"><div class="dapur-row-actions">' +
+      '<button class="btn btn-ghost btn-sm" data-act="expense-edit" data-id="' + escapeHtml(e.id) + '">Ubah</button>' +
+      '<button class="icon-act danger" data-act="expense-delete" data-id="' + escapeHtml(e.id) + '" title="Hapus pengeluaran">×</button>' +
+    '</div></td></tr>').join('');
+  const em = document.getElementById('expEmpty');
+  if (em) em.hidden = list.length > 0;
+  setText('expCount', list.length + ' catatan · ' + fmtIDR(total));
+  const months = lastMonths(6);
+  const expBy = expenseByMonth();
+  drawLine(document.getElementById('chartExpense'),
+    months.map(d => MONTHS_ID[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2)),
+    [{ label: 'Omset', color: '#C0272D', data: months.map(d => incomeByMonth()[toMonthKey(d)] || 0) },
+     { label: 'Pengeluaran', color: '#DFBB69', data: months.map(d => expBy[toMonthKey(d)] || 0) }]);
+}
+function openExpenseModal(id) {
+  const e = id ? db.expenses.find(x => x.id === id) : null;
+  const cats = EXPENSE_CATEGORIES.slice();
+  if (e && e.category && !cats.includes(e.category)) cats.unshift(e.category);
+  openModal(
+    '<h3>' + (e ? 'Ubah Pengeluaran' : 'Tambah Pengeluaran') + '</h3>' +
+    '<input type="hidden" id="expId" value="' + escapeHtml(e ? e.id : '') + '">' +
+    '<div class="pkg-pair">' +
+      '<label class="field"><span>Tanggal</span><input type="date" id="expDate" class="input" value="' + escapeHtml(e ? e.date : todayStr()) + '"></label>' +
+      '<label class="field"><span>Kategori</span><select id="expCategory" class="input">' +
+        cats.map(c => '<option value="' + escapeHtml(c) + '"' + (e && e.category === c ? ' selected' : '') + '>' + escapeHtml(c) + '</option>').join('') +
+      '</select></label>' +
+    '</div>' +
+    '<label class="field"><span>Nominal</span><input type="number" id="expAmount" class="input" min="0" step="any" placeholder="0" value="' + (e ? e.amount : '') + '"></label>' +
+    '<label class="field"><span>Catatan (opsional)</span><input type="text" id="expNote" class="input" maxlength="160" value="' + escapeHtml(e ? e.note : '') + '"></label>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="expense-save">Simpan</button></div>'
+  );
+}
+function saveExpenseModal() {
+  const id = document.getElementById('expId').value;
+  const date = document.getElementById('expDate').value || '';
+  const category = document.getElementById('expCategory').value;
+  const note = (document.getElementById('expNote').value || '').trim();
+  const amount = Math.round(+document.getElementById('expAmount').value || 0);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast('Isi tanggal pengeluaran dulu'); return; }
+  if (amount <= 0) { toast('Nominal pengeluaran harus lebih dari 0'); return; }
+  const old = id ? db.expenses.find(x => x.id === id) : null;
+  const data = { date, category: EXPENSE_CATEGORIES.includes(category) ? category : 'Lainnya', note, amount };
+  if (old) {
+    Object.assign(old, data);
+    logAction('pengeluaran', 'Ubah pengeluaran ' + category + ' · ' + fmtIDR(amount));
+  } else {
+    db.expenses.push(Object.assign({ id: uid() }, data));
+    logAction('pengeluaran', 'Tambah pengeluaran ' + category + ' · ' + fmtIDR(amount));
+  }
+  state.expMonth = monthKey(date);
+  save();
+  closeModal();
+  if (state.page === 'expenses') renderExpenses();
+  toast(old ? 'Pengeluaran diperbarui' : 'Pengeluaran ditambahkan');
+}
+
 /* ---------- Logo usaha ---------- */
 function loadLogoImage() {
   state.logoImg = null;
@@ -6100,6 +6204,19 @@ function onDocClick(e) {
       }
       break;
     }
+    case 'expense-add': openExpenseModal(null); break;
+    case 'expense-edit': openExpenseModal(id); break;
+    case 'expense-save': saveExpenseModal(); break;
+    case 'expense-delete': {
+      const e = db.expenses.find(x => x.id === id);
+      if (e && confirm('Hapus pengeluaran ' + e.category + ' ' + fmtIDR(e.amount) + '?')) {
+        db.expenses = db.expenses.filter(x => x.id !== id);
+        logAction('pengeluaran', 'Hapus pengeluaran ' + e.category + ' · ' + fmtIDR(e.amount));
+        save(); renderExpenses();
+        toast('Pengeluaran dihapus', { undo: true });
+      }
+      break;
+    }
     case 'img-download': downloadPreview(); break;
     case 'img-share': sharePreview(); break;
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;
@@ -6415,6 +6532,7 @@ function onDocClick(e) {
       else if (field === 'sticker') openCalendar({ mode: 'day', field, value: state.stickerDate || todayStr(), dotFn: satpamDot });
       else if (field === 'poMonth') openCalendar({ mode: 'month', field, value: state.poMonth });
       else if (field === 'rptMonth') openCalendar({ mode: 'month', field, value: state.rptMonth });
+      else if (field === 'expMonth') openCalendar({ mode: 'month', field, value: state.expMonth });
       break;
     }
     case 'cal-prev':
@@ -6672,6 +6790,9 @@ function applyCalPick(v) {
   } else if (f === 'dapurWeek') {
     state.dapurWeek = mondayOf(v);
     if (state.page === 'dapur') renderDapur();
+  } else if (f === 'expMonth') {
+    state.expMonth = monthKey(v);
+    if (state.page === 'expenses') renderExpenses();
   }
 }
 
@@ -6701,10 +6822,12 @@ function init() {
   state.satpamDate = todayStr();
   state.poMonth = monthKey(todayStr());
   state.rptMonth = monthKey(todayStr());
+  state.expMonth = monthKey(todayStr());
   setText('hariDateText', fmtLong(state.currentDate));
   setText('satpamDateText', fmtLong(state.satpamDate));
   setText('poMonthText', monthTitle(state.poMonth));
   setText('rptMonthText', monthTitle(state.rptMonth));
+  setText('expMonthText', monthTitle(state.expMonth));
   state.stickerDate = todayStr();
   renderStickerDate();
 
@@ -6764,6 +6887,7 @@ function init() {
       if (state.page === 'dashboard') renderDashboard();
       else if (state.page === 'po') renderPO();
       else if (state.page === 'report') renderReport();
+      else if (state.page === 'expenses') renderExpenses();
     }, 150);
   });
 

@@ -54,6 +54,12 @@ Tombol **+ Stok** di tiap baris adalah jalan cepat saat belanja datang: isi juml
 
 Stok bahan dipakai halaman Dapur untuk mengurangi daftar belanja. Tempat makan seperti kotak snack, nasi kotak, sendok, gelas, dan kantong dicatat di tab terpisah supaya persiapan kemasan juga terlihat.
 
+## Pengeluaran
+
+Halaman Pengeluaran mencatat biaya operasional di luar belanja bahan: gas, kemasan, transport, gaji, sewa, listrik, dan lain-lain. Setiap catatan berisi tanggal, kategori, nominal, dan catatan singkat. Bulan dipilih lewat tombol tanggal di kiri atas.
+
+Di atas daftar ada empat angka: **Pengeluaran** bulan itu, **Omset Dibayar** dari pesanan yang sudah lunas, **Laba Kotor** yaitu selisih keduanya, dan jumlah **Catatan**. Grafik di bawah membandingkan omset dan pengeluaran enam bulan terakhir. Pengeluaran tidak mengubah tagihan atau pesanan, angka ini hanya ringkasan usaha. Kalau belum ada omset, laba kotor tampil negatif sebesar pengeluaran bulan itu.
+
 ## Halaman
 
 | Halaman | Isi |
@@ -65,6 +71,7 @@ Stok bahan dipakai halaman Dapur untuk mengurangi daftar belanja. Tempat makan s
 | Stok | Dua tab untuk bahan dan tempat makan. Tiap item punya nama, satuan, stok, batas minimum, status Aman/Menipis/Habis, tombol + Stok untuk barang masuk, Ubah, dan hapus. Stok bahan ikut mengurangi daftar belanja di Dapur |
 | Cetak | Stiker nama A4 untuk kotak bekal, dan kertas konfirmasi porsi. Keduanya memakai kontrol di kiri serta pratinjau A4 di kanan, dengan tombol tanggal ber-popover yang sama. Tidak ada lagi pilihan gabungan "snack & lunch". Tanggal dimajukan otomatis kalau hari itu tidak ada pelanggan. Tinggi baris sel dihitung sendiri; slider Rapat sel memipihkan kotak dan slider Padding sel mengatur jarak isinya. Penanda alergi bawaannya garis di bawah nama, dan bentuk lain (titik, lingkaran huruf A, tulisan, atau tanpa penanda) beserta warnanya tetap bisa dipilih |
 | Laporan | Rekap per anak dan per orang tua: tagihan, dibayar, sisa. Bisa dicetak PDF dan diekspor CSV |
+| Pengeluaran | Catatan biaya operasional per bulan dengan tanggal, kategori, nominal, dan catatan. Ringkasan berisi pengeluaran, omset dibayar, laba kotor, dan grafik omset vs pengeluaran enam bulan terakhir |
 | Pengingat | Pengingat harian, mingguan, dan bulanan, plus daftar tagihan menunggak yang siap dikirim ke WhatsApp |
 | Pre-Order (PO) | Pesanan per tanggal: menu PO beserta pembelinya, dan pesanan kelompok (lembaga) dengan invoice bernomor. Grafik nilai PO per bulan dan per tahun berdampingan. Tiap menu PO punya pintasan Beranda yang membuka Menu Harian tanggal itu dan menyiapkan baris PO kosong |
 | Pelanggan | Daftar anak dengan filter jenjang, angkatan, kelas, dan status. Bawaannya "Hanya yang berjalan", yaitu anak aktif ditambah anak beli sekali yang tanggalnya belum lewat. Di sini juga ada catatan alergi, periode langganan, aksi massal, dan tombol rekap yang membuka anak itu di Laporan |
@@ -120,7 +127,7 @@ Beli Sekali hanya menawarkan satu tanggal. Pilihan Selesai dan Berhenti sengaja 
 - Cetak dan PDF memakai iframe tersembunyi dan `window.print()`, dengan "Simpan sebagai PDF" dipilih di dialog cetak browser. Jam, judul, dan alamat file yang muncul di tepi halaman adalah header/footer browser, bukan bagian dokumen. Judul dokumen dikosongkan selama dialog cetak terbuka, sisanya dimatikan lewat centang *Header and footers* di dialog tersebut. Setiap dokumen cetak diberi `Content-Security-Policy: default-src 'none'` dengan pengecualian gaya sebaris dan logo `data:` URL, sehingga dokumen itu tidak bisa menjalankan skrip atau menghubungi internet.
 - Grafik digambar sendiri di `<canvas>`, tanpa library.
 - Input angka tidak menampilkan panah naik-turun. Nilainya tetap bisa digeser dengan tombol ↑/↓ atau diketik langsung.
-- Tema terang/gelap dan ukuran font diatur dari Pengaturan › Tampilan & Cadangan Data. Tata letak menyesuaikan sampai lebar 620px: di bawah 1200px kalender turun ke atas menu, dan di bawah 640px nama makanan turun ke baris kedua. Tabel Dapur dan Stok berubah menjadi kartu di bawah 620px supaya tidak perlu digeser ke samping.
+- Tema terang/gelap dan ukuran font diatur dari Pengaturan › Tampilan & Cadangan Data. Tata letak menyesuaikan sampai lebar 620px: di bawah 1200px kalender turun ke atas menu, dan di bawah 640px nama makanan turun ke baris kedua. Tabel Dapur, Stok, dan Pengeluaran berubah menjadi kartu di bawah 620px supaya tidak perlu digeser ke samping.
 - Data tidak dikirim ke mana pun. Aplikasi ini sepenuhnya lokal di satu komputer, dan tidak ada satu permintaan jaringan pun saat semua halamannya dibuka (diperiksa otomatis oleh suite verifikasi di `verify-tools/`). Semua teks yang diketik pemilik dikecualikan dari HTML sebelum ditampilkan, jadi nama atau catatan yang berisi `<…>` tetap tampil sebagai tulisan.
 - Satu batasan yang perlu diketahui: browser memperlakukan semua berkas lokal sebagai satu sumber yang sama, jadi berkas `.html` asing yang dibuka di profil browser yang sama secara teori bisa membaca isi `localStorage`. Amankan data dengan unduhan cadangan berkala dan hindari membuka berkas HTML kiriman orang lain di profil yang dipakai untuk aplikasi ini.
 
