@@ -995,9 +995,18 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
   .dapur-recipe-wrap .dapur-row-actions{justify-content:flex-start}
 }
 
-/* Stok dan pengeluaran */
+/* Stok, pengeluaran, dan pengaturan menu sidebar */
+.nav-item[hidden],.nav-group[hidden]{display:none!important}
 #page-stok .table-wrap .table{min-width:620px}
 #page-expenses .table-wrap .table{min-width:680px}
+.nav-cfg{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.nav-cfg-group{display:flex;flex-direction:column;gap:2px}
+.nav-cfg-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.nav-cfg-row:last-child{border-bottom:0}
+.nav-cfg-row .check{margin:0;flex:1;min-width:0;font-size:13px}
+.nav-cfg-move{display:flex;gap:4px;flex:none}
+.nav-cfg-move .icon-act{width:27px;height:27px;border-radius:9px;font-size:14px;line-height:1}
+.nav-cfg-move .icon-act:disabled{opacity:.3;cursor:default;transform:none;box-shadow:none}
 /* Di layar sempit tabel Stok dan Pengeluaran berubah jadi kartu, tanpa geser samping */
 @media (max-width:620px){
   .date-badge{display:none}

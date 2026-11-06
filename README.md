@@ -76,7 +76,7 @@ Di atas daftar ada empat angka: **Pengeluaran** bulan itu, **Omset Dibayar** dar
 | Pre-Order (PO) | Pesanan per tanggal: menu PO beserta pembelinya, dan pesanan kelompok (lembaga) dengan invoice bernomor. Grafik nilai PO per bulan dan per tahun berdampingan. Tiap menu PO punya pintasan Beranda yang membuka Menu Harian tanggal itu dan menyiapkan baris PO kosong |
 | Pelanggan | Daftar anak dengan filter jenjang, angkatan, kelas, dan status. Bawaannya "Hanya yang berjalan", yaitu anak aktif ditambah anak beli sekali yang tanggalnya belum lewat. Di sini juga ada catatan alergi, periode langganan, aksi massal, dan tombol rekap yang membuka anak itu di Laporan |
 | Log Aktivitas | Semua aksi yang pernah dilakukan. Dari sini perubahan lama masih bisa dibatalkan |
-| Pengaturan | Informasi usaha, logo, rekening, template WA, metode pembayaran, paket harga, dan satu kartu Tampilan & Cadangan Data yang menggabungkan pengaturan font serta ukuran teks dengan unduh/pulihkan JSON, cadangan harian, dan reset |
+| Pengaturan | Informasi usaha, logo, rekening, template WA, metode pembayaran, paket harga, dan satu kartu Tampilan & Cadangan Data yang menggabungkan pengaturan font serta ukuran teks dengan unduh/pulihkan JSON, cadangan harian, dan reset. Kartu Menu Sidebar mengatur halaman yang tampil beserta urutannya; Pengaturan selalu tampil |
 
 Lonceng di kanan atas mengumpulkan hal yang sedang menunggu: pengingat yang jatuh tempo, penunggak tagihan, pesanan hari ini yang belum dipilih makanannya, dan menu yang belum diisi. Klik salah satu barisnya untuk langsung membuka halamannya.
 

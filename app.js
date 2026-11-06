@@ -88,6 +88,12 @@ const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', '
 const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat Makan' };
 const STOCK_UNITS = RECIPE_UNITS.concat(['pcs', 'lusin', 'pack', 'box', 'lembar', 'roll']);
 const EXPENSE_CATEGORIES = ['Belanja pasar', 'Gas & energi', 'Kemasan', 'Transport', 'Gaji', 'Sewa', 'Listrik & air', 'Lainnya'];
+const NAV_DEFAULT_ORDER = ['dashboard', 'hari', 'print', 'custom', 'dapur', 'stok', 'report', 'expenses', 'pengingat', 'po', 'customers', 'log', 'settings'];
+const NAV_GROUPS = [
+  { label: 'Hari ini', keys: ['dashboard', 'hari', 'print', 'custom', 'dapur', 'stok'] },
+  { label: 'Penjualan', keys: ['report', 'expenses', 'pengingat', 'po'] },
+  { label: 'Data & pengaturan', keys: ['customers', 'log', 'settings'] }
+];
 function shortTxt(s, n) { const t = String(s || ''); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; }
 
 function defaultData() {
@@ -109,6 +115,8 @@ function defaultData() {
       uiFont: 'default', // jenis huruf seluruh aplikasi (key UI_FONTS)
       uiZoom: 100,       // skala teks seluruh aplikasi, 85–130 %
       customDisplay: 'both', // tampilan sel Kustomisasi: 'both' | 'name' | 'price'
+      navOrder: NAV_DEFAULT_ORDER.slice(), // urutan tombol halaman di sidebar
+      navHidden: [], // halaman yang disembunyikan dari sidebar; Pengaturan selalu tampil
       paymentMethods: ['Tunai', 'Transfer', 'QRIS', 'Gratis'],
       menuSnack: ['Roti & Buah', 'Nasi Goreng', 'Lontong'],
       menuLunch: ['Ayam Geprek + Nasi', 'Nasi Uduk + Ayam', 'Soto + Nasi']
@@ -287,6 +295,12 @@ function normalize(d) {
     note: String(e && e.note || '').trim().slice(0, 160),
     amount: Math.max(0, Math.min(999999999999, Math.round(+e.amount || 0)))
   })).filter(e => e.amount > 0);
+  const navKeys = new Set(NAV_DEFAULT_ORDER);
+  if (!Array.isArray(d.settings.navOrder)) d.settings.navOrder = NAV_DEFAULT_ORDER.slice();
+  d.settings.navOrder = d.settings.navOrder.filter((k, i, a) => navKeys.has(k) && a.indexOf(k) === i);
+  NAV_DEFAULT_ORDER.forEach(k => { if (!d.settings.navOrder.includes(k)) d.settings.navOrder.push(k); });
+  if (!Array.isArray(d.settings.navHidden)) d.settings.navHidden = [];
+  d.settings.navHidden = d.settings.navHidden.filter((k, i, a) => navKeys.has(k) && k !== 'settings' && a.indexOf(k) === i);
   return d;
 }
 
@@ -678,7 +692,8 @@ function restoreSnapshot(s) {
   catch (e) { toast('Gagal membatalkan perubahan'); return false; }
   undoing = true; save(); undoing = false;
   loadLogoImage();
-  applyBrand(); applyUiStyle(); showPage(state.page);
+  applyBrand(); applyUiStyle(); applyNavSettings();
+  showPage(navHidden().includes(state.page) ? firstVisibleNav() : state.page);
   return true;
 }
 function undoLast() {
@@ -1348,6 +1363,82 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 /* ---------- Render: navigasi ---------- */
 const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', print: 'Cetak', report: 'Laporan', expenses: 'Pengeluaran', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
+function navOrder() { return (db.settings.navOrder || NAV_DEFAULT_ORDER).slice(); }
+function navHidden() { return (db.settings.navHidden || []).slice(); }
+function firstVisibleNav() { return navOrder().find(k => !navHidden().includes(k)) || 'settings'; }
+function navLabel(key) {
+  const el = document.querySelector('.nav-item[data-nav="' + key + '"] span');
+  return el ? el.textContent : (TITLES[key] || key);
+}
+function navGroupsMeta() {
+  const nav = document.getElementById('nav');
+  const groups = [];
+  let cur = null;
+  if (!nav) return groups;
+  [...nav.children].forEach(el => {
+    if (el.classList.contains('nav-group')) {
+      cur = { label: el.textContent.trim(), heading: el, items: [] };
+      groups.push(cur);
+    } else if (cur && el.classList.contains('nav-item')) cur.items.push(el);
+  });
+  return groups;
+}
+/* Geser tombol halaman sesuai pengaturan, lalu sembunyikan yang dimatikan. */
+function applyNavSettings() {
+  const nav = document.getElementById('nav');
+  if (!nav) return;
+  const order = navOrder(), hidden = navHidden();
+  navGroupsMeta().forEach(g => {
+    nav.appendChild(g.heading);
+    g.items.slice().sort((a, b) => order.indexOf(a.dataset.nav) - order.indexOf(b.dataset.nav)).forEach(it => {
+      it.hidden = hidden.includes(it.dataset.nav);
+      nav.appendChild(it);
+    });
+    g.heading.hidden = g.items.every(it => it.hidden);
+  });
+}
+function renderNavCfg() {
+  const el = document.getElementById('navCfg');
+  if (!el) return;
+  const order = navOrder(), hidden = navHidden();
+  el.innerHTML = NAV_GROUPS.map(g => {
+    const keys = g.keys.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    return '<div class="nav-cfg-group"><div class="cat-title">' + escapeHtml(g.label) + '</div>' +
+      keys.map((k, i) => '<div class="nav-cfg-row">' +
+        '<label class="check"><input type="checkbox" class="nav-toggle" data-key="' + escapeHtml(k) + '"' +
+          (hidden.includes(k) ? '' : ' checked') +
+          (k === 'settings' ? ' disabled title="Pengaturan selalu tampil"' : '') + '> ' + escapeHtml(navLabel(k)) + '</label>' +
+        '<span class="nav-cfg-move">' +
+          '<button type="button" class="icon-act" data-act="nav-up" data-id="' + escapeHtml(k) + '"' + (i === 0 ? ' disabled' : '') + ' title="Naikkan">↑</button>' +
+          '<button type="button" class="icon-act" data-act="nav-down" data-id="' + escapeHtml(k) + '"' + (i === keys.length - 1 ? ' disabled' : '') + ' title="Turunkan">↓</button>' +
+        '</span></div>').join('') + '</div>';
+  }).join('');
+}
+function moveNav(key, delta) {
+  const g = NAV_GROUPS.find(x => x.keys.includes(key));
+  if (!g) return;
+  const order = navOrder();
+  const keys = g.keys.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const i = keys.indexOf(key), j = i + delta;
+  if (i < 0 || j < 0 || j >= keys.length) return;
+  const a = keys[i], b = keys[j];
+  const ia = order.indexOf(a), ib = order.indexOf(b);
+  [order[ia], order[ib]] = [order[ib], order[ia]];
+  db.settings.navOrder = order;
+  save({ noUndo: true });
+  applyNavSettings();
+  renderNavCfg();
+}
+function setNavHidden(key, on) {
+  if (key === 'settings') return;
+  const hidden = navHidden().filter(k => k !== key);
+  if (on) hidden.push(key);
+  db.settings.navHidden = hidden;
+  save({ noUndo: true });
+  applyNavSettings();
+  renderNavCfg();
+  if (on && state.page === key) showPage(firstVisibleNav());
+}
 
 function showPage(name) {
   state.page = name;
@@ -5578,6 +5669,7 @@ function renderSettings() {
   renderPackages();
   renderCustomers();
   renderBackups();
+  renderNavCfg();
 }
 /* Makanan yang benar-benar dimakan anak ber-paket ini dalam 7 hari ke depan */
 function pkgMenuSample(p) {
@@ -5887,7 +5979,7 @@ function importBackup(file) {
   reader.onload = () => {
     try {
       const d = normalize(JSON.parse(reader.result));
-      db = d; save(); loadLogoImage(); applyBrand(); showPage('dashboard');
+      db = d; save(); loadLogoImage(); applyBrand(); applyNavSettings(); showPage(firstVisibleNav());
       toast('Data dipulihkan', { undo: true });
     } catch (e) { toast('File tidak valid'); }
   };
@@ -5955,7 +6047,7 @@ function restoreBackup(i) {
   try {
     db = normalize(JSON.parse(b.json));
     logAction('backup', 'Pulihkan cadangan ' + b.day);
-    save(); applyBrand(); showPage('dashboard');
+    save(); applyBrand(); applyNavSettings(); showPage(firstVisibleNav());
     toast('Data dipulihkan ke cadangan ' + fmtShortDate(b.day));
   } catch (e) { toast('Cadangan tidak terbaca'); }
 }
@@ -6217,6 +6309,16 @@ function onDocClick(e) {
       }
       break;
     }
+    case 'nav-up': moveNav(id, -1); break;
+    case 'nav-down': moveNav(id, 1); break;
+    case 'nav-reset':
+      db.settings.navOrder = NAV_DEFAULT_ORDER.slice();
+      db.settings.navHidden = [];
+      save({ noUndo: true });
+      applyNavSettings();
+      renderNavCfg();
+      toast('Menu sidebar kembali ke bawaan');
+      break;
     case 'img-download': downloadPreview(); break;
     case 'img-share': sharePreview(); break;
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;
@@ -6425,8 +6527,8 @@ function onDocClick(e) {
       break;
     case 'export': exportBackup(); break;
     case 'import': document.getElementById('importFile').click(); break;
-    case 'reset': if (confirm('Hapus SEMUA data dan kembali ke pengaturan awal? Tindakan ini tidak bisa dibatalkan.')) { db = defaultData(); save(); applyBrand(); showPage('dashboard'); toast('Data direset'); } break;
-    case 'demo-load': if (confirm('Ganti data saat ini dengan data contoh (demo)?')) { db = normalize(makeDemoData()); save(); applyBrand(); showPage('dashboard'); toast('Data contoh dimuat'); } break;
+    case 'reset': if (confirm('Hapus SEMUA data dan kembali ke pengaturan awal? Tindakan ini tidak bisa dibatalkan.')) { db = defaultData(); save(); applyBrand(); applyNavSettings(); showPage('dashboard'); toast('Data direset'); } break;
+    case 'demo-load': if (confirm('Ganti data saat ini dengan data contoh (demo)?')) { db = normalize(makeDemoData()); save(); applyBrand(); applyNavSettings(); showPage('dashboard'); toast('Data contoh dimuat'); } break;
     case 'backup-now': autoBackup(true); renderBackups(); toast('Cadangan harian dibuat'); break;
     case 'backup-download': {
       const b = readBackups()[+act.dataset.i];
@@ -6555,6 +6657,7 @@ function onDocClick(e) {
 function onDocChange(e) {
   const t = e.target;
   if (t.id === 'logoFile') { if (t.files && t.files[0]) applyLogoFile(t.files[0]); t.value = ''; return; }
+  if (t.classList.contains('nav-toggle')) { setNavHidden(t.dataset.key, !t.checked); return; }
   if (t.classList.contains('logo-opt')) {
     db.settings.logoOpts[t.dataset.key] = t.checked;
     save();
@@ -6816,6 +6919,7 @@ function init() {
   applyUiStyle();
   loadLogoImage();
   renderLogoUI();
+  applyNavSettings();
   setTodayBadge();
   setSaveStatus();
   state.currentDate = todayStr();
@@ -6891,7 +6995,7 @@ function init() {
     }, 150);
   });
 
-  showPage('dashboard');
+  showPage(firstVisibleNav());
   renderNotif();
   setTimeout(backupReminder, 1400);
   setTimeout(reminderNudge, 2600);
