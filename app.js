@@ -4550,6 +4550,20 @@ function notifItems() {
     });
   });
   if (pending) out.push({ nav: 'hari', tone: 'amber', title: pending + ' pesanan hari ini belum dipilih makanannya', sub: 'buka Hari Ini' });
+  ['bahan', 'wadah'].forEach(kind => {
+    const list = stockItems(kind);
+    const empty = list.filter(x => +x.qty <= 0);
+    const low = list.filter(x => +x.qty > 0 && +x.min > 0 && +x.qty <= +x.min);
+    if (!empty.length && !low.length) return;
+    const parts = [];
+    if (empty.length) parts.push(empty.length + ' habis');
+    if (low.length) parts.push(low.length + ' menipis');
+    const names = empty.concat(low).slice(0, 3).map(x => x.name);
+    const more = empty.length + low.length - names.length;
+    out.push({ nav: 'stok', stockKind: kind, tone: empty.length ? 'red' : 'amber',
+      title: 'Stok ' + STOCK_KIND_LABEL[kind].toLowerCase() + ': ' + parts.join(', '),
+      sub: names.join(' · ') + (more > 0 ? ' +' + more + ' lagi' : '') + ' · buka Stok' });
+  });
   DAY_TYPES.forEach(t => {
     if (isFullHoliday(today)) return;
     if (!menuItemsFor(t, today).length) out.push({ nav: 'dashboard', tone: 'gray', title: 'Menu ' + TYPE_LABEL[t] + ' hari ini belum diisi', sub: 'atur di kartu Menu pada Beranda' });
@@ -4569,10 +4583,11 @@ function renderNotif() {
   const list = document.getElementById('notifList');
   if (list) {
     list.innerHTML = items.length
-      ? items.map(it => '<button type="button" class="notif-row is-' + it.tone + '" data-nav="' + it.nav + '">' +
+      ? items.map(it => '<button type="button" class="notif-row is-' + it.tone + '" data-nav="' + it.nav + '"' +
+          (it.stockKind ? ' data-stock-kind="' + it.stockKind + '"' : '') + '>' +
           '<span class="nr-dot" aria-hidden="true"></span><span class="nr-body"><span class="nr-title">' + escapeHtml(it.title) + '</span>' +
           (it.sub ? '<span class="nr-sub">' + escapeHtml(it.sub) + '</span>' : '') + '</span></button>').join('')
-      : '<p class="notif-none">Semua beres: tidak ada pengingat, tagihan, atau pesanan yang menunggu.</p>';
+      : '<p class="notif-none">Semua beres: tidak ada pengingat, tagihan, pesanan, atau stok yang menunggu.</p>';
   }
   if (!items.length) closeNotif();
 }
@@ -6177,7 +6192,10 @@ function onDocClick(e) {
   const panel = document.getElementById('notifPanel');
   if (panel && !panel.hidden && !(e.target.closest && e.target.closest('.notif-wrap'))) closeNotif();
   const nav = e.target.closest('[data-nav]');
-  if (nav) { closeNotif(); showPage(nav.dataset.nav); return; }
+  if (nav) {
+    if (nav.dataset.stockKind) state.stockKind = nav.dataset.stockKind;
+    closeNotif(); showPage(nav.dataset.nav); return;
+  }
   if (e.target.closest('#menuBtn')) { openSidebar(); return; }
   if (e.target.closest('#sideToggle')) { toggleSidebar(); return; }
   if (e.target.closest('#themeBtn')) { toggleTheme(); return; }

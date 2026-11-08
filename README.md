@@ -58,6 +58,14 @@ Tombol **+ Stok** di tiap baris adalah jalan cepat saat belanja datang: isi juml
 
 Stok bahan dipakai halaman Dapur untuk mengurangi daftar belanja. Tempat makan seperti kotak snack, nasi kotak, sendok, gelas, dan kantong dicatat di tab terpisah supaya persiapan kemasan juga terlihat.
 
+Item yang habis atau menyentuh batas minimum ikut muncul di lonceng kanan atas. Klik baris stok di lonceng untuk langsung membuka tab Bahan atau Tempat Makan yang bermasalah.
+
+## Lonceng perhatian
+
+Lonceng di kanan atas mengumpulkan hal yang sedang menunggu: pengingat jatuh tempo, penunggak tagihan, pesanan hari ini yang belum dipilih makanannya, menu hari ini yang belum diisi, dan stok bahan atau tempat makan yang habis atau menipis. Baris stok menyebut nama barangnya, dan klik baris itu membuka tab Stok yang sesuai.
+
+Stok dianggap menipis saat jumlahnya menyentuh batas minimum, dan habis saat jumlahnya nol. Sinyal ini muncul di setiap halaman karena lonceng ada di top bar, jadi barang yang perlu dibeli tidak perlu dicari dulu ke halaman Stok.
+
 ## Pengeluaran
 
 Halaman Pengeluaran mencatat biaya operasional di luar belanja bahan: gas, kemasan, transport, gaji, sewa, listrik, dan lain-lain. Setiap catatan berisi tanggal, kategori, nominal, dan catatan singkat. Bulan dipilih lewat tombol tanggal di kiri atas.
@@ -82,7 +90,7 @@ Di atas daftar ada empat angka: **Pengeluaran** bulan itu, **Omset Dibayar** dar
 | Log Aktivitas | Semua aksi yang pernah dilakukan. Dari sini perubahan lama masih bisa dibatalkan |
 | Pengaturan | Informasi usaha, logo, rekening, template WA, metode pembayaran, paket harga, dan satu kartu Tampilan & Cadangan Data yang menggabungkan pengaturan font serta ukuran teks dengan unduh/pulihkan JSON, cadangan harian, dan reset. Kartu Menu Sidebar mengatur halaman yang tampil beserta urutannya; Pengaturan selalu tampil |
 
-Lonceng di kanan atas mengumpulkan hal yang sedang menunggu: pengingat yang jatuh tempo, penunggak tagihan, pesanan hari ini yang belum dipilih makanannya, dan menu yang belum diisi. Klik salah satu barisnya untuk langsung membuka halamannya.
+Lonceng di kanan atas mengumpulkan hal yang sedang menunggu: pengingat yang jatuh tempo, penunggak tagihan, pesanan hari ini yang belum dipilih makanannya, menu yang belum diisi, dan stok bahan atau tempat makan yang habis atau menipis. Klik salah satu barisnya untuk langsung membuka halamannya.
 
 Arahkan kursor, atau tab lewat keyboard, ke chip makanan A/B/C di halaman Hari Ini atau ke huruf di tabel Pesanan Mingguan. Muncul dialog berisi nama lengkap, isi porsi, dan harganya. Untuk menu biasa yang tertulis adalah paket anak itu; untuk menu spesial tertulis harga spesialnya.
 
