@@ -5243,8 +5243,12 @@ function renderDapur() {
 
   const ns = db.recipes.filter(r => r.type === 'snack' && r.ingredients.length).length;
   const nl = db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length).length;
+  const prev = previousWeekMenuInfo(start);
+  const prevTxt = (prev.names.snack.size || prev.names.lunch.size)
+    ? ' Minggu lalu: ' + prev.names.snack.size + ' menu snack dan ' + prev.names.lunch.size + ' menu lunch.'
+    : '';
   setText('dapurRandInfo', (ns || nl)
-    ? 'Tersedia ' + ns + ' menu snack dan ' + nl + ' menu lunch yang punya bahan.'
+    ? 'Tersedia ' + ns + ' menu snack dan ' + nl + ' menu lunch yang punya bahan.' + prevTxt
     : 'Belum ada menu dengan bahan. Tambahkan dulu lewat + Bahan Menu.');
 }
 function recipeRowHtml(g) {
@@ -5333,25 +5337,69 @@ function dapurMakeReminder() {
   const due = shiftDate(start, -1);
   prefillReminder(text, due < todayStr() ? todayStr() : due);
 }
-function shuffleArr(a) {
-  const out = a.slice();
-  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
-  return out;
+/* Menu biasa minggu sebelumnya, dipakai filter "hindari menu minggu lalu" */
+function previousWeekMenuInfo(start) {
+  const prev = shiftDate(start, -7);
+  const names = { snack: new Set(), lunch: new Set() };
+  const slots = new Map();
+  for (let i = 0; i < 5; i++) {
+    const date = shiftDate(prev, i);
+    menuPlanItems(date).forEach(it => {
+      if (it.type !== 'snack' && it.type !== 'lunch') return;
+      const name = flatName(it.name);
+      if (!name) return;
+      names[it.type].add(name);
+      const key = it.type + '|' + i;
+      if (!slots.has(key)) slots.set(key, new Set());
+      slots.get(key).add(name);
+    });
+  }
+  return { names, slots };
+}
+/* Pilih menu acak: utamakan yang belum dipakai minggu ini dan belum muncul minggu lalu.
+   Kalau pilihan habis, jatuh ke menu lain yang tidak sama dengan hari yang sama minggu lalu. */
+function pickRandomRecipe(pool, used, last, type, dayIdx, noRepeat) {
+  if (!pool.length) return null;
+  const slot = last.slots.get(type + '|' + dayIdx) || new Set();
+  const nameOf = r => flatName(r.name);
+  const countOf = r => used.get(nameOf(r)) || 0;
+  const tiers = noRepeat ? [
+    pool.filter(r => !last.names[type].has(nameOf(r)) && countOf(r) === 0),
+    pool.filter(r => !slot.has(nameOf(r)) && countOf(r) === 0),
+    pool.filter(r => countOf(r) === 0),
+    pool.filter(r => !last.names[type].has(nameOf(r))),
+    pool.filter(r => !slot.has(nameOf(r))),
+    pool
+  ] : [
+    pool.filter(r => countOf(r) === 0),
+    pool
+  ];
+  const cands = tiers.find(list => list.length) || pool;
+  const min = Math.min(...cands.map(countOf));
+  const best = cands.filter(r => countOf(r) === min);
+  const r = best[Math.floor(Math.random() * best.length)];
+  const name = nameOf(r);
+  used.set(name, (used.get(name) || 0) + 1);
+  return r;
 }
 function randomizeDapurWeek() {
   const start = dapurWeekStart();
   const wantSnack = document.getElementById('dapurRandSnack').checked;
   const wantLunch = document.getElementById('dapurRandLunch').checked;
+  const noRepeat = document.getElementById('dapurRandNoRepeat').checked;
   if (!wantSnack && !wantLunch) { toast('Centang Snack atau Lunch dulu'); return; }
   const pools = {
-    snack: wantSnack ? shuffleArr(db.recipes.filter(r => r.type === 'snack' && r.ingredients.length)) : [],
-    lunch: wantLunch ? shuffleArr(db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length)) : []
+    snack: wantSnack ? db.recipes.filter(r => r.type === 'snack' && r.ingredients.length) : [],
+    lunch: wantLunch ? db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length) : []
   };
   if (wantSnack && !pools.snack.length) { toast('Belum ada bahan menu snack'); return; }
   if (wantLunch && !pools.lunch.length) { toast('Belum ada bahan menu lunch'); return; }
-  if (!confirm('Acak menu ' + dapurRangeLabel(start) + '? Menu biasa snack/lunch akan diganti. Menu spesial dan PO tetap.')) return;
-  let changed = 0, skipped = 0;
-  const pick = { snack: 0, lunch: 0 };
+  const last = previousWeekMenuInfo(start);
+  const lastRelevant = (wantSnack && last.names.snack.size) || (wantLunch && last.names.lunch.size);
+  if (!confirm('Acak menu ' + dapurRangeLabel(start) + '? Menu biasa snack/lunch akan diganti. Menu spesial dan PO tetap.' +
+    (noRepeat ? ' Menu yang sama dengan minggu lalu dihindari bila ada pilihan lain.' : ''))) return;
+  let changed = 0, skipped = 0, repeatLast = 0;
+  const used = { snack: new Map(), lunch: new Map() };
   for (let i = 0; i < 5; i++) {
     const date = shiftDate(start, i);
     if (isFullHoliday(date)) { skipped++; continue; }
@@ -5360,18 +5408,21 @@ function randomizeDapurWeek() {
       if (!pools[type].length) return;
       items = items.filter(it => it.type !== type);
       if (items.length >= WEEK_MENU_MAX) return;
-      const r = pools[type][pick[type] % pools[type].length];
-      pick[type]++;
+      const r = pickRandomRecipe(pools[type], used[type], last, type, i, noRepeat);
+      if (!r) return;
+      if (noRepeat && last.names[type].has(flatName(r.name))) repeatLast++;
       items.push({ name: r.name, type: type, pkg: '', price: '' });
       changed++;
     });
     writeMenuPlan(date, items);
   }
   if (!changed) { toast('Tidak ada menu yang bisa diacak'); return; }
-  logAction('dapur', 'Acak menu ' + start + ' · ' + changed + ' menu');
+  logAction('dapur', 'Acak menu ' + start + ' · ' + changed + ' menu' + (noRepeat ? ' · hindari minggu lalu' : ''));
   save();
   renderDapur();
-  toast('Menu diacak: ' + changed + ' baris' + (skipped ? ' · ' + skipped + ' hari libur dilewati' : ''));
+  let note = '';
+  if (noRepeat && lastRelevant) note = repeatLast ? ' · ' + repeatLast + ' baris mengulang minggu lalu' : ' · semua beda dari minggu lalu';
+  toast('Menu diacak: ' + changed + ' baris' + (skipped ? ' · ' + skipped + ' hari libur dilewati' : '') + note);
 }
 
 /* ---------- Stok bahan & tempat makan ---------- */
