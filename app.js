@@ -5466,9 +5466,9 @@ function pickRandomRecipe(pool, used, last, type, dayIdx, noRepeat) {
   const tiers = noRepeat ? [
     pool.filter(r => !last.names[type].has(nameOf(r)) && countOf(r) === 0),
     pool.filter(r => !slot.has(nameOf(r)) && countOf(r) === 0),
-    pool.filter(r => countOf(r) === 0),
     pool.filter(r => !last.names[type].has(nameOf(r))),
     pool.filter(r => !slot.has(nameOf(r))),
+    pool.filter(r => countOf(r) === 0),
     pool
   ] : [
     pool.filter(r => countOf(r) === 0),
