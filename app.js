@@ -2514,6 +2514,7 @@ function buildCustomPage() {
       '<div class="card-head">' +
         '<div><h3>Tabel Pesanan Mingguan</h3><span class="muted tiny" id="customCount"></span></div>' +
         '<div class="head-tools">' +
+          '<button class="btn btn-ghost btn-sm" data-act="custom-print" title="Cetak tabel pilihan minggu ini ke A4 portrait">Cetak tabel</button>' +
           '<span class="muted tiny">tampilkan</span>' +
           '<div class="seg seg-xs" id="customDisplaySeg">' +
             '<button class="seg-btn" data-act="custom-display" data-mode="name" title="Hanya nama paket">Nama paket</button>' +
@@ -2527,7 +2528,8 @@ function buildCustomPage() {
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
       '<p class="empty" id="customEmpty" hidden>Tidak ada pelanggan yang cocok dengan filter.</p>' +
-    '</div>';
+    '</div>' +
+    '<iframe class="offscreen" id="customFrame" title="Pratinjau cetak tabel mingguan"></iframe>';
 }
 function customDates() {
   const start = state.custom.weekStart || mondayOf(todayStr());
@@ -2677,6 +2679,23 @@ function togglePlainOrder(cid, date, typeIn) {
   save();
   renderCustom(); renderDailyMerged(); renderDashboard();
 }
+function customWeekCols(type) {
+  const hideWe = state.custom.hideWeekend !== false;
+  const cols = [];
+  customDates().forEach((d, i) => {
+    const items = menuItemsFor(type, d);
+    const anyOrder = Object.keys(db[type][d] || {}).some(id => (db[type][d][id] || {}).ordered);
+    if (i >= 5 && hideWe && !items.length && !anyOrder) return;
+    cols.push({ date: d, dow: i, items: items });
+  });
+  return cols;
+}
+function customCustomers() {
+  const st = state.custom;
+  return db.customers.filter(c => c.active && dailyMatch(c, st))
+    .filter(c => !st.q || ((c.name || '') + ' ' + (c.className || '') + ' ' + (c.allergy || '')).toLowerCase().includes(st.q))
+    .sort(sortCustomers);
+}
 function renderCustom() {
   const st = state.custom;
   if (!st.weekStart) st.weekStart = mondayOf(todayStr());
@@ -2689,17 +2708,10 @@ function renderCustom() {
   document.querySelectorAll('[data-act="custom-display"]').forEach(b => b.classList.toggle('is-on', b.dataset.mode === cdm));
   const allDates = customDates();
   setText('customWeekText', fmtShortDate(allDates[0]) + ' – ' + fmtShortDate(allDates[6]));
-  const hideWe = st.hideWeekend !== false;
-  const cols = [];
-  allDates.forEach((d, i) => {
-    const items = menuItemsFor(type, d);
-    const anyOrder = Object.keys(db[type][d] || {}).some(id => (db[type][d][id] || {}).ordered);
-    if (i >= 5 && hideWe && !items.length && !anyOrder) return;
-    cols.push({ date: d, dow: i, items: items });
-  });
+  const cols = customWeekCols(type);
   const weHidden = allDates.length - cols.length;
   const weBox = document.getElementById('customWeekend');
-  if (weBox) weBox.checked = hideWe;
+  if (weBox) weBox.checked = st.hideWeekend !== false;
   setText('customHiddenNote', weHidden ? weHidden + ' hari akhir pekan disembunyikan (tidak ada menu & tidak ada pesanan)' : '');
 
   document.getElementById('customHead').innerHTML =
@@ -2713,9 +2725,7 @@ function renderCustom() {
     }).join('') +
     '<th class="num">Total mingguan</th>';
 
-  const customers = db.customers.filter(c => c.active && dailyMatch(c, st))
-    .filter(c => !st.q || ((c.name || '') + ' ' + (c.className || '') + ' ' + (c.allergy || '')).toLowerCase().includes(st.q))
-    .sort(sortCustomers);
+  const customers = customCustomers();
   const totalActive = db.customers.filter(c => c.active).length;
   state.customVisible = customers.map(c => c.id);
   setText('customNote', customers.length === totalActive ? totalActive + ' anak aktif' : customers.length + ' dari ' + totalActive + ' anak');
@@ -2758,6 +2768,96 @@ function renderCustom() {
     statCard('Porsi ' + (type === 'snack' ? 'Snack' : 'Lunch'), portions) +
     statCard('Nilai Minggu Ini', fmtIDR(value), '', 'gold') +
     statCard('Belum Lunas', unpaid, '', 'danger');
+}
+
+/* ---------- Cetak tabel pilihan mingguan ---------- */
+function customWeekPrintHTML() {
+  const type = customType();
+  const typeLabel = type === 'snack' ? 'Snack' : 'Lunch';
+  const start = state.custom.weekStart || mondayOf(todayStr());
+  const range = fmtShortDate(start) + ' – ' + fmtShortDate(shiftDate(start, 6));
+  const cols = customWeekCols(type);
+  const customers = customCustomers();
+  const head = cols.map(col => {
+    const span = Math.max(1, col.items.length);
+    return '<th class="day" colspan="' + span + '">' + WEEKDAYS[col.dow] +
+      '<span class="dt">' + col.date.slice(8) + '/' + col.date.slice(5, 7) + '</span></th>';
+  }).join('');
+  const pickHead = cols.map(col => {
+    if (!col.items.length) return '<th class="pick none">&ndash;</th>';
+    return col.items.slice(0, LETTERS.length).map((it, k) => '<th class="pick">' + LETTERS[k] + '</th>').join('');
+  }).join('');
+  const rows = customers.map((c, i) => {
+    const cells = cols.map(col => {
+      const rec = (db[type][col.date] || {})[c.id];
+      const ordered = !!(rec && rec.ordered);
+      const leave = isOnLeave(c, col.date);
+      const picks = ordered ? customPicks(type, rec).filter(k => k < col.items.length) : [];
+      if (!col.items.length) return '<td class="cell' + (leave ? ' leave' : '') + '"></td>';
+      return col.items.map((it, k) => {
+        const on = picks.indexOf(k) >= 0;
+        return '<td class="cell' + (on ? ' on' : '') + (leave ? ' leave' : '') + '">' + (on ? '&#10003;' : '') + '</td>';
+      }).join('');
+    }).join('');
+    return '<tr><td class="no">' + (i + 1) + '</td><td class="nm">' + escapeHtml(c.name) +
+      (c.allergy ? '<span class="alg">' + escapeHtml(shortTxt(c.allergy, 30)) + '</span>' : '') +
+      '</td><td class="cls">' + escapeHtml(c.className || '') + '</td>' + cells + '</tr>';
+  }).join('');
+  const legend = cols.map(col => {
+    const menu = col.items.length
+      ? col.items.slice(0, LETTERS.length).map((it, k) =>
+          '<span class="lo"><b>' + LETTERS[k] + '</b> ' + escapeHtml(shortTxt(menuLines(it.name).join(' · '), 56)) + '</span>').join(' ')
+      : '<span class="none">belum ada menu</span>';
+    return '<div class="lg-day"><b>' + WEEKDAYS[col.dow] + '</b> ' + col.date.slice(8) + '/' + col.date.slice(5, 7) + ' · ' + menu + '</div>';
+  }).join('');
+  const note = type === 'snack'
+    ? 'Centang satu atau dua pilihan. Snack boleh dua centang.'
+    : 'Centang satu pilihan menu.';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
+    '@page{size:A4 portrait;margin:10mm}' +
+    'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:10px}' +
+    'h1{font-size:16px;margin:0 0 1.2mm;letter-spacing:.2px}' +
+    '.head{text-align:center;margin-bottom:3mm}' +
+    '.head .sub{font-size:9.5px;color:#555}' +
+    '.legend{font-size:7.6px;line-height:1.3;margin:0 0 2.5mm}' +
+    '.legend .lg-day{margin-bottom:.7mm}' +
+    '.legend b{font-weight:800}' +
+    '.legend .lo{white-space:nowrap;margin-right:2mm}' +
+    '.legend .none{color:#888;font-style:italic}' +
+    'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
+    'thead{display:table-header-group}' +
+    'tr{break-inside:avoid;page-break-inside:avoid}' +
+    'th,td{border:1px solid #666;padding:1mm .5mm;vertical-align:middle}' +
+    'th.no,td.no{width:7mm;text-align:center}' +
+    'th.nm,td.nm{width:36mm}' +
+    'th.cls,td.cls{width:11mm}' +
+    'th.day{background:#e9e3d8;text-align:center;font-size:8px;padding:1mm .4mm}' +
+    'th.day .dt{display:block;font-size:7px;font-weight:400;color:#555}' +
+    'th.pick{background:#f3efe8;text-align:center;font-size:8.5px;padding:.8mm .3mm}' +
+    'th.pick.none{color:#888;font-weight:400}' +
+    'td.cell{text-align:center;font-size:9px;font-weight:800;height:6mm;padding:.6mm .2mm}' +
+    'td.cell.on{color:#111}' +
+    'td.cell.leave{background:#eee}' +
+    '.alg{display:block;color:#777;font-size:6.8px;font-weight:400;line-height:1.2;margin-top:.3mm}' +
+    '.foot{margin-top:2.5mm;font-size:8.5px;color:#555}' +
+    '.doc-logo{display:block;margin:0 auto 2mm;max-width:50mm;object-fit:contain}' +
+    '</style></head><body>' +
+    '<div class="head">' + logoFor('laporan') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
+    '<div class="sub">Tabel Pilihan Menu Mingguan · ' + typeLabel + '</div>' +
+    '<div class="sub">' + range + ' · ' + customers.length + ' anak</div></div>' +
+    '<div class="legend">' + legend + '</div>' +
+    '<table><thead><tr><th class="no" rowspan="2">No</th><th class="nm" rowspan="2">Nama</th><th class="cls" rowspan="2">Kelas</th>' + head + '</tr>' +
+    '<tr>' + pickHead + '</tr></thead>' +
+    '<tbody>' + (rows || '<tr><td colspan="' + (3 + cols.reduce((s, c) => s + Math.max(1, c.items.length), 0)) + '" style="text-align:center;color:#777">Tidak ada pelanggan yang cocok dengan filter.</td></tr>') + '</tbody></table>' +
+    '<div class="foot">' + note + '</div>' +
+    '</body></html>';
+}
+function printCustomWeek() {
+  const fr = document.getElementById('customFrame');
+  if (!fr) return;
+  if (!customCustomers().length) { toast('Tidak ada pelanggan untuk dicetak.'); return; }
+  fr.srcdoc = customWeekPrintHTML();
+  setTimeout(() => printFrame(fr), 300);
 }
 
 /* ---------- Render: PO (Pre-Order) ---------- */
@@ -6393,6 +6493,7 @@ function onDocClick(e) {
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;
     case 'custom-next': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), 7); renderCustom(); break;
     case 'custom-today': state.custom.weekStart = mondayOf(todayStr()); renderCustom(); break;
+    case 'custom-print': printCustomWeek(); break;
     case 'custom-type': state.custom.type = act.dataset.type === 'lunch' ? 'lunch' : 'snack'; renderCustom(); break;
     case 'custom-reset': state.custom.level = ''; state.custom.cohort = ''; state.custom.cls = ''; state.custom.q = ''; renderCustom(); break;
     case 'custom-food': setCustomFood(act.dataset.cid, act.dataset.date, +act.dataset.mi); break;
