@@ -262,6 +262,7 @@ function normalize(d) {
     name: String(r.name || '').trim().slice(0, 220),
     type: r.type === 'lunch' || r.type === 'po' ? r.type : 'snack',
     note: String(r.note || '').trim().slice(0, 160),
+    steps: String(r.steps || '').trim().slice(0, 2000),
     ingredients: (Array.isArray(r.ingredients) ? r.ingredients : []).map(g => ({
       name: String(g && g.name || '').trim().slice(0, 60),
       qty: +(g && g.qty) > 0 ? +(g && g.qty) : '',
@@ -772,6 +773,7 @@ const state = {
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
   dapurWeek: '',        // Senin minggu yang dibuka di halaman Dapur
+  dapurQ: '',           // pencarian di Daftar Resep
   stockKind: 'bahan',   // tab halaman Stok: bahan | wadah
   expMonth: monthKey(todayStr()), // bulan yang dibuka di halaman Pengeluaran
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
@@ -5660,9 +5662,9 @@ function renderDapur() {
   const withRecipe = menus.filter(m => m.recipe).length;
   const stat = document.getElementById('dapurStats');
   if (stat) stat.innerHTML =
-    statCard('Menu dengan bahan', withRecipe, 'dari ' + menus.length + ' menu minggu ini', 'primary') +
+    statCard('Menu dengan resep', withRecipe, 'dari ' + menus.length + ' menu minggu ini', 'primary') +
     statCard('Bahan unik', shop.items.length, 'siap jadi daftar belanja', 'accent') +
-    statCard('Menu tanpa bahan', Math.max(0, menus.length - withRecipe), 'klik Atur bahan untuk melengkapi', '');
+    statCard('Menu tanpa resep', Math.max(0, menus.length - withRecipe), 'klik Atur resep untuk melengkapi', '');
 
   const list = document.getElementById('dapurMenuList');
   if (list) list.innerHTML = menus.map(m => {
@@ -5676,7 +5678,7 @@ function renderDapur() {
       '<td class="c"><span class="badge ' + (m.type === 'lunch' ? 'green' : m.type === 'po' ? 'gold' : 'orange') + '">' + RECIPE_TYPE_LABEL[m.type] + '</span></td>' +
       '<td class="num">' + (n ? n + ' bahan' : '<span class="muted">belum</span>') + '</td>' +
       '<td class="end"><button class="btn btn-ghost btn-sm" data-act="recipe-menu" data-date="' + m.refDate + '" data-idx="' + m.refIdx + '">' +
-        (m.recipe ? 'Ubah bahan' : 'Atur bahan') + '</button></td>' +
+        (m.recipe ? 'Ubah resep' : 'Atur resep') + '</button></td>' +
     '</tr>';
   }).join('');
   const menuEmpty = document.getElementById('dapurMenuEmpty');
@@ -5697,27 +5699,39 @@ function renderDapur() {
   const covered = shop.items.filter(x => x.hasQty && x.buy === 0).length;
   setText('dapurShopNote', 'Bahan digabung dari semua menu minggu ini. Stok yang ada dikurangkan otomatis' + (covered ? ' · ' + covered + ' bahan sudah cukup' : '') + '.');
 
-  const recipes = db.recipes.slice().sort((a, b) =>
+  const q = (state.dapurQ || '').trim().toLowerCase();
+  const search = document.getElementById('dapurRecipeSearch');
+  if (search && search.value !== state.dapurQ) search.value = state.dapurQ;
+  const allRecipes = db.recipes.slice().sort((a, b) =>
     ({ snack: 0, lunch: 1, po: 2 })[a.type] - ({ snack: 0, lunch: 1, po: 2 })[b.type] || flatName(a.name).localeCompare(flatName(b.name), 'id'));
+  const recipes = !q ? allRecipes : allRecipes.filter(r =>
+    [flatName(r.name), r.note, r.steps, r.ingredients.map(g => g.name).join(' ')].join(' ').toLowerCase().includes(q));
   const recList = document.getElementById('dapurRecipeList');
   if (recList) recList.innerHTML = recipes.map(r => {
     const lines = menuLines(r.name);
     const ing = r.ingredients.map(g => g.name + (+g.qty > 0 ? ' ' + fmtQtyNum(g.qty) + (g.unit ? ' ' + g.unit : '') : '')).join(', ');
+    const steps = r.steps
+      ? '<details class="recipe-steps"><summary>Cara membuat</summary><div>' + escapeHtml(r.steps).replace(/\n/g, '<br>') + '</div></details>'
+      : '';
     return '<tr>' +
       '<td><div class="dapur-menu-name"><strong>' + escapeHtml(lines[0] || r.name) + '</strong>' +
         (lines.length > 1 ? '<small>' + escapeHtml(lines.slice(1).join(' · ')) + '</small>' : '') + '</div></td>' +
       '<td class="c"><span class="badge ' + (r.type === 'lunch' ? 'green' : r.type === 'po' ? 'gold' : 'orange') + '">' + RECIPE_TYPE_LABEL[r.type] + '</span></td>' +
-      '<td class="small">' + (ing ? escapeHtml(ing) : '<span class="muted">belum ada bahan</span>') + (r.note ? '<div class="muted tiny">' + escapeHtml(r.note) + '</div>' : '') + '</td>' +
+      '<td class="small">' + (ing ? escapeHtml(ing) : '<span class="muted">belum ada bahan</span>') +
+        (r.note ? '<div class="muted tiny">' + escapeHtml(r.note) + '</div>' : '') + steps + '</td>' +
       '<td class="end"><div class="dapur-row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="recipe-remind" data-id="' + r.id + '" title="Isi pengingat beli bahan menu ini">Pengingat</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="recipe-edit" data-id="' + r.id + '">Ubah</button>' +
-        '<button class="icon-act danger" data-act="recipe-delete" data-id="' + r.id + '" title="Hapus bahan menu">×</button>' +
+        '<button class="icon-act danger" data-act="recipe-delete" data-id="' + r.id + '" title="Hapus resep">×</button>' +
       '</div></td>' +
     '</tr>';
   }).join('');
   const recEmpty = document.getElementById('dapurEmpty');
-  if (recEmpty) recEmpty.hidden = recipes.length > 0;
-  setText('dapurCount', recipes.length + ' menu');
+  if (recEmpty) {
+    recEmpty.hidden = recipes.length > 0;
+    recEmpty.textContent = q ? 'Tidak ada resep yang cocok dengan pencarian.' : 'Belum ada resep. Klik + Resep.';
+  }
+  setText('dapurCount', q ? recipes.length + ' dari ' + allRecipes.length + ' resep' : allRecipes.length + ' resep');
 
   const ns = db.recipes.filter(r => r.type === 'snack' && r.ingredients.length).length;
   const nl = db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length).length;
@@ -5726,8 +5740,8 @@ function renderDapur() {
     ? ' Minggu lalu: ' + prev.names.snack.size + ' menu snack dan ' + prev.names.lunch.size + ' menu lunch.'
     : '';
   setText('dapurRandInfo', (ns || nl)
-    ? 'Tersedia ' + ns + ' menu snack dan ' + nl + ' menu lunch yang punya bahan.' + prevTxt
-    : 'Belum ada menu dengan bahan. Tambahkan dulu lewat + Bahan Menu.');
+    ? 'Tersedia ' + ns + ' menu snack dan ' + nl + ' menu lunch yang punya resep.' + prevTxt
+    : 'Belum ada menu dengan resep. Tambahkan dulu lewat + Resep.');
 }
 function recipeRowHtml(g) {
   g = g || {};
@@ -5747,7 +5761,7 @@ function openRecipeModal(opts) {
   const name = rec ? rec.name : (opts.name || '');
   const ingredients = rec && rec.ingredients.length ? rec.ingredients : [{}];
   openModal(
-    '<h3>' + (rec ? 'Ubah Bahan Menu' : 'Bahan Menu') + '</h3>' +
+    '<h3>' + (rec ? 'Ubah Resep' : 'Resep Baru') + '</h3>' +
     '<label class="field"><span>Nama menu</span><textarea id="recipeName" class="input" rows="3" placeholder="Nama menu, boleh beberapa baris">' + escapeHtml(name) + '</textarea></label>' +
     '<div class="pkg-pair">' +
       '<label class="field"><span>Jenis</span><select id="recipeType" class="input">' +
@@ -5757,16 +5771,18 @@ function openRecipeModal(opts) {
     '</div>' +
     '<div class="field"><span>Bahan</span><div id="recipeRows" class="recipe-grid">' + ingredients.map(recipeRowHtml).join('') + '</div>' +
       '<button type="button" class="btn btn-ghost btn-sm" data-act="recipe-row-add">+ Tambah bahan</button></div>' +
+    '<label class="field"><span>Cara membuat (opsional)</span><textarea id="recipeSteps" class="input" rows="4" placeholder="Tulis langkah memasak, satu baris per langkah">' + escapeHtml(rec ? rec.steps : '') + '</textarea></label>' +
     '<datalist id="recipeUnits">' + RECIPE_UNITS.map(u => '<option value="' + u + '">').join('') + '</datalist>' +
     '<input type="hidden" id="recipeId" value="' + escapeHtml(rec ? rec.id : '') + '">' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
-    '<button type="button" class="btn btn-primary" data-act="recipe-save">Simpan Bahan</button></div>', true
+    '<button type="button" class="btn btn-primary" data-act="recipe-save">Simpan Resep</button></div>', true
   );
 }
 function saveRecipeModal() {
   const name = (document.getElementById('recipeName').value || '').trim();
   const type = document.getElementById('recipeType').value;
   const note = (document.getElementById('recipeNote').value || '').trim();
+  const steps = (document.getElementById('recipeSteps').value || '').trim();
   const id = document.getElementById('recipeId').value;
   if (!name) { toast('Tulis nama menu dulu'); return; }
   const ingredients = [...document.querySelectorAll('#recipeRows .recipe-row')].map(row => ({
@@ -5775,20 +5791,20 @@ function saveRecipeModal() {
     unit: (row.querySelector('.recipe-ing-unit').value || '').trim()
   })).filter(g => g.name);
   const dup = db.recipes.find(r => r.id !== id && recipeKey(r.type, r.name) === recipeKey(type, name));
-  if (dup) { toast('Bahan untuk menu itu sudah ada di daftar'); return; }
+  if (dup) { toast('Resep untuk menu itu sudah ada di daftar'); return; }
   const old = id ? db.recipes.find(r => r.id === id) : null;
-  const data = { name, type: ['snack', 'lunch', 'po'].includes(type) ? type : 'snack', note, ingredients };
+  const data = { name, type: ['snack', 'lunch', 'po'].includes(type) ? type : 'snack', note, steps, ingredients };
   if (old) {
     Object.assign(old, data);
-    logAction('dapur', 'Ubah bahan ' + flatName(name));
+    logAction('dapur', 'Ubah resep ' + flatName(name));
   } else {
     db.recipes.push(Object.assign({ id: uid() }, data));
-    logAction('dapur', 'Tambah bahan ' + flatName(name));
+    logAction('dapur', 'Tambah resep ' + flatName(name));
   }
   save();
   closeModal();
   if (state.page === 'dapur') renderDapur();
-  toast(old ? 'Bahan diperbarui' : 'Bahan ditambahkan');
+  toast(old ? 'Resep diperbarui' : 'Resep ditambahkan');
 }
 function recipeReminder(id) {
   const r = db.recipes.find(x => x.id === id);
@@ -5870,8 +5886,8 @@ function randomizeDapurWeek() {
     snack: wantSnack ? db.recipes.filter(r => r.type === 'snack' && r.ingredients.length) : [],
     lunch: wantLunch ? db.recipes.filter(r => r.type === 'lunch' && r.ingredients.length) : []
   };
-  if (wantSnack && !pools.snack.length) { toast('Belum ada bahan menu snack'); return; }
-  if (wantLunch && !pools.lunch.length) { toast('Belum ada bahan menu lunch'); return; }
+  if (wantSnack && !pools.snack.length) { toast('Belum ada resep menu snack'); return; }
+  if (wantLunch && !pools.lunch.length) { toast('Belum ada resep menu lunch'); return; }
   const last = previousWeekMenuInfo(start);
   const lastRelevant = (wantSnack && last.names.snack.size) || (wantLunch && last.names.lunch.size);
   if (!confirm('Acak menu ' + dapurRangeLabel(start) + '? Menu biasa snack/lunch akan diganti. Menu spesial dan PO tetap.' +
@@ -6814,11 +6830,11 @@ function onDocClick(e) {
     }
     case 'recipe-delete': {
       const r = db.recipes.find(x => x.id === id);
-      if (r && confirm('Hapus bahan untuk "' + flatName(r.name) + '"?')) {
+      if (r && confirm('Hapus resep "' + flatName(r.name) + '"?')) {
         db.recipes = db.recipes.filter(x => x.id !== id);
-        logAction('dapur', 'Hapus bahan ' + flatName(r.name));
+        logAction('dapur', 'Hapus resep ' + flatName(r.name));
         save(); renderDapur();
-        toast('Bahan dihapus', { undo: true });
+        toast('Resep dihapus', { undo: true });
       }
       break;
     }
@@ -7526,6 +7542,7 @@ function init() {
     if (t.id === 'hariSearch') { state.daily.hari.q = (t.value || '').trim().toLowerCase(); renderDailyMerged(); }
     if (t.id === 'custSearch') { state.cust.q = (t.value || '').trim().toLowerCase(); renderCustomers(); }
     if (t.id === 'holidayPeopleQ') { filterHolidayPeople(); return; }
+    if (t.id === 'dapurRecipeSearch') { state.dapurQ = t.value || ''; renderDapur(); }
     if (t.classList.contains('wm-name')) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 170) + 'px'; applyMenuEdit(t, true); }
     if (t.name === 'allergy') { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 150) + 'px'; }
     if (t.id === 'stickerNameScale') setText('stickerNameScaleVal', t.value + '%');

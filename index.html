@@ -48,7 +48,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9.5h18M9 9.5V19M15 9.5V19M3 14.5h18"/></svg>
         <span>Pesanan Mingguan</span>
       </button>
-      <button class="nav-item" data-nav="dapur" title="Dapur: bahan menu, daftar belanja, dan acak menu">
+      <button class="nav-item" data-nav="dapur" title="Dapur: daftar resep, daftar belanja, dan acak menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="M2.5 10h19"/><path d="M9 6.5c0-1 .7-1.4.7-2.3M14.5 6.5c0-1 .7-1.4.7-2.3"/></svg>
         <span>Dapur</span>
       </button>
@@ -150,7 +150,7 @@
             </div>
           </div>
           <div class="card panel">
-            <div class="card-head"><h3>Menu</h3><span class="head-tools"><span class="muted tiny" id="menuWeekLabel"></span><button type="button" class="btn btn-ghost btn-sm" data-act="goto-dapur" title="Atur bahan per menu, daftar belanja, dan acak menu">Bahan</button><button type="button" class="btn btn-ghost btn-sm" data-act="menu-share" title="Simpan atau bagikan menu sebagai foto">Bagikan Foto</button></span></div>
+            <div class="card-head"><h3>Menu</h3><span class="head-tools"><span class="muted tiny" id="menuWeekLabel"></span><button type="button" class="btn btn-ghost btn-sm" data-act="goto-dapur" title="Buka daftar resep, daftar belanja, dan acak menu">Resep</button><button type="button" class="btn btn-ghost btn-sm" data-act="menu-share" title="Simpan atau bagikan menu sebagai foto">Bagikan Foto</button></span></div>
             <div class="menu-tabrow">
               <div class="seg seg-sm">
                 <button class="seg-btn is-on" data-act="menu-tab" data-tab="week">Menu Mingguan</button>
@@ -232,7 +232,7 @@
           </label>
           <span class="spacer"></span>
           <button class="btn btn-ghost btn-sm" data-act="goto-stok" title="Buka stok bahan dan tempat makan">Stok</button>
-          <button class="btn btn-primary btn-sm" data-act="recipe-add">+ Bahan Menu</button>
+          <button class="btn btn-primary btn-sm" data-act="recipe-add">+ Resep</button>
         </div>
 
         <div class="stat-grid" id="dapurStats"></div>
@@ -240,7 +240,7 @@
         <div class="split dapur-split">
           <div class="card panel">
             <div class="card-head"><h3>Menu Minggu Ini</h3><span class="muted tiny" id="dapurMenuCount"></span></div>
-            <p class="muted tiny" style="margin:-6px 0 10px">Bahan dicatat per menu. Menu yang berulang di beberapa hari memakai bahan yang sama.</p>
+            <p class="muted tiny" style="margin:-6px 0 10px">Resep dicatat per menu. Menu yang berulang di beberapa hari memakai resep yang sama.</p>
             <div class="table-wrap dapur-menu-wrap"><table class="table">
               <thead><tr><th>Menu</th><th class="c">Jenis</th><th class="num">Bahan</th><th class="end">Aksi</th></tr></thead>
               <tbody id="dapurMenuList"></tbody>
@@ -273,12 +273,17 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>Semua Bahan</h3><span class="muted tiny" id="dapurCount"></span></div>
+          <div class="card-head"><h3>Daftar Resep</h3>
+            <span class="head-tools">
+              <input type="search" class="input input-sm dapur-search" id="dapurRecipeSearch" placeholder="Cari resep atau bahan…" autocomplete="off">
+              <span class="muted tiny" id="dapurCount"></span>
+            </span>
+          </div>
           <div class="table-wrap dapur-recipe-wrap"><table class="table">
-            <thead><tr><th>Menu</th><th class="c">Jenis</th><th>Bahan</th><th class="end">Aksi</th></tr></thead>
+            <thead><tr><th>Menu</th><th class="c">Jenis</th><th>Bahan &amp; cara membuat</th><th class="end">Aksi</th></tr></thead>
             <tbody id="dapurRecipeList"></tbody>
           </table></div>
-          <p class="empty" id="dapurEmpty" hidden>Belum ada bahan. Klik + Bahan Menu.</p>
+          <p class="empty" id="dapurEmpty" hidden>Belum ada resep. Klik + Resep.</p>
         </div>
       </section>
 
