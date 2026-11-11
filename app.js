@@ -5403,7 +5403,9 @@ function renderHomeHoliday() {
   const base = state.menuDate || todayStr();
   const mon = mondayOf(base);
   const dalam = daily ? (h => h.date === base) : (h => h.date >= mon && h.date <= shiftDate(mon, 6));
-  const daftar = db.holidays.filter(dalam).sort((a, b) => a.date.localeCompare(b.date));
+  /* menu mingguan hanya memberitakan libur untuk semua orang;
+     libur kelas / angkatan / perorangan tetap terlihat di tab Harian */
+  const daftar = db.holidays.filter(dalam).filter(h => daily || h.scope === 'all').sort((a, b) => a.date.localeCompare(b.date));
   sum.textContent = daftar.length
     ? daftar.length + ' tanggal libur ' + (daily ? 'hari ini' : 'minggu ini')
     : 'Tidak ada libur ' + (daily ? 'hari ini' : 'minggu ini');

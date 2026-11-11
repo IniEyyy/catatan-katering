@@ -128,7 +128,7 @@ Titik kuning muncul begitu tanggal itu punya salah satu dari tiga: pembeli PO, m
 
 Aturan yang sama dipakai di kalender Beranda, pemilih tanggal Hari Ini, dan pemilih tanggal stiker. Ketiganya dimulai dari kolom Minggu. Daftar hari di tempat lain, seperti baris menu mingguan, chip hari, dan tabel Pesanan Mingguan, tetap berurut Senin sampai Minggu karena mengikuti minggu kerja.
 
-Daftar "N tanggal libur" di bawah tab menu hanya berisi minggu yang sedang dibuka pada tab Menu Mingguan, atau tanggal yang sedang dipilih pada tab Menu Harian. Di tab Menu Harian daftar ini tampil menyamping di bawah menu, terpisah dari kalender, dan hanya berisi libur tanggal itu saja. Hari biasa tidak menampilkan apa pun. Sakit atau tidak masuk satu hari lebih cepat ditangani di Pesanan Mingguan dengan mematikan pesanannya.
+Daftar "N tanggal libur" di bawah tab menu hanya berisi minggu yang sedang dibuka pada tab Menu Mingguan, atau tanggal yang sedang dipilih pada tab Menu Harian. Di tab Menu Mingguan daftar itu hanya memuat libur untuk semua orang, karena libur satu kelas, satu angkatan, atau satu anak tidak mengubah menu seminggu. Pindah ke tab Menu Harian pada tanggal tersebut untuk melihat libur sebagian. Di tab Menu Harian daftar ini tampil menyamping di bawah menu, terpisah dari kalender, dan hanya berisi libur tanggal itu saja. Hari biasa tidak menampilkan apa pun. Sakit atau tidak masuk satu hari lebih cepat ditangani di Pesanan Mingguan dengan mematikan pesanannya.
 
 ## Status pelanggan
 
