@@ -191,6 +191,11 @@ function normalize(d) {
     d.menuPlan[date] = normMenu(d.menuPlan[date]);
     if (!d.menuPlan[date].length) delete d.menuPlan[date];
   }
+  const snackPkgIds = new Set((d.settings.packages || []).filter(p => p.type === 'snack').map(p => p.id));
+  for (const date in d.menuPlan) d.menuPlan[date] = d.menuPlan[date].map(it => {
+    if (it.pkg && !snackPkgIds.has(it.pkg)) it.pkg = '';
+    return it;
+  });
   delete d.menuDaily;
   d.customers.forEach(c => {
     c.snackPkg = c.snackPkg || ''; c.lunchPkg = c.lunchPkg || ''; c.parent = c.parent || '';
@@ -205,7 +210,7 @@ function normalize(d) {
       const n = (d.menuPlan[date] || []).filter(it => menuTypeOf(it) === t).length;
       for (const id in d[t][date]) {
         const r = d[t][date][id];
-        const max = t === 'snack' ? 2 : 1;
+        const max = t === 'snack' ? Infinity : 1;
         let list = (Array.isArray(r.mis) ? r.mis.map(Number) : [])
           .filter(x => Number.isInteger(x) && x >= 0 && x < n);
         if (!list.length && Number.isInteger(r.mi) && r.mi >= 0 && r.mi < n) list = [r.mi];
@@ -845,6 +850,19 @@ function pkgFor(type, rec, cust) {
   const def = pkgById(cust ? cust[type + 'Pkg'] : '');
   if (def && def.type === type) return def;
   return pkgList(type)[0] || null;
+}
+/* Menu snack bisa ditandai untuk satu paket. Tanpa tanda = berlaku untuk semua paket. */
+function menuItemPkg(it) {
+  const id = it && it.pkg;
+  if (!id) return null;
+  const p = pkgById(id);
+  return p && p.type === menuTypeOf(it) ? p : null;
+}
+function itemAllowedFor(type, it, rec, cust) {
+  const p = menuItemPkg(it);
+  if (!p) return true;
+  const own = pkgFor(type, rec, cust);
+  return !!own && own.id === p.id;
 }
 /* Harga satu porsi: menu spesial memakai harga yang diketik di barisnya (sama untuk semua anak),
    menu biasa memakai harga paket anak itu, porsinya yang menentukan, bukan makanannya. */
@@ -1487,6 +1505,7 @@ function renderPrint() {  const mode = state.printMode === 'konfirmasi' ? 'konfi
   document.querySelectorAll('#page-print .print-seg .seg-btn').forEach(b => b.classList.toggle('is-on', b.dataset.mode === mode));
   syncTypeSeg('sticker-type', state.stickerType);
   syncTypeSeg('satpam-type', state.satpamType);
+  syncPrintStyleControls();
   if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
   else satpamPreview();
 }
@@ -1715,6 +1734,12 @@ function menuItemsHtml(date) {
     } else if (raw === 'snack-spesial' || raw === 'lunch-spesial') {
       harga = '<input type="number" class="input input-sm wm-price" min="0" step="500" data-date="' + date + '" data-idx="' + idx +
         '" value="' + (it.price || '') + '" placeholder="harga" title="Harga menu spesial hari ini. Semua anak yang memilih makanan ini membayar harga ini, berapa pun paketnya.">';
+    } else if (raw === 'snack') {
+      harga = '<select class="input input-sm wm-pkg" data-date="' + date + '" data-idx="' + idx +
+        '" title="Pilih paket snack yang mendapat menu ini. Semua paket = menu umum. Harga tetap mengikuti paket anak.">' +
+        '<option value="">Semua paket</option>' +
+        pkgList('snack').map(p => '<option value="' + escapeHtml(p.id) + '"' + (it.pkg === p.id ? ' selected' : '') + '>' + escapeHtml(p.name) + '</option>').join('') +
+      '</select>';
     } else {
       harga = '<span class="wm-noprice" title="Baris biasa tidak punya harga: tiap anak membayar sesuai paket porsinya sendiri, diatur di Pesanan Mingguan">paket anak</span>';
     }
@@ -1816,6 +1841,7 @@ function applyMenuEdit(t, quiet) {
     const lama = MENU_TYPES.includes(items[idx].type) ? items[idx].type : 'snack';
     items[idx].type = MENU_TYPES.includes(t.value) ? t.value : 'snack';
     const baru = items[idx].type;
+    if (baru !== 'snack') items[idx].pkg = '';
     if (baru === 'po') { items[idx].pkg = ''; items[idx].price = ''; }
     else if (baru === 'snack-spesial' || baru === 'lunch-spesial') {
       if (lama !== baru && !(+items[idx].price > 0)) {
@@ -1823,6 +1849,9 @@ function applyMenuEdit(t, quiet) {
         items[idx].price = p ? +p.price || 0 : '';
       }
     } else items[idx].price = '';
+  } else if (t.classList.contains('wm-pkg')) {
+    const p = pkgById(t.value);
+    items[idx].pkg = p && p.type === 'snack' ? p.id : '';
   } else if (t.classList.contains('wm-price')) {
     const v = t.value === '' ? null : Math.max(0, +t.value || 0);
     if (items[idx].type === 'po') {
@@ -1845,6 +1874,7 @@ function applyMenuEdit(t, quiet) {
   const row = menuPlanItems(date)[idx];
   if (!isName || !row || (isName && !row.name)) renderWeekMenu();
   renderHomeCalendar();
+  if (t.classList.contains('wm-pkg')) { renderDailyMerged(); renderCustom(); }
   if (terisi) { renderDailyMerged(); renderCustom(); }
 }
 
@@ -1874,11 +1904,15 @@ function menuShareImage() {
       const parts = menuLines(it.name);
       const sp = spesialPrice(it);
       const po = it.type === 'po' ? poPrice(it, d) : 0;
+      const pj = menuItemPkg(it);
       return {
         type: menuTypeOf(it),
         title: parts[0] || it.name,
         comps: parts.slice(1).join(' · '),
-        pkg: sp ? 'Spesial · ' + fmtIDR(sp) : (it.type === 'po' ? 'Pre-Order' + (po ? ' · ' + fmtIDR(po) : '') : '')
+        pkg: [
+          sp ? 'Spesial · ' + fmtIDR(sp) : (it.type === 'po' ? 'Pre-Order' + (po ? ' · ' + fmtIDR(po) : '') : ''),
+          pj ? 'Paket ' + pj.name : ''
+        ].filter(Boolean).join(' · ')
       };
     })
   }));
@@ -2208,11 +2242,17 @@ function foodChips(type, date, rec, cid) {
     if (!picks.length) return '<span class="muted tiny">' + (rec && rec.ordered ? 'belum dipilih' : '—') + '</span>';
     return picks.map(k => '<span class="food-chip is-on" data-tip="' + foodTip(k, items[k]) + '"><b>' + LETTERS[k] + '</b>' + escapeHtml(label(items[k])) + '</span>').join('');
   }
+  const cust = customerById(cid);
   return items.slice(0, LETTERS.length).map((it, k) => {
     const on = picks.indexOf(k) >= 0;
     const sp = spesialPrice(it);
-    return '<button type="button" class="food-chip ' + (on ? 'is-on' : 'is-off') + '" data-act="daily-food" data-type="' + type +
-      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '" data-tip="' + foodTip(k, it, sp ? 'Spesial · ' + fmtIDR(sp) : '') + '">' +
+    const pj = menuItemPkg(it);
+    const allowed = !cust || itemAllowedFor(type, it, rec, cust);
+    const extra = [sp ? 'Spesial · ' + fmtIDR(sp) : '', pj ? (allowed ? 'Paket ' : 'Khusus paket ') + pj.name : ''].filter(Boolean).join('\n');
+    return '<button type="button" class="food-chip ' + (on ? 'is-on' : 'is-off') + (allowed ? '' : ' is-locked') + '" data-act="daily-food" data-type="' + type +
+      '" data-cid="' + escapeHtml(cid) + '" data-date="' + date + '" data-mi="' + k + '"' +
+      (!allowed && pj ? ' title="Khusus paket ' + escapeHtml(pj.name) + '"' : '') +
+      ' data-tip="' + foodTip(k, it, extra) + '">' +
       '<b>' + LETTERS[k] + '</b>' + escapeHtml(label(it)) + '</button>';
   }).join('');
 }
@@ -2514,7 +2554,7 @@ function buildCustomPage() {
       '<div class="card-head">' +
         '<div><h3>Tabel Pesanan Mingguan</h3><span class="muted tiny" id="customCount"></span></div>' +
         '<div class="head-tools">' +
-          '<button class="btn btn-ghost btn-sm" data-act="custom-print" title="Cetak tabel pilihan minggu ini ke A4 portrait">Cetak tabel</button>' +
+          '<button class="btn btn-ghost btn-sm" data-act="custom-print" title="Atur tampilan lalu cetak tabel pilihan minggu ini">Cetak tabel</button>' +
           '<span class="muted tiny">tampilkan</span>' +
           '<div class="seg seg-xs" id="customDisplaySeg">' +
             '<button class="seg-btn" data-act="custom-display" data-mode="name" title="Hanya nama paket">Nama paket</button>' +
@@ -2523,7 +2563,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan, klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh 2 pilihan sekaligus</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan, klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2548,7 +2588,7 @@ function customPkgNote(type, rec, c, chosen) {
   return p.name + ' · ' + fmtIDR(p.price);
 }
 function customPicks(type, rec) {
-  const max = type === 'snack' ? 2 : 1;
+  const max = type === 'snack' ? Infinity : 1;
   let list = Array.isArray(rec && rec.mis) ? rec.mis.filter(n => Number.isInteger(n) && n >= 0) : [];
   if (!list.length && rec && Number.isInteger(rec.mi)) list = [rec.mi];
   if (list.length > max) list = list.slice(0, max);
@@ -2565,7 +2605,8 @@ function autoPickSingles(dates, onlyId) {
       if (!recs) return;
       const items = menuItemsFor(t, d);
       const bernama = items.filter(it => String(it.name || '').trim());
-      const satu = bernama.length === 1 ? items.indexOf(bernama[0]) : -1;
+      const single = bernama.length === 1 ? bernama[0] : null;
+      const satu = single ? items.indexOf(single) : -1;
       Object.keys(recs).forEach(id => {
         if (onlyId && id !== onlyId) return;
         const r = recs[id];
@@ -2578,6 +2619,7 @@ function autoPickSingles(dates, onlyId) {
           return;
         }
         if (semua.length || satu < 0) return;
+        if (single && !itemAllowedFor(t, single, r, customerById(id))) return;
         r.mis = [satu]; r.mi = satu;
         if (!r.pkg) { const p = pkgFor(t, r, customerById(id)); if (p) r.pkg = p.id; }
         if (!r.method) r.method = defaultMethod();
@@ -2631,13 +2673,18 @@ function setCustomFood(cid, date, mi, typeIn) {
   if (!it) return;
   const lama = (db[type][date] || {})[cid];
   const had = !!lama && customPicks(type, lama).indexOf(mi) >= 0;
+  const itemPkg = menuItemPkg(it);
+  if (!had && itemPkg && !itemAllowedFor(type, it, lama, c)) {
+    toast('Menu ' + LETTERS[mi] + ' khusus paket ' + itemPkg.name);
+    return;
+  }
   if (!had && askUnblockLeave(c, date, () => setCustomFood(cid, date, mi, typeIn))) return;
   const rec = ensureRecord(type, date, cid);
   let picks = customPicks(type, rec);
   if (had) picks = picks.filter(x => x !== mi);
   else if (type === 'snack') {
-    picks = picks.length >= 2 ? [mi] : picks.concat(mi).sort((a, b) => a - b);
-    if (picks.length === 2) toast('Snack: ' + LETTERS[picks[0]] + ' + ' + LETTERS[picks[1]] + ' · harga mengikuti pilihan ' + LETTERS[picks[0]]);
+    picks = picks.concat(mi).sort((a, b) => a - b);
+    if (picks.length > 1) toast('Snack: ' + picks.map(k => LETTERS[k]).join(' + ') + ' · harga mengikuti pilihan ' + LETTERS[picks[0]]);
   } else picks = [mi];
   rec.mis = picks;
   rec.mi = picks.length ? picks[0] : undefined;
@@ -2718,7 +2765,7 @@ function renderCustom() {
     '<th class="sticky-col">Nama</th><th>Kelas</th>' +
     cols.map(col => {
       const items = col.items;
-      const legend = items.length ? '' : '<span class="cs-legend cs-none">belum ada menu</span>';
+      const legend = items.length ? '' : '<button type="button" class="cs-legend cs-none cs-make" data-act="goto-menu" data-date="' + col.date + '" data-tab="daily" title="Buat menu snack/lunch tanggal ini di Beranda › Menu Harian">+ buat menu</button>';
       return '<th class="day">' + WEEKDAYS[col.dow] +
         '<button type="button" class="day-jump" data-act="goto-day" data-date="' + col.date + '" title="Buka halaman Hari Ini pada tanggal ini">' +
         col.date.slice(8) + '/' + col.date.slice(5, 7) + '</button>' + legend + '</th>';
@@ -2748,11 +2795,20 @@ function renderCustom() {
       }
       const picks = ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
-        '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) =>
-          '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '" data-tip="' +
-          foodTip(k, it, (spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ', berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini')) + '">' + LETTERS[k] + '</button>').join('') + '</div>' +
+        '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) => {
+          const pj = menuItemPkg(it);
+          const allowed = itemAllowedFor(type, it, rec, c);
+          const extra = [
+            spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ', berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini',
+            pj ? (allowed ? 'Paket ' : 'Khusus paket ') + pj.name : ''
+          ].filter(Boolean).join('\n');
+          return '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
+            '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '"' +
+            (!allowed && pj ? ' title="Khusus paket ' + escapeHtml(pj.name) + '"' : '') +
+            ' data-tip="' + foodTip(k, it, extra) + '">' + LETTERS[k] + '</button>';
+        }).join('') + '</div>' +
         '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
-        escapeHtml(picks.length > 1 ? ('2 pilihan · harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu, harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih 2 makanan sekaligus' : 'Satu pilihan per hari'))) + '">' +
+        escapeHtml(picks.length > 1 ? (picks.length + ' pilihan · harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu, harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih lebih dari satu makanan' : 'Satu pilihan per hari'))) + '">' +
         escapeHtml(picks.length || ordered ? customPkgNote(type, rec, c, picks.length ? items[picks[0]] : null) : 'belum pesan') + '</div>' +
         '</td>';
     }).join('');
@@ -2771,92 +2827,344 @@ function renderCustom() {
 }
 
 /* ---------- Cetak tabel pilihan mingguan ---------- */
-function customWeekPrintHTML() {
+const CUSTOM_PRINT_COLORS = [
+  ['dark', '#222222', 'Hitam'],
+  ['blue', '#1F3A5F', 'Biru tua'],
+  ['red', '#7A1F1F', 'Merah tua'],
+  ['green', '#1F4D36', 'Hijau tua'],
+  ['gray', '#444444', 'Abu-abu']
+];
+const CUSTOM_PRINT_SIZES = [8, 9, 10, 11, 12, 13, 14];
+const CUSTOM_PRINT_ZOOMS = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3];
+const CUSTOM_PRINT_ZOOM_FIT = 1;
+const CUSTOM_PRINT_ZOOM_DEFAULT = 3;
+const CUSTOM_PRINT_STRIPE_DEFAULT = ['#dbeafe', '#fdf1d8'];
+let cprintZoomIdx = CUSTOM_PRINT_ZOOM_DEFAULT;
+function normHex(v, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toLowerCase() : fallback;
+}
+function mixHex(hex, ratio) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return '#' + ch.map(c => Math.round(c + (255 - c) * ratio).toString(16).padStart(2, '0')).join('');
+}
+function avgHex(a, b) {
+  const na = parseInt(a.slice(1), 16);
+  const nb = parseInt(b.slice(1), 16);
+  return '#' + [16, 8, 0].map(s =>
+    Math.round((((na >> s) & 255) + ((nb >> s) & 255)) / 2).toString(16).padStart(2, '0')).join('');
+}
+function customPrintOptions() {
+  const raw = uiPrefs().customPrint || {};
+  return {
+    checks: raw.checks !== false,
+    legend: raw.legend !== false,
+    color: CUSTOM_PRINT_COLORS.some(c => c[0] === raw.color) ? raw.color : 'dark',
+    size: CUSTOM_PRINT_SIZES.includes(+raw.size) ? +raw.size : 10,
+    table: raw.table === 'pick' ? 'pick' : (raw.table === 'stripe' ? 'stripe' : 'day'),
+    color1: normHex(raw.color1, CUSTOM_PRINT_STRIPE_DEFAULT[0]),
+    color2: normHex(raw.color2, CUSTOM_PRINT_STRIPE_DEFAULT[1])
+  };
+}
+function saveCustomPrintOptions(o) {
+  const p = uiPrefs();
+  p.customPrint = {
+    checks: o.checks !== false,
+    legend: o.legend !== false,
+    color: CUSTOM_PRINT_COLORS.some(c => c[0] === o.color) ? o.color : 'dark',
+    size: CUSTOM_PRINT_SIZES.includes(+o.size) ? +o.size : 10,
+    table: o.table === 'pick' ? 'pick' : (o.table === 'stripe' ? 'stripe' : 'day'),
+    color1: normHex(o.color1, CUSTOM_PRINT_STRIPE_DEFAULT[0]),
+    color2: normHex(o.color2, CUSTOM_PRINT_STRIPE_DEFAULT[1])
+  };
+  try { localStorage.setItem(UI_KEY, JSON.stringify(p)); } catch (e) { /* penyimpanan penuh */ }
+}
+function openCustomPrintModal() {
+  const o = customPrintOptions();
+  cprintZoomIdx = CUSTOM_PRINT_ZOOM_DEFAULT;
+  openModal(
+    '<h3>Cetak Tabel Mingguan</h3>' +
+    '<div class="cprint-layout">' +
+      '<div class="cprint-opts">' +
+        '<label class="check" style="margin:0 0 8px"><input type="checkbox" id="cprintChecks"' + (o.checks ? ' checked' : '') + '> Tampilkan centang pilihan makanan</label>' +
+        '<label class="check" style="margin:0 0 12px"><input type="checkbox" id="cprintLegend"' + (o.legend ? ' checked' : '') + '> Tampilkan hari, tanggal, dan makanan di atas tabel</label>' +
+        '<label class="field"><span>Warna font</span><select id="cprintColor" class="input">' +
+          CUSTOM_PRINT_COLORS.map(c => '<option value="' + c[0] + '"' + (o.color === c[0] ? ' selected' : '') + '>' + c[2] + '</option>').join('') +
+        '</select></label>' +
+        '<label class="field"><span>Ukuran font</span><select id="cprintSize" class="input">' +
+          CUSTOM_PRINT_SIZES.map(s => '<option value="' + s + '"' + (o.size === s ? ' selected' : '') + '>' + s + ' px</option>').join('') +
+        '</select></label>' +
+        '<label class="field"><span>Warna tabel</span><select id="cprintTable" class="input">' +
+          '<option value="day"' + (o.table === 'day' ? ' selected' : '') + '>Warna per hari</option>' +
+          '<option value="stripe"' + (o.table === 'stripe' ? ' selected' : '') + '>Selang-seling per hari</option>' +
+          '<option value="pick"' + (o.table === 'pick' ? ' selected' : '') + '>Selang-seling per pilihan</option>' +
+        '</select></label>' +
+        '<div class="cprint-colors" id="cprintStripeBox"' + (o.table === 'day' ? ' hidden' : '') + '>' +
+          '<div class="cprint-hint muted tiny" id="cprintStripeHint">' + (o.table === 'pick' ? 'Pilihan A, B, dan C bergantian memakai Warna 1 dan Warna 2.' : 'Kolom hari bergantian memakai Warna 1 dan Warna 2.') + '</div>' +
+          '<label class="field"><span>Warna 1</span><input type="color" class="input" id="cprintColor1" value="' + o.color1 + '"></label>' +
+          '<label class="field"><span>Warna 2</span><input type="color" class="input" id="cprintColor2" value="' + o.color2 + '"></label>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cprint-preview-col">' +
+        '<div class="cprint-zoombar">' +
+          '<span class="muted tiny">Pratinjau A4</span>' +
+          '<div class="cprint-zoomctl">' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-act="cprint-zoom-out" title="Perkecil pratinjau">&minus;</button>' +
+            '<span class="cprint-zoom-label" id="cprintZoomLabel">150%</span>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-act="cprint-zoom-in" title="Perbesar pratinjau">+</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-act="cprint-zoom-fit" title="Kembalikan ke ukuran pas">Pas</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cprint-preview" id="cprintPreviewWrap">' +
+          '<div class="cprint-sizer" id="cprintSizer">' +
+            '<div class="cprint-page" id="cprintPreviewPage"><iframe id="cprintPreview" title="Pratinjau tabel mingguan"></iframe></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+    '<button type="button" class="btn btn-primary" data-act="custom-print-go">Cetak</button></div>',
+    true
+  );
+  const box = document.querySelector('#modalBackdrop .modal');
+  if (box) box.classList.add('modal-print');
+  setTimeout(() => {
+    const frame = document.getElementById('cprintPreview');
+    if (!frame) return;
+    refreshCustomPrintPreview();
+    ['cprintChecks', 'cprintLegend', 'cprintColor', 'cprintSize', 'cprintColor1', 'cprintColor2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', refreshCustomPrintPreview);
+    });
+    const tableSel = document.getElementById('cprintTable');
+    if (tableSel) tableSel.addEventListener('change', () => {
+      syncCustomPrintColorFields();
+      refreshCustomPrintPreview();
+    });
+    requestAnimationFrame(fitCustomPrintPreview);
+  }, 30);
+}
+function syncCustomPrintColorFields() {
+  const tableSel = document.getElementById('cprintTable');
+  const box = document.getElementById('cprintStripeBox');
+  const hint = document.getElementById('cprintStripeHint');
+  const mode = tableSel ? tableSel.value : 'day';
+  if (box) box.hidden = mode === 'day';
+  if (hint) hint.textContent = mode === 'pick'
+    ? 'Pilihan A, B, dan C bergantian memakai Warna 1 dan Warna 2.'
+    : 'Kolom hari bergantian memakai Warna 1 dan Warna 2.';
+}
+function customPrintFormOptions() {
+  const checks = document.getElementById('cprintChecks');
+  const legend = document.getElementById('cprintLegend');
+  const color = document.getElementById('cprintColor');
+  const size = document.getElementById('cprintSize');
+  const tableSel = document.getElementById('cprintTable');
+  const color1 = document.getElementById('cprintColor1');
+  const color2 = document.getElementById('cprintColor2');
+  return {
+    checks: !checks || checks.checked,
+    legend: !legend || legend.checked,
+    color: color ? color.value : 'dark',
+    size: size ? +size.value : 10,
+    table: tableSel && (tableSel.value === 'stripe' || tableSel.value === 'pick') ? tableSel.value : 'day',
+    color1: color1 ? color1.value : CUSTOM_PRINT_STRIPE_DEFAULT[0],
+    color2: color2 ? color2.value : CUSTOM_PRINT_STRIPE_DEFAULT[1]
+  };
+}
+function fitCustomPrintPreview() {
+  const wrap = document.getElementById('cprintPreviewWrap');
+  const sizer = document.getElementById('cprintSizer');
+  const page = document.getElementById('cprintPreviewPage');
+  if (!wrap || !sizer || !page) return;
+  const avail = Math.max(200, wrap.clientWidth - 16);
+  const maxH = Math.max(320, Math.min(620, window.innerHeight * 0.63));
+  const baseScale = Math.min(avail / 794, maxH / 1123);
+  const zoom = CUSTOM_PRINT_ZOOMS[cprintZoomIdx] || 1;
+  const scale = baseScale * zoom;
+  const w = 794 * scale;
+  const h = 1123 * scale;
+  const fitH = 1123 * baseScale;
+  sizer.style.width = w + 'px';
+  sizer.style.height = h + 'px';
+  page.style.transform = 'scale(' + scale + ')';
+  const zoomed = h > fitH + 1 || w > avail + 1;
+  wrap.style.height = Math.ceil(Math.min(h, fitH) + 16) + 'px';
+  wrap.style.overflow = zoomed ? 'auto' : 'hidden';
+  const label = document.getElementById('cprintZoomLabel');
+  if (label) label.textContent = Math.round(zoom * 100) + '%';
+  const zin = document.querySelector('[data-act="cprint-zoom-in"]');
+  const zout = document.querySelector('[data-act="cprint-zoom-out"]');
+  if (zin) zin.disabled = cprintZoomIdx >= CUSTOM_PRINT_ZOOMS.length - 1;
+  if (zout) zout.disabled = cprintZoomIdx <= 0;
+}
+function setCustomPrintZoom(idx) {
+  cprintZoomIdx = Math.max(0, Math.min(CUSTOM_PRINT_ZOOMS.length - 1, idx));
+  fitCustomPrintPreview();
+  if (cprintZoomIdx === CUSTOM_PRINT_ZOOM_FIT) {
+    const wrap = document.getElementById('cprintPreviewWrap');
+    if (wrap) { wrap.scrollTop = 0; wrap.scrollLeft = 0; }
+  }
+}
+function refreshCustomPrintPreview() {
+  const frame = document.getElementById('cprintPreview');
+  if (!frame) return;
+  frame.style.visibility = 'hidden';
+  frame.onload = () => {
+    frame.onload = null;
+    frame.style.visibility = 'visible';
+    fitCustomPrintPreview();
+  };
+  frame.srcdoc = customWeekPrintHTML(customPrintFormOptions());
+  fitCustomPrintPreview();
+}
+function customPrintFromModal() {
+  const o = customPrintFormOptions();
+  saveCustomPrintOptions(o);
+  closeModal();
+  printCustomWeek(o);
+}
+function customWeekPrintHTML(opts) {
+  const opt = Object.assign(customPrintOptions(), opts || {});
+  const fontColor = (CUSTOM_PRINT_COLORS.find(c => c[0] === opt.color) || CUSTOM_PRINT_COLORS[0])[1];
+  const fontSize = Math.min(16, Math.max(8, +opt.size || 10));
+  const showChecks = opt.checks !== false;
+  const showLegend = opt.legend !== false;
   const type = customType();
   const typeLabel = type === 'snack' ? 'Snack' : 'Lunch';
   const start = state.custom.weekStart || mondayOf(todayStr());
   const range = fmtShortDate(start) + ' – ' + fmtShortDate(shiftDate(start, 6));
   const cols = customWeekCols(type);
   const customers = customCustomers();
-  const head = cols.map(col => {
+  const tableMode = opt.table === 'pick' ? 'pick' : (opt.table === 'stripe' ? 'stripe' : 'day');
+  const stripes = [
+    normHex(opt.color1, CUSTOM_PRINT_STRIPE_DEFAULT[0]),
+    normHex(opt.color2, CUSTOM_PRINT_STRIPE_DEFAULT[1])
+  ];
+  const neutral = mixHex(avgHex(stripes[0], stripes[1]), .35);
+  const tints = [
+    ['#cfe2f5', '#e4effa', '#f5faff'],
+    ['#d4ead9', '#e8f5eb', '#f6fbf7'],
+    ['#f6e3b8', '#fbf0d6', '#fffaf0'],
+    ['#f6d4dd', '#fbe7ec', '#fff7f9'],
+    ['#ddd3f2', '#eee8f8', '#f8f6fd'],
+    ['#cfe8e6', '#e5f4f2', '#f5fbfa'],
+    ['#dcdcdc', '#ececec', '#f7f7f7']
+  ];
+  const colTints = cols.map((col, i) => tableMode === 'stripe' ? i % 2 : (col.items.length ? col.dow : 6));
+  let pickSeq = 0;
+  const pickTints = cols.map((col, ci) => {
+    if (!col.items.length) return [tableMode === 'pick' ? 'dn' : 'd' + colTints[ci]];
+    return col.items.map(() =>
+      tableMode === 'pick' ? 'd' + (pickSeq++ % 2) : 'd' + colTints[ci]);
+  });
+  const dayTint = ci => tableMode === 'pick' ? 'dn' : 'd' + colTints[ci];
+  const tintCss = (tableMode === 'day'
+    ? tints.map((t, i) =>
+        'th.day.d' + i + '{background:' + t[0] + '}' +
+        'th.pick.d' + i + '{background:' + t[1] + '}' +
+        'td.cell.d' + i + '{background:' + t[2] + '}' +
+        '.daytag.d' + i + '{background:' + t[0] + '}'
+      ).join('')
+    : tableMode === 'stripe'
+      ? stripes.map((c, i) =>
+          'th.day.d' + i + '{background:' + c + '}' +
+          'th.pick.d' + i + '{background:' + mixHex(c, .5) + '}' +
+          'td.cell.d' + i + '{background:' + mixHex(c, .74) + '}' +
+          '.daytag.d' + i + '{background:' + c + '}'
+        ).join('')
+      : 'th.day.dn{background:' + neutral + '}' +
+        'th.pick.dn{background:' + neutral + '}' +
+        'td.cell.dn{background:' + mixHex(neutral, .55) + '}' +
+        '.daytag.dn{background:' + neutral + '}' +
+        stripes.map((c, i) =>
+          'th.pick.d' + i + '{background:' + c + '}' +
+          'td.cell.d' + i + '{background:' + mixHex(c, .74) + '}'
+        ).join('')
+  ) +
+    'th.day{border-left:1.6px solid #555}' +
+    'th.pick.first,td.cell.first{border-left:1.6px solid #555}';
+  const head = cols.map((col, ci) => {
     const span = Math.max(1, col.items.length);
-    return '<th class="day" colspan="' + span + '">' + WEEKDAYS[col.dow] +
+    return '<th class="day ' + dayTint(ci) + '" colspan="' + span + '">' + WEEKDAYS[col.dow] +
       '<span class="dt">' + col.date.slice(8) + '/' + col.date.slice(5, 7) + '</span></th>';
   }).join('');
-  const pickHead = cols.map(col => {
-    if (!col.items.length) return '<th class="pick none">&ndash;</th>';
-    return col.items.slice(0, LETTERS.length).map((it, k) => '<th class="pick">' + LETTERS[k] + '</th>').join('');
+  const pickHead = cols.map((col, ci) => {
+    if (!col.items.length) return '<th class="pick ' + pickTints[ci][0] + ' first none">&ndash;</th>';
+    return col.items.slice(0, LETTERS.length).map((it, k) =>
+      '<th class="pick ' + pickTints[ci][k] + (k === 0 ? ' first' : '') + '">' + LETTERS[k] + '</th>').join('');
   }).join('');
   const rows = customers.map((c, i) => {
-    const cells = cols.map(col => {
+    const cells = cols.map((col, ci) => {
       const rec = (db[type][col.date] || {})[c.id];
       const ordered = !!(rec && rec.ordered);
       const leave = isOnLeave(c, col.date);
       const picks = ordered ? customPicks(type, rec).filter(k => k < col.items.length) : [];
-      if (!col.items.length) return '<td class="cell' + (leave ? ' leave' : '') + '"></td>';
+      if (!col.items.length) return '<td class="cell ' + pickTints[ci][0] + ' first' + (leave ? ' leave' : '') + '"></td>';
       return col.items.map((it, k) => {
-        const on = picks.indexOf(k) >= 0;
-        return '<td class="cell' + (on ? ' on' : '') + (leave ? ' leave' : '') + '">' + (on ? '&#10003;' : '') + '</td>';
+        const on = showChecks && picks.indexOf(k) >= 0;
+        return '<td class="cell ' + pickTints[ci][k] + (k === 0 ? ' first' : '') + (on ? ' on' : '') + (leave ? ' leave' : '') + '">' + (on ? '&#10003;' : '') + '</td>';
       }).join('');
     }).join('');
     return '<tr><td class="no">' + (i + 1) + '</td><td class="nm">' + escapeHtml(c.name) +
-      (c.allergy ? '<span class="alg">' + escapeHtml(shortTxt(c.allergy, 30)) + '</span>' : '') +
       '</td><td class="cls">' + escapeHtml(c.className || '') + '</td>' + cells + '</tr>';
   }).join('');
-  const legend = cols.map(col => {
+  const legend = cols.map((col, ci) => {
     const menu = col.items.length
-      ? col.items.slice(0, LETTERS.length).map((it, k) =>
-          '<span class="lo"><b>' + LETTERS[k] + '</b> ' + escapeHtml(shortTxt(menuLines(it.name).join(' · '), 56)) + '</span>').join(' ')
+      ? col.items.slice(0, LETTERS.length).map((it, k) => {
+          const pj = menuItemPkg(it);
+          return '<span class="lo"><b>' + LETTERS[k] + '</b> ' + escapeHtml(shortTxt(menuLines(it.name).join(' · '), 56)) +
+            (pj ? ' <i class="pk">' + escapeHtml(pj.name) + '</i>' : '') + '</span>';
+        }).join(' ')
       : '<span class="none">belum ada menu</span>';
-    return '<div class="lg-day"><b>' + WEEKDAYS[col.dow] + '</b> ' + col.date.slice(8) + '/' + col.date.slice(5, 7) + ' · ' + menu + '</div>';
+    return '<div class="lg-day"><b class="daytag ' + dayTint(ci) + '">' + WEEKDAYS[col.dow] + '</b> ' + col.date.slice(8) + '/' + col.date.slice(5, 7) + ' · ' + menu + '</div>';
   }).join('');
-  const note = type === 'snack'
-    ? 'Centang satu atau dua pilihan. Snack boleh dua centang.'
-    : 'Centang satu pilihan menu.';
   return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4 portrait;margin:10mm}' +
-    'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:10px}' +
-    'h1{font-size:16px;margin:0 0 1.2mm;letter-spacing:.2px}' +
+    'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'body{font-family:"Segoe UI",system-ui,sans-serif;color:' + fontColor + ';font-size:' + fontSize + 'px}' +
+    '@media screen{body{margin:0;padding:10mm}}' +
+    'h1{font-size:' + (fontSize + 6) + 'px;margin:0 0 1.2mm;letter-spacing:.2px}' +
     '.head{text-align:center;margin-bottom:3mm}' +
-    '.head .sub{font-size:9.5px;color:#555}' +
-    '.legend{font-size:7.6px;line-height:1.3;margin:0 0 2.5mm}' +
+    '.head .sub{font-size:' + Math.max(8, fontSize - 0.5) + 'px;color:' + fontColor + ';opacity:.72}' +
+    '.legend{font-size:' + Math.max(6.5, fontSize - 2.4) + 'px;line-height:1.3;margin:0 0 2.5mm}' +
     '.legend .lg-day{margin-bottom:.7mm}' +
     '.legend b{font-weight:800}' +
     '.legend .lo{white-space:nowrap;margin-right:2mm}' +
-    '.legend .none{color:#888;font-style:italic}' +
+    '.legend .pk{font-style:normal;font-weight:700;opacity:.62}' +
+    '.legend .none{color:' + fontColor + ';opacity:.6;font-style:italic}' +
+    '.daytag{display:inline-block;padding:0 .9mm;border-radius:1mm}' +
     'table{width:100%;border-collapse:collapse;table-layout:fixed}' +
     'thead{display:table-header-group}' +
     'tr{break-inside:avoid;page-break-inside:avoid}' +
     'th,td{border:1px solid #666;padding:1mm .5mm;vertical-align:middle}' +
     'th.no,td.no{width:7mm;text-align:center}' +
     'th.nm,td.nm{width:36mm}' +
-    'th.cls,td.cls{width:11mm}' +
-    'th.day{background:#e9e3d8;text-align:center;font-size:8px;padding:1mm .4mm}' +
-    'th.day .dt{display:block;font-size:7px;font-weight:400;color:#555}' +
-    'th.pick{background:#f3efe8;text-align:center;font-size:8.5px;padding:.8mm .3mm}' +
-    'th.pick.none{color:#888;font-weight:400}' +
-    'td.cell{text-align:center;font-size:9px;font-weight:800;height:6mm;padding:.6mm .2mm}' +
-    'td.cell.on{color:#111}' +
-    'td.cell.leave{background:#eee}' +
-    '.alg{display:block;color:#777;font-size:6.8px;font-weight:400;line-height:1.2;margin-top:.3mm}' +
-    '.foot{margin-top:2.5mm;font-size:8.5px;color:#555}' +
+    'th.cls,td.cls{width:11mm;text-align:center}' +
+    'th.day{text-align:center;font-size:' + Math.max(7, fontSize - 2) + 'px;padding:1mm .4mm}' +
+    'th.day .dt{display:block;font-size:' + Math.max(6, fontSize - 3) + 'px;font-weight:400;color:' + fontColor + ';opacity:.7}' +
+    'th.pick{text-align:center;font-size:' + Math.max(7, fontSize - 1.5) + 'px;padding:.8mm .3mm}' +
+    'th.pick.none{color:' + fontColor + ';opacity:.6;font-weight:400}' +
+    'td.cell{text-align:center;font-size:' + Math.max(7, fontSize - 1) + 'px;font-weight:800;height:' + (fontSize * 0.6).toFixed(1) + 'mm;padding:.6mm .2mm}' +
+    'td.cell.on{color:' + fontColor + '}' +
+    tintCss +
+    'td.cell.leave{background:#d9d9d9}' +
     '.doc-logo{display:block;margin:0 auto 2mm;max-width:50mm;object-fit:contain}' +
     '</style></head><body>' +
     '<div class="head">' + logoFor('laporan') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
     '<div class="sub">Tabel Pilihan Menu Mingguan · ' + typeLabel + '</div>' +
     '<div class="sub">' + range + ' · ' + customers.length + ' anak</div></div>' +
-    '<div class="legend">' + legend + '</div>' +
+    (showLegend ? '<div class="legend">' + legend + '</div>' : '') +
     '<table><thead><tr><th class="no" rowspan="2">No</th><th class="nm" rowspan="2">Nama</th><th class="cls" rowspan="2">Kelas</th>' + head + '</tr>' +
     '<tr>' + pickHead + '</tr></thead>' +
     '<tbody>' + (rows || '<tr><td colspan="' + (3 + cols.reduce((s, c) => s + Math.max(1, c.items.length), 0)) + '" style="text-align:center;color:#777">Tidak ada pelanggan yang cocok dengan filter.</td></tr>') + '</tbody></table>' +
-    '<div class="foot">' + note + '</div>' +
     '</body></html>';
 }
-function printCustomWeek() {
+function printCustomWeek(opts) {
   const fr = document.getElementById('customFrame');
   if (!fr) return;
   if (!customCustomers().length) { toast('Tidak ada pelanggan untuk dicetak.'); return; }
-  fr.srcdoc = customWeekPrintHTML();
+  fr.srcdoc = customWeekPrintHTML(opts);
   setTimeout(() => printFrame(fr), 300);
 }
 
@@ -4253,6 +4561,57 @@ function buildRecapHTML(rows, mode) {
   return printableDoc('Rekap Tagihan per Pelanggan', 'Periode: ' + scope, inner);
 }
 
+/* ---------- Opsi warna cetak stiker & kertas konfirmasi ---------- */
+const PRINT_FONT_COLORS = [
+  ['default', '', 'Bawaan'],
+  ['dark', '#222222', 'Hitam'],
+  ['blue', '#1F3A5F', 'Biru tua'],
+  ['red', '#7A1F1F', 'Merah tua'],
+  ['green', '#1F4D36', 'Hijau tua'],
+  ['gray', '#444444', 'Abu-abu']
+];
+const PRINT_TABLE_TONES = [
+  ['none', '', 'Tanpa warna'],
+  ['cream', '#f7f1e6', 'Krem'],
+  ['blue', '#e8f1fb', 'Biru muda'],
+  ['green', '#e9f5ec', 'Hijau muda'],
+  ['rose', '#fbeef1', 'Merah muda'],
+  ['gray', '#f0f0f0', 'Abu-abu']
+];
+function printStyleOptions() {
+  const raw = uiPrefs().printStyle || {};
+  return {
+    font: PRINT_FONT_COLORS.some(c => c[0] === raw.font) ? raw.font : 'default',
+    tone: PRINT_TABLE_TONES.some(t => t[0] === raw.tone) ? raw.tone : 'none'
+  };
+}
+function printStyleHex() {
+  const o = printStyleOptions();
+  return {
+    font: (PRINT_FONT_COLORS.find(c => c[0] === o.font) || PRINT_FONT_COLORS[0])[1],
+    tone: (PRINT_TABLE_TONES.find(t => t[0] === o.tone) || PRINT_TABLE_TONES[0])[1]
+  };
+}
+function savePrintStyle() {
+  const p = uiPrefs();
+  const f = document.getElementById('printFontColor');
+  const t = document.getElementById('printTableTone');
+  p.printStyle = {
+    font: f && PRINT_FONT_COLORS.some(c => c[0] === f.value) ? f.value : 'default',
+    tone: t && PRINT_TABLE_TONES.some(x => x[0] === t.value) ? t.value : 'none'
+  };
+  try { localStorage.setItem(UI_KEY, JSON.stringify(p)); } catch (e) { /* penyimpanan penuh */ }
+}
+function syncPrintStyleControls() {
+  const o = printStyleOptions();
+  const f = document.getElementById('printFontColor');
+  const t = document.getElementById('printTableTone');
+  if (f && !f.options.length) f.innerHTML = PRINT_FONT_COLORS.map(c => '<option value="' + c[0] + '">' + c[2] + '</option>').join('');
+  if (t && !t.options.length) t.innerHTML = PRINT_TABLE_TONES.map(x => '<option value="' + x[0] + '">' + x[2] + '</option>').join('');
+  if (f) f.value = o.font;
+  if (t) t.value = o.tone;
+}
+
 /* ---------- Render: Stiker ---------- */
 function renderStickerDate() {
   setText('stickerDateText', fmtLong(state.stickerDate || todayStr()));
@@ -4306,6 +4665,11 @@ function stickerOptions() {
 }
 function buildStickerHTML(customers, o) {
   const cols = o.cols, rows = o.rows, style = o.style || db.settings.sticker;
+  const ps = printStyleHex();
+  const ink = ps.font || '#2B2020';
+  const clsInk = ps.font || '#5F564B';
+  const brandInk = ps.font || '#C0272D';
+  const tone = ps.tone;
   const rowH = o.rowH || +(STICKER_SHEET_H / rows).toFixed(2);
   const perPage = cols * rows;
   const pages = [];
@@ -4384,22 +4748,22 @@ function buildStickerHTML(customers, o) {
     '@page{size:A4;margin:5mm 6mm}' +
     '*{box-sizing:border-box}' +
     'html,body{margin:0;padding:0;background:#fff}' +
-    'body{font-family:"Segoe UI",system-ui,sans-serif;color:#2B2020;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'body{font-family:"Segoe UI",system-ui,sans-serif;color:' + ink + ';-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
     '@media screen{body{zoom:' + fit + '}}' +
     '.sheet{display:grid;gap:0;width:' + STICKER_SHEET_W + 'mm;margin:0 auto;border-top:' + edge + ';border-left:' + edge + ';page-break-inside:avoid}' +
     '.sheet + .sheet{margin-top:5mm;page-break-before:always}' +
-    '.label{position:relative;border-right:' + edge + ';border-bottom:' + edge + ';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:' + padMm.toFixed(2) + 'mm ' + (padMm * 0.45).toFixed(2) + 'mm;overflow:hidden;min-height:0;line-height:1.02;gap:.25mm}' +
+    '.label{position:relative;border-right:' + edge + ';border-bottom:' + edge + ';background:' + (tone || '#fff') + ';display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:' + padMm.toFixed(2) + 'mm ' + (padMm * 0.45).toFixed(2) + 'mm;overflow:hidden;min-height:0;line-height:1.02;gap:.25mm}' +
     '.mk{position:absolute;bottom:.8mm;right:.8mm;display:block}' +
     '.mk-dot{border-radius:50%}' +
-    '.mk-letter{border:1.1px solid ' + markFg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1;background:#fff}' +
+    '.mk-letter{border:1.1px solid ' + markFg + ';border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1;background:' + (tone || '#fff') + '}' +
     '.mk-bar{position:static;width:34%;height:1.1mm;border-radius:1mm;margin:.9mm auto 0}' +
     '.mk-word{position:static;display:block;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:.7mm;line-height:1}' +
     '.label.has-mark .brand,.label.has-mark .alg,.label.has-mark .cls{max-width:calc(100% - ' + (markMm + 1).toFixed(1) + 'mm)}' +
     '.name{flex:0 0 auto;font-family:' + nameFont + ';font-weight:700;font-size:' + nameSize.toFixed(1) + 'px;max-width:100%;overflow-wrap:anywhere}' +
-    '.cls{flex:0 0 auto;font-family:' + clsFont + ';color:#5F564B;font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.cls{flex:0 0 auto;font-family:' + clsFont + ';color:' + clsInk + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.alg{font-family:' + clsFont + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;line-height:1.08;max-width:100%;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}' +
     '.alg-dot{display:inline-block;width:1.6mm;height:1.6mm;border-radius:50%;margin-right:1mm;vertical-align:middle}' +
-    '.brand{flex:0 0 auto;font-family:' + brandFont + ';color:#C0272D;font-size:' + brandSize.toFixed(1) + 'px;letter-spacing:.3px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.brand{flex:0 0 auto;font-family:' + brandFont + ';color:' + brandInk + ';font-size:' + brandSize.toFixed(1) + 'px;letter-spacing:.3px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.brand-logo{height:' + slotSize.toFixed(1) + 'px;max-width:70%;object-fit:contain;display:block;flex:0 1 auto;min-height:0}' +
     '</style></head><body>' + sheets + '</body></html>';
 }
@@ -4504,13 +4868,22 @@ function satpamEntries(date, type) {
 }
 function buildSatpamHTML(date, type, showClass) {
   const entries = satpamEntries(date, type);
+  const ps = printStyleHex();
+  const ink = ps.font || '#222';
+  const subInk = ps.font || '#555';
+  const emInk = ps.font || '#666';
+  const tone = ps.tone;
+  const rowCss = tone ? 'tbody tr:nth-child(even) td{background:' + mixHex(tone, .55) + '}' : '';
+  const offBg = tone ? mixHex(tone, .3) : '#f1efe9';
   const typeLabel = type === 'snack' ? 'Snack' : 'Lunch';
   const menus = menuFor(date).filter(it => menuTypeOf(it) === type);
   const menuHtml = menus.length
     ? '<div class="menu"><strong>Pilihan ' + typeLabel + ':</strong>' + menus.map(m => {
         const parts = menuLines(m.name);
+        const pj = menuItemPkg(m);
         return '<div class="mi"><strong>' + escapeHtml(parts[0] || m.name) + '</strong>' +
-          (parts.length > 1 ? ' <span class="isi">' + parts.slice(1).map(escapeHtml).join(' · ') + '</span>' : '') + '</div>';
+          (parts.length > 1 ? ' <span class="isi">' + parts.slice(1).map(escapeHtml).join(' · ') + '</span>' : '') +
+          (pj ? ' <span class="isi">· ' + escapeHtml(pj.name) + '</span>' : '') + '</div>';
       }).join('') + '</div>'
     : '';
   const foods = menuItemsFor(type, date).slice(0, LETTERS.length);
@@ -4530,26 +4903,27 @@ function buildSatpamHTML(date, type, showClass) {
     : '<div class="cap">Belum ada menu ' + typeLabel + ' pada tanggal ini &mdash; kolom Paket + Cek dipakai sementara.</div>';
   return '<!DOCTYPE html><html><head><meta charset="utf-8">' + DOC_CSP + '<style>' +
     '@page{size:A4 portrait;margin:12mm}' +
-    'body{font-family:"Segoe UI",system-ui,sans-serif;color:#222;font-size:12px}' +
+    'body{font-family:"Segoe UI",system-ui,sans-serif;color:' + ink + ';font-size:12px}' +
     'h1{font-size:19px;margin:0 0 2mm;letter-spacing:.2px}' +
     '.head{text-align:center;margin-bottom:6mm}' +
-    '.head .sub{font-size:11px;color:#555}' +
+    '.head .sub{font-size:11px;color:' + subInk + '}' +
     '.menu{margin:0 0 4mm;font-size:12px}' +
     '.menu .mi{margin:.6mm 0}' +
-    '.menu .isi{color:#555;font-size:11px}' +
-    '.menu em{color:#666;font-weight:400}' +
+    '.menu .isi{color:' + subInk + ';font-size:11px}' +
+    '.menu em{color:' + emInk + ';font-weight:400}' +
     'table{width:100%;border-collapse:collapse}' +
     'th,td{border:1px solid #555;padding:2.6mm 2mm;text-align:left}' +
-    'th{background:#f3efe8;font-size:11px}' +
+    'th{background:' + (tone || '#f3efe8') + ';font-size:11px}' +
+    rowCss +
     'td.r,th.r{text-align:right}' +
     'td.box{width:14mm}' +
     'td.no{width:9mm;text-align:center}' +
-    '.cap{font-size:10.5px;color:#555;margin:0 0 2mm}' +
+    '.cap{font-size:10.5px;color:' + subInk + ';margin:0 0 2mm}' +
     'th.pick,td.pick{width:13mm;text-align:center}' +
     'th.pick{font-size:14px;line-height:1.15}' +
-    'th.pick small{display:block;font-size:8.5px;font-weight:600;color:#555;line-height:1.2;letter-spacing:0;text-transform:none}' +
+    'th.pick small{display:block;font-size:8.5px;font-weight:600;color:' + subInk + ';line-height:1.2;letter-spacing:0;text-transform:none}' +
     'td.pick{font-size:14px;color:#777}' +
-    'td.pick.off{background:#f1efe9}' +
+    'td.pick.off{background:' + offBg + '}' +
     '.doc-logo{display:block;margin:0 auto 2.5mm;max-width:60mm;object-fit:contain}' +
     '</style></head><body>' +
     '<div class="head">' + logoFor('konfirmasi') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
@@ -4560,7 +4934,11 @@ function buildSatpamHTML(date, type, showClass) {
     '<table><thead><tr><th class="no">No</th><th>Nama</th>' +
     (showClass ? '<th>Kelas</th>' : '') +
     (useFoods
-      ? foods.map((f, k) => '<th class="pick">' + LETTERS[k] + '<small>' + escapeHtml(shortTxt(menuLines(f.name)[0] || f.name, 16)) + '</small></th>').join('')
+      ? foods.map((f, k) => {
+          const pj = menuItemPkg(f);
+          return '<th class="pick">' + LETTERS[k] + '<small>' + escapeHtml(shortTxt(menuLines(f.name)[0] || f.name, 16)) +
+            (pj ? ' · ' + escapeHtml(shortTxt(pj.name, 12)) : '') + '</small></th>';
+        }).join('')
       : '<th>Paket</th><th class="box">Cek ✓</th>') +
     '</tr></thead><tbody>' + rows + '</tbody></table>' +
     '</body></html>';
@@ -5925,6 +6303,7 @@ function removePackage(id) {
   for (const type of ['snack', 'lunch']) for (const date in db[type]) for (const cid in db[type][date]) {
     const r = db[type][date][cid]; if (r.pkg === id) r.pkg = '';
   }
+  for (const date in db.menuPlan) db.menuPlan[date].forEach(it => { if (it.pkg === id) it.pkg = ''; });
   logAction('pengaturan', 'Hapus paket ' + p.type + ': ' + p.name);
   save(); renderSettings(); renderDailyMerged();
   toast('Paket dihapus', { undo: true });
@@ -6493,7 +6872,11 @@ function onDocClick(e) {
     case 'custom-prev': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), -7); renderCustom(); break;
     case 'custom-next': state.custom.weekStart = shiftDate(state.custom.weekStart || mondayOf(todayStr()), 7); renderCustom(); break;
     case 'custom-today': state.custom.weekStart = mondayOf(todayStr()); renderCustom(); break;
-    case 'custom-print': printCustomWeek(); break;
+    case 'custom-print': openCustomPrintModal(); break;
+    case 'custom-print-go': customPrintFromModal(); break;
+    case 'cprint-zoom-in': setCustomPrintZoom(cprintZoomIdx + 1); break;
+    case 'cprint-zoom-out': setCustomPrintZoom(cprintZoomIdx - 1); break;
+    case 'cprint-zoom-fit': setCustomPrintZoom(CUSTOM_PRINT_ZOOM_FIT); break;
     case 'custom-type': state.custom.type = act.dataset.type === 'lunch' ? 'lunch' : 'snack'; renderCustom(); break;
     case 'custom-reset': state.custom.level = ''; state.custom.cohort = ''; state.custom.cls = ''; state.custom.q = ''; renderCustom(); break;
     case 'custom-food': setCustomFood(act.dataset.cid, act.dataset.date, +act.dataset.mi); break;
@@ -6863,6 +7246,11 @@ function onDocChange(e) {
     updatePoGroupTotal();
     return;
   }
+  if (t.id === 'printFontColor' || t.id === 'printTableTone') {
+    savePrintStyle();
+    if (state.printMode === 'konfirmasi') satpamPreview(); else stickerPreview();
+    return;
+  }
   if (t.id === 'stickerSize' || t.id === 'stickerContent' || t.id === 'stickerBrand' || t.id === 'stickerLines') {
     stickerPreview();
     return;
@@ -6926,7 +7314,7 @@ function onDocChange(e) {
   if (t.id === 'holidayScope') { renderHolidayValueOptions(); renderHolidayWarn(); return; }
   if (t.id === 'holidayValue') { renderHolidayWarn(); return; }
   if (t.dataset.hp === '1') { filterHolidayPeople(); renderHolidayWarn(); return; }
-  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-price')) {
+  if (t.classList.contains('wm-name') || t.classList.contains('wm-type') || t.classList.contains('wm-price') || t.classList.contains('wm-pkg')) {
     applyMenuEdit(t, false);
     return;
   }
@@ -7156,6 +7544,7 @@ function init() {
 
   let rt;
   window.addEventListener('resize', () => {
+    if (document.getElementById('cprintPreview')) fitCustomPrintPreview();
     clearTimeout(rt);
     rt = setTimeout(() => {
       if (state.page === 'dashboard') renderDashboard();
