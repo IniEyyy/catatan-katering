@@ -384,14 +384,19 @@ function makeDemoData() {
   const leavePerson = shiftDate(sen, 8);   // Selasa minggu depan
   const methods = ['Tunai', 'Transfer', 'QRIS'];
 
-  /* tiga rotasi menu mingguan: paket sama, makanan berbeda; dua hari berisi menu spesial dengan harganya sendiri */
-  const mi = (name, type, pkg, price) => ({ name, type, pkg: '', price: /-spesial$/.test(type) ? (price || '') : '' });
+  /* tiga rotasi menu mingguan: paket sama, makanan berbeda; dua hari berisi menu spesial dengan harganya sendiri.
+     menuPkg menandai menu snack yang hanya untuk satu paket, contoh fitur menu per paket. */
+  const mi = (name, type, pkg, price, menuPkg) => ({
+    name, type,
+    pkg: type === 'snack' && menuPkg ? menuPkg.id : '',
+    price: /-spesial$/.test(type) ? (price || '') : ''
+  });
   const W1 = [
-    [mi('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', sMini.id), mi('Susu Cokelat\nBiskuit', 'snack', sSedang.id)],
+    [mi('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', sMini.id), mi('Susu Cokelat\nBiskuit', 'snack', sSedang.id, '', sMini)],
     [mi('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', lStandar.id), mi('Risoles Mayo\nMelon', 'snack', sSedang.id)],
-    [mi('Bubur Merah\nKacang\nRoti', 'snack', sSedang.id), mi('Kue Lumpur\nKelapa', 'snack', sMini.id),
+    [mi('Bubur Merah\nKacang\nRoti', 'snack', sSedang.id), mi('Kue Lumpur\nKelapa', 'snack', sMini.id, '', sSedang),
       mi('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', lPrem.id)],
-    [mi('Perkedel Jagung\nSayur', 'snack', sMini.id), mi('Es Jeruk\nNata', 'snack', sSedang.id),
+    [mi('Perkedel Jagung\nSayur', 'snack', sMini.id), mi('Es Jeruk\nNata', 'snack', sSedang.id, '', sMini),
       mi('Mie Ayam Spesial\nBakso\nSawi', 'lunch-spesial', '', 22000), mi('Nasi Ayam Kalio\nSayur', 'lunch', lStandar.id)],
     [mi('Kue Putu\nBulan', 'snack', sMini.id), mi('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', lStandar.id)],
     [mi('Sandwich Telur\nKeju', 'snack', sSedang.id), mi('Kue Tart Ulang Tahun', 'po')],
@@ -399,10 +404,10 @@ function makeDemoData() {
   ];
   const W2 = [
     [mi('Donat Kampung\nGula Halus', 'snack', sMini.id), mi('Puding Roti\nSaus Vanila', 'snack', sSedang.id),
-      mi('Abon Daging\nNasi', 'snack', sKomplit.id)],
+      mi('Abon Daging\nNasi', 'snack', sKomplit.id, '', sKomplit)],
     [mi('Nasi Ayam Bakar\nSayur\nBuah', 'lunch', lStandar.id), mi('Lontong Sayur\nTelur Balado', 'lunch', lPrem.id),
       mi('Lapis Legit\nTeh', 'snack', sSedang.id)],
-    [mi('Bola Tahu\nSayur', 'snack', sMini.id), mi('Cemilan Manis\nPuding Cokelat', 'snack', sSedang.id)],
+    [mi('Bola Tahu\nSayur', 'snack', sMini.id), mi('Cemilan Manis\nPuding Cokelat', 'snack', sSedang.id, '', sSedang)],
     [mi('Soto Ayam\nNasi\nPerkedel', 'lunch', lStandar.id), mi('Tahu Isi\nSayur', 'snack', sMini.id),
       mi('Es Teh Manis\nJeruk', 'snack-spesial', '', 5000)],
     [mi('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', lPrem.id)],
@@ -413,7 +418,7 @@ function makeDemoData() {
     [mi('Klepon\nUnu', 'snack', sMini.id), mi('Susu Stroberi\nRoti', 'snack', sSedang.id)],
     [mi('Nasi Goreng Kampung\nTelur\nSayur', 'lunch', lStandar.id), mi('Pastel Isi\nSayur', 'snack', sSedang.id)],
     [mi('Pisang Rebus\nKaramel', 'snack', sMini.id), mi('Nasi Ayam Woku\nSayur\nPuding', 'lunch', lBesar.id)],
-    [mi('Tahu Bulat\nBakso', 'snack', sKomplit.id), mi('Es Buah\nSemangka', 'snack', sSedang.id),
+    [mi('Tahu Bulat\nBakso', 'snack', sKomplit.id, '', sKomplit), mi('Es Buah\nSemangka', 'snack', sSedang.id),
       mi('Nasi Rendang\nSayur\nBuah', 'lunch', lPrem.id)],
     [mi('Getuk Singkong\nKelapa', 'snack', sMini.id), mi('Nasi Pecel\nAyam Goreng', 'lunch', lStandar.id)],
     [mi('Martabak Mini\nCokelat', 'snack', sSedang.id), mi('Tumpeng Mini', 'po')],
@@ -436,11 +441,18 @@ function makeDemoData() {
   const pickOf = (type, date, c, i) => {
     const items = (d.menuPlan[date] || []).filter(x => menuTypeOf(x) === type);
     if (!items.length) return { items: [], mis: [] };
-    const first = (i * 3 + c.name.length + (type === 'lunch' ? 2 : 0)) % items.length;
+    /* menu yang ditandai untuk satu paket hanya boleh dipilih anak berpaket itu */
+    const ownPkg = c[type === 'snack' ? 'snackPkg' : 'lunchPkg'] || (type === 'snack' ? sMini.id : lStandar.id);
+    const usable = items.filter(it => !it.pkg || it.pkg === ownPkg);
+    const pool = usable.length ? usable : items;
+    const start = (i * 3 + c.name.length + (type === 'lunch' ? 2 : 0)) % pool.length;
+    const chosen = pool[start];
+    const first = items.indexOf(chosen);
     const mis = [first];
-    if (type === 'snack' && items.length > 1 && (i + c.name.length) % 4 === 0) {
-      mis.push((first + 1) % items.length);
-      mis.sort((a, b) => a - b);
+    if (type === 'snack' && pool.length > 1 && (i + c.name.length) % 4 === 0) {
+      const next = pool[(start + 1) % pool.length];
+      const second = items.indexOf(next);
+      if (second !== first) { mis.push(second); mis.sort((a, b) => a - b); }
     }
     return { items, mis };
   };
@@ -562,18 +574,54 @@ function makeDemoData() {
     { id: uid(), date: shiftDate(today, -2), time: '', text: 'Tagih Kantor Desa Sukamaju, jatuh tempo terlewat', repeat: 'once', doneOn: '', ref: gDesa.gid }
   ];
 
-  const rc = (name, type, items, note) => ({ id: uid(), name, type, ingredients: items.map(([n, qty, unit]) => ({ name: n, qty, unit })), note: note || '' });
+  const rc = (name, type, items, note, steps) => ({
+    id: uid(), name, type,
+    ingredients: items.map(([n, qty, unit]) => ({ name: n, qty, unit })),
+    note: note || '', steps: steps || ''
+  });
   d.recipes = [
-    rc('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', [['Roti gandum', 3, 'bungkus'], ['Selai nanas', 1, 'botol'], ['Pisang', 2, 'sisir']]),
-    rc('Susu Cokelat\nBiskuit', 'snack', [['Susu UHT', 2, 'liter'], ['Bubuk cokelat', 0.5, 'kg'], ['Biskuit', 2, 'kaleng']]),
-    rc('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 3, 'kg'], ['Bumbu nasi goreng', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Puding', 2, 'bungkus']]),
-    rc('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tahu', 2, 'kg'], ['Buah', 2, 'kg']]),
-    rc('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', [['Beras', 4, 'kg'], ['Ayam', 3, 'kg'], ['Abon', 1, 'kg'], ['Puding', 2, 'bungkus']]),
-    rc('Nasi Goreng Kampung\nTelur\nSayur', 'snack', [['Beras', 3, 'kg'], ['Telur', 1, 'kg'], ['Minyak goreng', 1, 'liter'], ['Bawang merah', 0.5, 'kg'], ['Kecap manis', 1, 'botol'], ['Sayur', 2, 'kg']], 'Bumbu dasar sudah ada di dapur'),
-    rc('Roti Bakar Keju\nSusu', 'snack', [['Roti tawar', 4, 'bungkus'], ['Keju cheddar', 1, 'kg'], ['Susu UHT', 2, 'liter'], ['Mentega', 0.5, 'kg']]),
-    rc('Nasi Ayam Bakar\nSayur\nBuah', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 4, 'kg'], ['Bumbu bakar', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Buah', 3, 'kg']]),
-    rc('Soto Ayam\nNasi\nPerkedel', 'lunch', [['Ayam', 3, 'kg'], ['Beras', 4, 'kg'], ['Bumbu soto', 2, 'bungkus'], ['Kentang', 2, 'kg'], ['Daun bawang', 1, 'ikat']]),
-    rc('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tempe', 2, 'kg'], ['Buah', 2, 'kg']])
+    rc('Roti Sari Gandum\nSelai Nanas\nPisang', 'snack', [['Roti gandum', 3, 'bungkus'], ['Selai nanas', 1, 'botol'], ['Pisang', 2, 'sisir']], '', '1. Olesi roti dengan selai nanas.\n2. Isi dengan pisang, lalu lipat dan bungkus.'),
+    rc('Susu Cokelat\nBiskuit', 'snack', [['Susu UHT', 2, 'liter'], ['Bubuk cokelat', 0.5, 'kg'], ['Biskuit', 2, 'kaleng']], '', '1. Seduh susu dengan bubuk cokelat.\n2. Dinginkan, lalu kemas bersama biskuit.'),
+    rc('Nasi Goreng Jawa\nAyam Suwir\nSayur\nPuding', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 3, 'kg'], ['Bumbu nasi goreng', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Puding', 2, 'bungkus']], '', '1. Masak nasi, lalu goreng dengan bumbu.\n2. Suwir ayam dan tumis sayur.\n3. Kemas nasi, ayam, sayur, dan puding.'),
+    rc('Nasi Uduk\nAyam Bakar\nTahu\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tahu', 2, 'kg'], ['Buah', 2, 'kg']], '', '1. Masak nasi uduk dengan santan.\n2. Bakar ayam berbumbu dan goreng tahu.\n3. Kemas dengan potongan buah.'),
+    rc('Nasi Kuning\nAyam\nAbon\nPuding', 'lunch', [['Beras', 4, 'kg'], ['Kunyit', 0.2, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Abon', 1, 'kg'], ['Puding', 2, 'bungkus']], '', '1. Masak nasi kuning dengan kunyit dan santan.\n2. Goreng ayam dan siapkan abon.\n3. Kemas dengan puding.'),
+    rc('Nasi Goreng Kampung\nTelur\nSayur', 'lunch', [['Beras', 3, 'kg'], ['Telur', 1, 'kg'], ['Minyak goreng', 1, 'liter'], ['Bawang merah', 0.5, 'kg'], ['Kecap manis', 1, 'botol'], ['Sayur', 2, 'kg']], 'Bumbu dasar sudah ada di dapur', '1. Goreng nasi dengan bawang dan kecap.\n2. Tambahkan telur dan sayur.'),
+    rc('Roti Bakar Keju\nSusu', 'snack', [['Roti tawar', 4, 'bungkus'], ['Keju cheddar', 1, 'kg'], ['Susu UHT', 2, 'liter'], ['Mentega', 0.5, 'kg']], '', '1. Olesi roti dengan mentega.\n2. Panggang, beri keju, lalu bungkus dengan susu.'),
+    rc('Nasi Ayam Bakar\nSayur\nBuah', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 4, 'kg'], ['Bumbu bakar', 2, 'bungkus'], ['Sayur', 3, 'kg'], ['Buah', 3, 'kg']], '', '1. Masak nasi dan tumis sayur.\n2. Bakar ayam dengan bumbu.\n3. Kemas dengan buah.'),
+    rc('Soto Ayam\nNasi\nPerkedel', 'lunch', [['Ayam', 3, 'kg'], ['Beras', 4, 'kg'], ['Bumbu soto', 2, 'bungkus'], ['Kentang', 2, 'kg'], ['Daun bawang', 1, 'ikat']], '', '1. Rebus ayam dengan bumbu soto.\n2. Goreng perkedel kentang.\n3. Kemas kuah, nasi, dan perkedel terpisah.'),
+    rc('Nasi Uduk Betawi\nAyam Goreng\nTempe\nBuah', 'lunch', [['Beras', 4, 'kg'], ['Santan', 2, 'liter'], ['Ayam', 3, 'kg'], ['Tempe', 2, 'kg'], ['Buah', 2, 'kg']], '', '1. Masak nasi uduk.\n2. Goreng ayam dan tempe.\n3. Kemas dengan buah.'),
+    rc('Risoles Mayo\nMelon', 'snack', [['Kulit risoles', 2, 'bungkus'], ['Mayones', 1, 'botol'], ['Smoked beef', 0.5, 'kg'], ['Melon', 2, 'buah']]),
+    rc('Bubur Merah\nKacang\nRoti', 'snack', [['Beras', 3, 'kg'], ['Kacang hijau', 1, 'kg'], ['Gula merah', 1, 'kg'], ['Roti tawar', 2, 'bungkus']]),
+    rc('Kue Lumpur\nKelapa', 'snack', [['Tepung', 2, 'kg'], ['Telur', 1, 'kg'], ['Santan', 2, 'liter'], ['Kelapa parut', 1, 'kg']]),
+    rc('Perkedel Jagung\nSayur', 'snack', [['Jagung', 3, 'kg'], ['Tepung', 1, 'kg'], ['Telur', 1, 'kg'], ['Sayur', 2, 'kg']]),
+    rc('Es Jeruk\nNata', 'snack', [['Jeruk', 3, 'kg'], ['Nata de coco', 2, 'bungkus'], ['Gula', 1, 'kg'], ['Es batu', 2, 'bungkus']]),
+    rc('Mie Ayam Spesial\nBakso\nSawi', 'lunch', [['Mie', 5, 'kg'], ['Ayam', 3, 'kg'], ['Bakso', 1, 'kg'], ['Sawi', 2, 'kg'], ['Bumbu mie', 2, 'bungkus']], '', '1. Rebus mie dan sawi.\n2. Masak ayam kecap dan bakso.\n3. Kemas dengan kuah terpisah.'),
+    rc('Nasi Ayam Kalio\nSayur', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 4, 'kg'], ['Santan', 3, 'liter'], ['Bumbu kalio', 2, 'bungkus'], ['Sayur', 2, 'kg']]),
+    rc('Kue Putu\nBulan', 'snack', [['Tepung beras', 2, 'kg'], ['Gula merah', 1, 'kg'], ['Kelapa parut', 1, 'kg'], ['Daun pisang', 1, 'ikat']]),
+    rc('Sandwich Telur\nKeju', 'snack', [['Roti tawar', 4, 'bungkus'], ['Telur', 1, 'kg'], ['Keju', 1, 'kg'], ['Mayones', 1, 'botol']]),
+    rc('Kue Tart Ulang Tahun', 'po', [['Tepung', 2, 'kg'], ['Telur', 2, 'kg'], ['Mentega', 1, 'kg'], ['Gula', 1, 'kg'], ['Krim', 1, 'kg']], '', '1. Panggang sponge cake.\n2. Olesi krim dan hias sesuai pesanan.'),
+    rc('Donat Kampung\nGula Halus', 'snack', [['Tepung', 4, 'kg'], ['Gula halus', 1, 'kg'], ['Ragi', 0.2, 'kg'], ['Minyak goreng', 2, 'liter']], '', '1. Uleni adonan dan diamkan sampai mengembang.\n2. Bentuk donat, goreng, lalu taburi gula halus.'),
+    rc('Puding Roti\nSaus Vanila', 'snack', [['Roti tawar', 2, 'bungkus'], ['Susu UHT', 3, 'liter'], ['Puding', 2, 'bungkus'], ['Gula', 0.5, 'kg']], '', '1. Susun roti dalam cup.\n2. Tuang puding susu, dinginkan, lalu beri saus vanila.'),
+    rc('Abon Daging\nNasi', 'snack', [['Beras', 3, 'kg'], ['Abon', 1, 'kg'], ['Minyak goreng', 1, 'liter']], 'Menu untuk paket Snack Komplit'),
+    rc('Lontong Sayur\nTelur Balado', 'lunch', [['Beras', 4, 'kg'], ['Santan', 3, 'liter'], ['Telur', 1, 'kg'], ['Sayur', 3, 'kg'], ['Bumbu lontong', 2, 'bungkus']]),
+    rc('Lapis Legit\nTeh', 'snack', [['Tepung', 2, 'kg'], ['Telur', 2, 'kg'], ['Mentega', 1, 'kg'], ['Teh', 2, 'bungkus']]),
+    rc('Bola Tahu\nSayur', 'snack', [['Tahu', 3, 'kg'], ['Tepung', 1, 'kg'], ['Sayur', 2, 'kg'], ['Minyak goreng', 2, 'liter']]),
+    rc('Cemilan Manis\nPuding Cokelat', 'snack', [['Puding', 3, 'bungkus'], ['Susu UHT', 2, 'liter'], ['Gula', 0.5, 'kg']], 'Menu untuk paket Snack Sedang'),
+    rc('Tahu Isi\nSayur', 'snack', [['Tahu', 3, 'kg'], ['Sayur', 2, 'kg'], ['Tepung', 1, 'kg'], ['Minyak goreng', 2, 'liter']]),
+    rc('Es Teh Manis\nJeruk', 'snack', [['Teh', 2, 'bungkus'], ['Gula', 1, 'kg'], ['Jeruk', 2, 'kg'], ['Es batu', 2, 'bungkus']]),
+    rc('Nasi Box Pengajian', 'po', [['Beras', 10, 'kg'], ['Ayam', 7, 'kg'], ['Sayur', 5, 'kg'], ['Buah', 4, 'kg'], ['Kotak nasi', 100, 'pcs']]),
+    rc('Klepon\nUnu', 'snack', [['Tepung ketan', 2, 'kg'], ['Gula merah', 1, 'kg'], ['Kelapa parut', 1, 'kg'], ['Ubi', 2, 'kg']]),
+    rc('Susu Stroberi\nRoti', 'snack', [['Susu UHT', 2, 'liter'], ['Sirup stroberi', 1, 'botol'], ['Roti tawar', 3, 'bungkus']]),
+    rc('Pastel Isi\nSayur', 'snack', [['Kulit pastel', 2, 'bungkus'], ['Sayur', 2, 'kg'], ['Telur', 1, 'kg'], ['Minyak goreng', 2, 'liter']]),
+    rc('Pisang Rebus\nKaramel', 'snack', [['Pisang', 3, 'sisir'], ['Gula', 1, 'kg'], ['Mentega', 0.5, 'kg']]),
+    rc('Nasi Ayam Woku\nSayur\nPuding', 'lunch', [['Beras', 5, 'kg'], ['Ayam', 4, 'kg'], ['Bumbu woku', 2, 'bungkus'], ['Sayur', 2, 'kg'], ['Puding', 2, 'bungkus']]),
+    rc('Tahu Bulat\nBakso', 'snack', [['Tahu', 3, 'kg'], ['Bakso', 1, 'kg'], ['Tepung', 1, 'kg'], ['Minyak goreng', 2, 'liter']], 'Menu untuk paket Snack Komplit'),
+    rc('Es Buah\nSemangka', 'snack', [['Semangka', 3, 'buah'], ['Melon', 2, 'buah'], ['Susu UHT', 2, 'liter'], ['Es batu', 2, 'bungkus']]),
+    rc('Nasi Rendang\nSayur\nBuah', 'lunch', [['Beras', 5, 'kg'], ['Daging', 4, 'kg'], ['Santan', 4, 'liter'], ['Bumbu rendang', 2, 'bungkus'], ['Buah', 2, 'kg']], '', '1. Masak rendang sampai kuah menyusut.\n2. Masak nasi dan tumis sayur.\n3. Kemas dengan buah.'),
+    rc('Getuk Singkong\nKelapa', 'snack', [['Singkong', 5, 'kg'], ['Gula', 1, 'kg'], ['Kelapa parut', 1, 'kg']]),
+    rc('Nasi Pecel\nAyam Goreng', 'lunch', [['Beras', 5, 'kg'], ['Sayur', 4, 'kg'], ['Ayam', 4, 'kg'], ['Bumbu pecel', 2, 'bungkus']], '', '1. Rebus sayur dan siapkan bumbu pecel.\n2. Goreng ayam.\n3. Kemas nasi, sayur, dan ayam.'),
+    rc('Martabak Mini\nCokelat', 'snack', [['Tepung', 2, 'kg'], ['Telur', 1, 'kg'], ['Cokelat', 1, 'kg'], ['Mentega', 0.5, 'kg']]),
+    rc('Tumpeng Mini', 'po', [['Beras', 3, 'kg'], ['Ayam', 2, 'kg'], ['Sayur', 2, 'kg'], ['Telur', 1, 'kg'], ['Buah', 2, 'kg']], '', '1. Masak nasi kuning dan cetak kerucut.\n2. Siapkan lauk dan sayur.\n3. Susun tumpeng mini per pesanan.')
   ];
 
   const st = (kind, name, unit, qty, min, note) => ({ id: uid(), name, unit, qty, min, note: note || '' });

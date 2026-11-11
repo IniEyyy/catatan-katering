@@ -16,7 +16,7 @@ Cara memakainya: buka `index.html` di Chrome atau Edge. Tidak ada proses install
 
 Rekaman penuhnya ada di [halaman release](https://github.com/IniEyyy/catatan-katering/releases/tag/preview): `preview.mp4` untuk tur seluruh halaman dan `tutorial.mp4` untuk langkah setup. Keduanya tanpa suara dan bisa diunduh langsung.
 
-1. **Klik dua kali `index.html`.** Yang muncul pertama kali adalah data contoh: 25 anak, 6 paket, pesanan ± 6 minggu, beberapa PO kelompok beserta invoice. Tujuannya supaya semua tampilan bisa langsung dicoba sebelum ada data sungguhan.
+1. **Klik dua kali `index.html`.** Yang muncul pertama kali adalah data contoh: 25 anak, 6 paket, pesanan ± 6 minggu, beberapa PO kelompok beserta invoice, dan resep lengkap untuk semua menu mingguannya. Tujuannya supaya semua tampilan bisa langsung dicoba sebelum ada data sungguhan.
 2. **Mulai dari kosong.** Buka *Pengaturan › Tampilan & Cadangan Data*, lalu tekan tombol merah **Reset semua data** di bagian bawah kartu itu.
 3. **Identitas usaha** ada di *Pengaturan › Informasi Usaha*: nama usaha, tagline, logo, nama bank, nomor rekening, dan atas nama. Nama usaha dipakai di sidebar, stiker, invoice, kertas konfirmasi, dan pesan tagihan. Nomor rekening ikut terkirim di pesan WA lewat placeholder `{rekening}`.
 4. **Paket harga** dibuat di *Pengaturan › Paket Harga*, misalnya *Snack Sedang* Rp 6.000 dan *Nasi Kotak* Rp 13.000. Isinya cuma nama dan harga, dan paket melekat pada anak, bukan pada menunya. Jadi satu paket yang sama bisa berisi makanan berbeda tiap hari.
