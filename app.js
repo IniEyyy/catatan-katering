@@ -3009,7 +3009,8 @@ function openCustomPrintModal() {
     '<div class="cprint-layout">' +
       '<div class="cprint-opts">' +
         '<label class="check" style="margin:0 0 8px"><input type="checkbox" id="cprintChecks"' + (o.checks ? ' checked' : '') + '> Tampilkan centang pilihan makanan</label>' +
-        '<label class="check" style="margin:0 0 12px"><input type="checkbox" id="cprintLegend"' + (o.legend ? ' checked' : '') + '> Tampilkan hari, tanggal, dan makanan di atas tabel</label>' +
+        '<label class="check" style="margin:0 0 6px"><input type="checkbox" id="cprintLegend"' + (o.legend ? ' checked' : '') + '> Tampilkan hari, tanggal, dan makanan di atas tabel</label>' +
+        '<p class="muted tiny" style="margin:0 0 12px">Logo usaha otomatis tidak dicetak kalau daftar anak panjang, supaya tabel lebih lega dan tetap muat satu halaman bila memungkinkan.</p>' +
         '<label class="field"><span>Warna font</span><select id="cprintColor" class="input">' +
           CUSTOM_PRINT_COLORS.map(c => '<option value="' + c[0] + '"' + (o.color === c[0] ? ' selected' : '') + '>' + c[2] + '</option>').join('') +
         '</select></label>' +
@@ -3146,6 +3147,19 @@ function customPrintFromModal() {
   closeModal();
   printCustomWeek(o);
 }
+/* Perkiraan jumlah baris yang masih muat di satu A4, dipakai untuk memutuskan logo otomatis.
+   Angka hasil ukur cetak Chrome pada 6 kolom hari dengan legenda aktif dan logo 14 mm. */
+const CUSTOM_PRINT_ROWS = {
+  logo: [33, 30, 27, 25, 23, 21, 19, 17, 16],
+  plain: [36, 33, 30, 27, 24, 22, 21, 19, 17]
+};
+function customPrintRowCapacity(fontSize, showLegend, logoMm) {
+  const idx = Math.max(0, Math.min(8, Math.round(fontSize) - 8));
+  let cap = (logoMm > 0 ? CUSTOM_PRINT_ROWS.logo : CUSTOM_PRINT_ROWS.plain)[idx];
+  if (!showLegend) cap += 3;
+  if (logoMm > 0) cap += Math.round((14 - logoMm) / 8);
+  return Math.max(0, cap);
+}
 function customWeekPrintHTML(opts) {
   const opt = Object.assign(customPrintOptions(), opts || {});
   const fontColor = (CUSTOM_PRINT_COLORS.find(c => c[0] === opt.color) || CUSTOM_PRINT_COLORS[0])[1];
@@ -3158,6 +3172,9 @@ function customWeekPrintHTML(opts) {
   const range = fmtShortDate(start) + ' – ' + fmtShortDate(shiftDate(start, 6));
   const cols = customWeekCols(type);
   const customers = customCustomers();
+  const logoMm = Math.min(30, Math.max(8, +((db.settings.logoOpts || {}).headMm) || 14));
+  /* logo hanya ikut kalau barisnya masih muat satu halaman bersamanya */
+  const showLogo = printLogoOn('laporan') && customers.length <= customPrintRowCapacity(fontSize, showLegend, logoMm);
   const tableMode = opt.table === 'pick' ? 'pick' : (opt.table === 'stripe' ? 'stripe' : 'day');
   const stripes = [
     normHex(opt.color1, CUSTOM_PRINT_STRIPE_DEFAULT[0]),
@@ -3273,7 +3290,7 @@ function customWeekPrintHTML(opts) {
     'td.cell.leave{background:#d9d9d9}' +
     '.doc-logo{display:block;margin:0 auto 2mm;max-width:50mm;object-fit:contain}' +
     '</style></head><body>' +
-    '<div class="head">' + logoFor('laporan') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
+    '<div class="head">' + (showLogo ? logoFor('laporan') : '') + '<h1>' + escapeHtml(db.settings.businessName) + '</h1>' +
     '<div class="sub">Tabel Pilihan Menu Mingguan · ' + typeLabel + '</div>' +
     '<div class="sub">' + range + ' · ' + customers.length + ' anak</div></div>' +
     (showLegend ? '<div class="legend">' + legend + '</div>' : '') +
