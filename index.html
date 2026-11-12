@@ -164,8 +164,15 @@
                 <button class="seg-btn is-on" data-act="menu-tab" data-tab="week">Menu Mingguan</button>
                 <button class="seg-btn" data-act="menu-tab" data-tab="daily">Menu Harian</button>
               </div>
-              <span class="muted tiny libur-sum" id="liburSummary"></span>
-              <button type="button" class="btn btn-ghost btn-sm libur-btn" id="liburBtn" data-act="holiday-week" title="Tandai seluruh minggu dari tanggal terpilih sebagai libur">Libur Mingguan</button>
+              <div class="seg seg-sm menu-kind" role="group" aria-label="Jenis menu yang ditampilkan">
+                <button class="seg-btn is-on" data-act="menu-type" data-type="all">Semua</button>
+                <button class="seg-btn" data-act="menu-type" data-type="snack">Snack</button>
+                <button class="seg-btn" data-act="menu-type" data-type="lunch">Lunch</button>
+              </div>
+              <span class="menu-libur-tools">
+                <span class="muted tiny libur-sum" id="liburSummary"></span>
+                <button type="button" class="btn btn-ghost btn-sm libur-btn" id="liburBtn" data-act="holiday-week" title="Tandai seluruh minggu dari tanggal terpilih sebagai libur">Libur Mingguan</button>
+              </span>
             </div>
             <div class="libur-chips" id="liburChips"></div>
             <div class="week-menu" id="weekMenuEditor"></div>

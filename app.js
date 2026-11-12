@@ -832,6 +832,7 @@ const state = {
   cust: { q: '', level: '', cohort: '', cls: '', status: 'jalan' }, // 'jalan' = aktif + beli sekali yang belum lewat
   custSel: new Set(), // pelanggan terpilih untuk aksi massal
   menuTab: 'week', // tab kartu Menu di Beranda: 'week' | 'daily'
+  menuType: 'all', // filter editor menu Beranda: all | snack | lunch
   menuDay: 0, // hari terpilih (0=Senin..6=Minggu) saat tab Menu Harian aktif
   pageHistory: [], // riwayat halaman untuk tombol kembali/maju
   pageHistoryAt: -1,
@@ -1824,7 +1825,10 @@ function poPrice(it, date) {
 }
 function menuItemsHtml(date) {
   const items = menuPlanItems(date);
-  return items.map((it, idx) => {
+  const only = state.menuType === 'snack' || state.menuType === 'lunch' ? state.menuType : '';
+  return items.map((it, idx) => ({ it, idx }))
+    .filter(x => !only || menuTypeOf(x.it) === only)
+    .map(({ it, idx }) => {
     const raw = MENU_TYPES.includes(it.type) ? it.type : 'snack';
     let harga;
     if (raw === 'po') {
@@ -1856,6 +1860,10 @@ function menuItemsHtml(date) {
     '</div>';
   }).join('');
 }
+function menuEmptyHtml() {
+  const only = state.menuType === 'snack' || state.menuType === 'lunch' ? state.menuType : '';
+  return '<p class="muted tiny">' + (only ? 'Belum ada menu ' + only + ' pada tampilan ini. Tekan + Pilihan.' : 'Belum ada menu. Tekan + Pilihan.') + '</p>';
+}
 function menuDayIndex() {
   if (Number.isInteger(state.menuDay) && state.menuDay >= 0 && state.menuDay <= 6) return state.menuDay;
   return weekdayOf(state.menuDate || todayStr()) - 1;
@@ -1883,6 +1891,8 @@ function renderWeekMenu() {
   if (!el) return;
   const tab = state.menuTab === 'daily' ? 'daily' : 'week';
   document.querySelectorAll('[data-act="menu-tab"]').forEach(b => b.classList.toggle('is-on', b.dataset.tab === tab));
+  const kind = state.menuType === 'snack' || state.menuType === 'lunch' ? state.menuType : 'all';
+  document.querySelectorAll('[data-act="menu-type"]').forEach(b => b.classList.toggle('is-on', b.dataset.type === kind));
   const hint = document.getElementById('menuTabHint');
   const addBtn = key => menuPlanItems(key).length < WEEK_MENU_MAX
     ? '<button type="button" class="btn btn-ghost btn-sm" data-act="week-menu-add" data-date="' + key + '">+ Pilihan</button>' : '';
@@ -1902,7 +1912,7 @@ function renderWeekMenu() {
         '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
           WEEKDAYS[idx] + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
         '<div class="wm-items">' +
-          (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu. Tekan + Pilihan.</p>') +
+          (menuItemsHtml(date) || menuEmptyHtml()) +
           addBtn(date) +
         '</div>' +
       '</div>';
@@ -1920,7 +1930,7 @@ function renderWeekMenu() {
       '<button type="button" class="wm-day" data-act="goto-day" data-date="' + date + '" title="Lihat pesanannya di halaman Hari Ini">' +
         w + '<small>' + date.slice(8) + '/' + date.slice(5, 7) + '</small></button>' +
       '<div class="wm-items">' +
-        (menuItemsHtml(date) || '<p class="muted tiny">Belum ada menu. Tekan + Pilihan.</p>') +
+        (menuItemsHtml(date) || menuEmptyHtml()) +
         addBtn(date) +
       '</div>' +
     '</div>';
@@ -6874,7 +6884,8 @@ function onDocClick(e) {
       const items = menuPlanItems(date).map(it => Object.assign({}, it));
       if (items.length >= WEEK_MENU_MAX) { toast('Maksimal ' + WEEK_MENU_MAX + ' pilihan per hari'); break; }
       const last = items[items.length - 1];
-      const type = last ? last.type : 'snack';
+      const filterType = state.menuType === 'snack' || state.menuType === 'lunch' ? state.menuType : '';
+      const type = filterType || (last ? last.type : 'snack');
       items.push({ name: '', type: type, pkg: '', price: '' });
       writeMenuPlan(date, items);
       save(); renderWeekMenu(); renderPkgShowcase(); renderHomeCalendar();
@@ -6901,6 +6912,10 @@ function onDocClick(e) {
       if (state.menuTab === 'daily') state.menuDay = weekdayOf(state.menuDate || todayStr()) - 1;
       renderWeekMenu();
       renderHomeHoliday();
+      break;
+    case 'menu-type':
+      state.menuType = act.dataset.type === 'snack' || act.dataset.type === 'lunch' ? act.dataset.type : 'all';
+      renderWeekMenu();
       break;
     case 'menu-day': {
       state.menuDate = act.dataset.ymd;

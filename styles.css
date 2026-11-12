@@ -1099,7 +1099,8 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 
 /* Baris tab Menu + tombol libur (paling kanan) di kartu Menu, Beranda */
 .menu-tabrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 10px}
-.menu-tabrow .libur-sum{margin-left:auto;text-align:right}
+.menu-tabrow .menu-libur-tools{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.menu-tabrow .libur-sum{text-align:right}
 .libur-btn{color:var(--danger);border-color:var(--border-strong)}
 .libur-btn:hover{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
 .libur-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
