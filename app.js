@@ -875,7 +875,7 @@ const state = {
   poMonth: monthKey(todayStr()),
   rptMonth: monthKey(todayStr()),
   stickerDate: todayStr(),
-  stickerType: 'snack', // filter daftar anak di kartu stiker: snack | lunch
+  stickerType: 'snack', // filter daftar anak di kartu stiker: snack | lunch | both
   satpamType: 'snack',  // jenis kertas konfirmasi yang dibuat: snack | lunch
   menuDate: todayStr(),
   menuMonth: monthKey(todayStr()),
@@ -1685,7 +1685,8 @@ function syncTypeSeg(act, type) {
   document.querySelectorAll('[data-act="' + act + '"]').forEach(b => b.classList.toggle('is-on', b.dataset.type === type));
 }
 function typeSeg(act, el) {
-  const t = el.dataset.type === 'lunch' ? 'lunch' : 'snack';
+  const raw = el.dataset.type;
+  const t = raw === 'lunch' ? 'lunch' : raw === 'both' ? 'both' : 'snack';
   if (act === 'sticker-type') { state.stickerType = t; renderStickerCustomers(); stickerPreview(); }
   else { state.satpamType = t; satpamPreview(); }
   syncTypeSeg(act, t);
@@ -4830,24 +4831,27 @@ function stickerOrdersOn(date) {
 function renderStickerCustomers() {
   const date = state.stickerDate || todayStr();
   const ordered = stickerOrdersOn(date);
-  const want = state.stickerType === 'lunch' ? 'lunch' : 'snack';
-  const label = want === 'snack' ? 'Snack' : 'Lunch';
-  const match = c => {
-    const o = ordered[c.id];
-    if (!o) return false;
-    return o.indexOf(label) >= 0;
-  };
-  const list = db.customers.filter(match).sort(sortCustomers);
+  const want = state.stickerType === 'lunch' ? 'lunch' : state.stickerType === 'both' ? 'both' : 'snack';
+  const labelOf = t => t === 'lunch' ? 'Lunch' : 'Snack';
+  const rows = [];
+  db.customers.filter(c => ordered[c.id]).sort(sortCustomers).forEach(c => {
+    if (want === 'both') {
+      /* gabung: satu anak bisa muncul dua kali, sekali untuk snack dan sekali untuk lunch */
+      ['snack', 'lunch'].forEach(t => {
+        if (((db[t][date] || {})[c.id] || {}).ordered) rows.push({ c: c, t: t });
+      });
+    } else if (ordered[c.id].indexOf(labelOf(want)) >= 0) rows.push({ c: c, t: want });
+  });
   const wrap = document.getElementById('stickerCustomerList');
-  if (!list.length) {
-    wrap.innerHTML = '<p class="empty">Tidak ada pesanan ' + (want === 'snack' ? 'snack' : 'lunch') +
+  if (!rows.length) {
+    wrap.innerHTML = '<p class="empty">Tidak ada pesanan ' + (want === 'both' ? 'snack atau lunch' : want) +
       ' pada ' + escapeHtml(fmtLong(date)) + '. Ganti filter atau pilih tanggal lain.</p>';
     return;
   }
-  wrap.innerHTML = list.map(c =>
-    '<label><input type="checkbox" class="sticker-cb" value="' + c.id + '" checked><span>' + escapeHtml(c.name) +
-    (c.allergy ? '<span class="alg-dot" title="' + escapeHtml(c.allergy) + '">&#9888;</span>' : '') +
-    '</span><span class="cls">' + escapeHtml(ordered[c.id]) + '</span></label>'
+  wrap.innerHTML = rows.map(r =>
+    '<label><input type="checkbox" class="sticker-cb" value="' + r.c.id + '" data-kind="' + r.t + '" checked><span>' + escapeHtml(r.c.name) +
+    (r.c.allergy ? '<span class="alg-dot" title="' + escapeHtml(r.c.allergy) + '">&#9888;</span>' : '') +
+    '</span><span class="cls">' + (want === 'both' ? labelOf(r.t) : escapeHtml(ordered[r.c.id])) + '</span></label>'
   ).join('');
 }
 /* Area cetak A4 setelah dikurangi margin @page 5mm/6mm */
@@ -5060,8 +5064,7 @@ function saveStickerStyle() {
 }
 function stickerPreview() {
   syncStickerControls();
-  const ids = [...document.querySelectorAll('.sticker-cb:checked')].map(x => x.value);
-  const selected = db.customers.filter(c => ids.includes(c.id)).sort(sortCustomers);
+  const selected = [...document.querySelectorAll('.sticker-cb:checked')].map(x => customerById(x.value)).filter(Boolean);
   const o = stickerOptions();
   document.getElementById('stickerFrame').srcdoc = buildStickerHTML(selected, o);
   const size = document.getElementById('stickerSize').value;
