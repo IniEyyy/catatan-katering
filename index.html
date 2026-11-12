@@ -370,7 +370,7 @@
             <input type="text" id="poSearch" class="input input-sm" placeholder="Cari nama / menu…">
           </label>
           <span class="spacer"></span>
-          <label class="check" style="margin:0" title="Berlaku untuk invoice, resi, dan rekap PO"><input type="checkbox" id="poLogoUse" class="print-logo" data-key="invoice"> Logo</label>
+          <span class="logo-use"><label class="check" style="margin:0" title="Berlaku untuk invoice, resi, dan rekap PO"><input type="checkbox" id="poLogoUse" class="print-logo" data-key="invoice"> Logo</label><button type="button" class="logo-cfg-link" data-act="goto-logo-settings" title="Buka Pengaturan › Informasi Usaha">Atur logo</button></span>
           <button class="btn btn-ghost btn-sm" data-act="po-print-month">Cetak Rekap PO</button>
           <button class="btn btn-accent btn-sm" data-act="po-group-add">+ Pesanan Kelompok</button>
           <button class="btn btn-primary" data-act="po-menu-add">+ Tambah Menu PO</button>
@@ -437,7 +437,7 @@
             <option value="nama">Urutkan: Nama</option>
           </select>
           <span class="spacer"></span>
-          <label class="check" style="margin:0"><input type="checkbox" id="reportLogoUse" class="print-logo" data-key="laporan"> Logo</label>
+          <span class="logo-use"><label class="check" style="margin:0"><input type="checkbox" id="reportLogoUse" class="print-logo" data-key="laporan"> Logo</label><button type="button" class="logo-cfg-link" data-act="goto-logo-settings" title="Buka Pengaturan › Informasi Usaha">Atur logo</button></span>
           <button class="btn btn-ghost btn-sm" data-act="csv-report">Ekspor CSV</button>
           <button class="btn btn-accent btn-sm" data-act="report-print">Cetak Rekap</button>
         </div>
@@ -704,9 +704,12 @@
               <input type="range" id="stickerBrandScale" min="40" max="200" step="5" value="100" title="Ukuran font nama usaha">
               <span class="stk-font-val" id="stickerBrandScaleVal">100%</span>
             </div>
-            <label class="check">
-              <input type="checkbox" id="stickerLogoUse" class="print-logo" data-key="stiker"> Pakai logo usaha
-            </label>
+            <div class="logo-use">
+              <label class="check">
+                <input type="checkbox" id="stickerLogoUse" class="print-logo" data-key="stiker"> Pakai logo usaha
+              </label>
+              <button type="button" class="logo-cfg-link" data-act="goto-logo-settings" title="Buka Pengaturan › Informasi Usaha">Atur logo</button>
+            </div>
             <div class="stk-font-row" id="stickerLogoLayoutRow">
               <span class="stk-font-tag">Posisi logo</span>
               <select id="stickerLogoLayout" class="input input-sm">
@@ -759,9 +762,12 @@
             <label class="check">
               <input type="checkbox" id="satpamShowClass" checked> Tampilkan kolom kelas
             </label>
-            <label class="check">
-              <input type="checkbox" id="satpamLogoUse" class="print-logo" data-key="konfirmasi"> Pakai logo usaha
-            </label>
+            <div class="logo-use">
+              <label class="check">
+                <input type="checkbox" id="satpamLogoUse" class="print-logo" data-key="konfirmasi"> Pakai logo usaha
+              </label>
+              <button type="button" class="logo-cfg-link" data-act="goto-logo-settings" title="Buka Pengaturan › Informasi Usaha">Atur logo</button>
+            </div>
             <div class="sticker-actions">
               <button class="btn btn-primary" data-act="satpam-preview">Perbarui Pratinjau</button>
               <button class="btn btn-accent" data-act="satpam-print">Cetak / Simpan PDF</button>
@@ -799,12 +805,22 @@
 
       <!-- ============ PENGATURAN ============ -->
       <section class="page" id="page-settings">
+        <nav class="settings-jump" aria-label="Bagian pengaturan">
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardUsaha">Usaha &amp; logo</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardWa">Pengingat WhatsApp</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardMethod">Metode bayar</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardView">Tampilan &amp; cadangan</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardNav">Menu sidebar</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardPkg">Paket harga</button>
+          <button type="button" class="settings-chip" data-act="settings-jump" data-target="setCardDemo">Data contoh</button>
+        </nav>
         <div class="settings-grid">
-          <div class="card">
+          <div class="settings-col">
+          <div class="card" id="setCardUsaha">
             <div class="card-head"><h3>Informasi Usaha</h3></div>
             <label class="field"><span>Nama usaha</span><input type="text" id="setName" class="input"></label>
             <label class="field"><span>Tagline</span><input type="text" id="setTagline" class="input"></label>
-            <div class="field">
+            <div class="field" id="setLogoField">
               <span>Logo usaha</span>
               <div class="logo-row">
                 <div class="logo-preview" id="logoPreview"><span class="muted tiny">Belum ada logo</span></div>
@@ -842,15 +858,7 @@
             <button class="btn btn-primary" data-act="settings-save">Simpan</button>
           </div>
 
-          <div class="card">
-            <div class="card-head"><h3>Pengingat WhatsApp</h3></div>
-            <label class="field"><span>Kode negara (untuk nomor 08…)</span><input type="text" id="setWaCountry" class="input" style="max-width:140px" placeholder="62"></label>
-            <label class="field"><span>Format pesan tagihan</span><textarea id="setWaTemplate" class="input" rows="6"></textarea></label>
-            <p class="muted tiny">Placeholder: {orang} {anak} {usaha} {rincian} {sisa} {terakhir} {umur}=lama menunggak dalam hari, {jatuh_tempo} dan {invoice} (hanya terisi untuk pesanan kelompok), {rekening}=rekening usaha di Pengaturan › Informasi Usaha.</p>
-            <button class="btn btn-primary btn-sm" data-act="wa-save">Simpan Format</button>
-          </div>
-
-          <div class="card">
+          <div class="card" id="setCardMethod">
             <div class="card-head"><h3>Metode Pembayaran</h3></div>
             <div class="method-list" id="methodList"></div>
             <div class="inline-add">
@@ -858,8 +866,35 @@
               <button class="btn btn-ghost" data-act="method-add">Tambah</button>
             </div>
           </div>
+          </div>
 
-          <div class="card">
+          <div class="settings-col">
+          <div class="card" id="setCardWa">
+            <div class="card-head"><h3>Pengingat WhatsApp</h3></div>
+            <label class="field"><span>Kode negara (untuk nomor 08…)</span><input type="text" id="setWaCountry" class="input" style="max-width:140px" placeholder="62"></label>
+            <label class="field"><span>Format pesan tagihan</span><textarea id="setWaTemplate" class="input" rows="6"></textarea></label>
+            <p class="muted tiny">Placeholder: {orang} {anak} {usaha} {rincian} {sisa} {terakhir} {umur}=lama menunggak dalam hari, {jatuh_tempo} dan {invoice} (hanya terisi untuk pesanan kelompok), {rekening}=rekening usaha di Pengaturan › Informasi Usaha.</p>
+            <button class="btn btn-primary btn-sm" data-act="wa-save">Simpan Format</button>
+          </div>
+
+          <div class="card" id="setCardNav">
+            <div class="card-head"><h3>Menu Sidebar</h3><span class="muted tiny">tampil dan urutan</span></div>
+            <p class="muted tiny">Centang halaman yang ingin ditampilkan. Tarik pegangan titik atau pakai panah untuk menggeser urutan di dalam grupnya. Pengaturan selalu tampil agar tidak terkunci.</p>
+            <div class="nav-cfg" id="navCfg"></div>
+            <div class="sticker-actions" style="margin-top:10px">
+              <button class="btn btn-ghost btn-sm" data-act="nav-reset">Kembalikan Bawaan</button>
+            </div>
+          </div>
+
+          <div class="card" id="setCardDemo">
+            <div class="card-head"><h3>Data Contoh (Demo)</h3></div>
+            <p class="muted small">Muat data palsu untuk mencoba semua fitur: pelanggan, absensi 3 minggu, menu mingguan, PO lintas tahun, libur. Data saat ini akan diganti.</p>
+            <button class="btn btn-ghost" data-act="demo-load">Muat Data Contoh</button>
+          </div>
+          </div>
+
+          <div class="settings-col">
+          <div class="card" id="setCardView">
             <div class="card-head"><h3>Tampilan &amp; Cadangan Data</h3></div>
             <label class="field"><span>Jenis huruf</span>
               <select id="setUiFont" class="input">
@@ -898,19 +933,13 @@
             <div class="backup-list" id="backupList"></div>
             <button class="btn btn-danger btn-sm" data-act="reset" style="margin-top:12px">Reset semua data</button>
           </div>
-
-          <div class="card">
-            <div class="card-head"><h3>Menu Sidebar</h3><span class="muted tiny">tampil dan urutan</span></div>
-            <p class="muted tiny">Centang halaman yang ingin ditampilkan. Tarik pegangan titik atau pakai panah untuk menggeser urutan di dalam grupnya. Pengaturan selalu tampil agar tidak terkunci.</p>
-            <div class="nav-cfg" id="navCfg"></div>
-            <div class="sticker-actions" style="margin-top:10px">
-              <button class="btn btn-ghost btn-sm" data-act="nav-reset">Kembalikan Bawaan</button>
-            </div>
           </div>
+        </div>
 
-          <div class="card span-2">
-            <div class="card-head"><h3>Paket Harga</h3></div>
-            <p class="muted small">Paket hanya berisi <strong>nama tingkatan + harga</strong>, misalnya Snack Sedang Rp 6.000. Makanannya mengikuti menu harian, jadi satu paket bisa berisi makanan berbeda tiap hari.</p>
+        <div class="card settings-wide" id="setCardPkg">
+          <div class="card-head"><h3>Paket Harga</h3></div>
+          <p class="muted small">Paket hanya berisi <strong>nama tingkatan + harga</strong>, misalnya Snack Sedang Rp 6.000. Makanannya mengikuti menu harian, jadi satu paket bisa berisi makanan berbeda tiap hari.</p>
+          <div class="pkg-cols">
             <div class="menu-cat">
               <div class="cat-title">Paket Snack</div>
               <div class="pkg-list" id="pkgSnackList"></div>
@@ -929,12 +958,6 @@
                 <button class="btn btn-ghost" data-act="pkg-add" data-which="lunch">Tambah</button>
               </div>
             </div>
-          </div>
-
-          <div class="card">
-            <div class="card-head"><h3>Data Contoh (Demo)</h3></div>
-            <p class="muted small">Muat data palsu untuk mencoba semua fitur: pelanggan, absensi 3 minggu, menu mingguan, PO lintas tahun, libur. Data saat ini akan diganti.</p>
-            <button class="btn btn-ghost" data-act="demo-load">Muat Data Contoh</button>
           </div>
         </div>
       </section>

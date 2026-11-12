@@ -639,8 +639,32 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .customer-check-list .cls{color:var(--muted);font-size:12px;margin-left:auto}
 
 /* ===== Pengaturan ===== */
-.settings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
-@media (min-width:961px){.settings-grid .span-2{grid-column:span 2}}
+.settings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.settings-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.settings-jump{display:flex;flex-wrap:wrap;gap:8px}
+.settings-chip{
+  border:1px solid var(--border);background:var(--surface);color:var(--muted);
+  border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;transition:color .15s,border-color .15s,background .15s;
+}
+.settings-chip:hover{color:var(--primary-dark);border-color:var(--primary);background:var(--primary-soft)}
+.settings-wide .pkg-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.settings-wide .menu-cat{margin-bottom:0}
+.settings-grid .card,.settings-wide{scroll-margin-top:82px}
+.card.is-flash{animation:setFlash 1.7s ease}
+@keyframes setFlash{
+  0%,55%{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  100%{border-color:var(--border);box-shadow:none}
+}
+.logo-use{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.logo-cfg-link{
+  border:0;background:none;padding:0 2px;color:var(--primary-dark);font-family:inherit;
+  font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;
+}
+.logo-cfg-link:hover{color:var(--primary)}
+@media (max-width:960px){
+  .settings-wide .pkg-cols{grid-template-columns:1fr}
+}
 .method-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
 .method-item{
   display:flex;align-items:center;justify-content:space-between;gap:10px;

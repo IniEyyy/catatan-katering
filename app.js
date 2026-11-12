@@ -6450,6 +6450,16 @@ function renderSettings() {
   renderBackups();
   renderNavCfg();
 }
+function flashSettingsCard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const top = el.getBoundingClientRect().top + window.scrollY - 88;
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  el.classList.remove('is-flash');
+  void el.offsetWidth;
+  el.classList.add('is-flash');
+  setTimeout(() => el.classList.remove('is-flash'), 1800);
+}
 /* Makanan yang benar-benar dimakan anak ber-paket ini dalam 7 hari ke depan */
 function pkgMenuSample(p) {
   const type = p.type;
@@ -7298,6 +7308,13 @@ function onDocClick(e) {
       db.settings.uiFont = 'default'; db.settings.uiZoom = 100;
       applyUiStyle(); save({ noUndo: true });
       toast('Jenis huruf & ukuran teks kembali ke bawaan');
+      break;
+    case 'settings-jump':
+      flashSettingsCard(act.dataset.target);
+      break;
+    case 'goto-logo-settings':
+      showPage('settings');
+      setTimeout(() => flashSettingsCard('setCardUsaha'), 60);
       break;
     case 'settings-save': {
       db.settings.businessName = document.getElementById('setName').value.trim() || 'Nama Usaha';
