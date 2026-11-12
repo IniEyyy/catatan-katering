@@ -86,6 +86,17 @@ const MENU_TYPE_LABEL = { snack: 'Snack', 'snack-spesial': 'Snack Spesial', lunc
 const RECIPE_TYPE_LABEL = { snack: 'Snack', lunch: 'Lunch', po: 'PO' };
 const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', 'botol', 'kaleng', 'sachet', 'porsi', 'buah'];
 const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat & Alat Makan' };
+const STORAGE_KINDS = { kulkas: 'Kulkas', freezer: 'Freezer', rak: 'Rak', laci: 'Laci', meja: 'Meja', lemari: 'Lemari', lainnya: 'Lainnya' };
+function storageKindGuess(name) {
+  const s = String(name || '').toLowerCase();
+  if (/freezer/.test(s)) return 'freezer';
+  if (/chiller|kulkas|fridge/.test(s)) return 'kulkas';
+  if (/laci|drawer/.test(s)) return 'laci';
+  if (/meja|table/.test(s)) return 'meja';
+  if (/lemari|almari|cupboard/.test(s)) return 'lemari';
+  if (/rak|shelf|gudang/.test(s)) return 'rak';
+  return 'lainnya';
+}
 const STOCK_UNITS = RECIPE_UNITS.concat(['pcs', 'lusin', 'pack', 'box', 'lembar', 'roll']);
 const EXPENSE_CATEGORIES = ['Belanja pasar', 'Gas & energi', 'Kemasan', 'Transport', 'Gaji', 'Sewa', 'Listrik & air', 'Lainnya'];
 const NAV_DEFAULT_ORDER = ['dashboard', 'hari', 'print', 'custom', 'dapur', 'stok', 'report', 'expenses', 'pengingat', 'po', 'customers', 'log', 'settings'];
@@ -285,23 +296,57 @@ function normalize(d) {
   });
   if (!d.stock || typeof d.stock !== 'object') d.stock = {};
   ['bahan', 'wadah'].forEach(kind => {
-    const keys = new Set();
-    d.stock[kind] = (Array.isArray(d.stock[kind]) ? d.stock[kind] : []).map(x => ({
-      id: x && x.id || uid(),
-      name: String(x && x.name || '').trim().slice(0, 80),
-      unit: String(x && x.unit || '').trim().slice(0, 16) || (kind === 'wadah' ? 'pcs' : ''),
-      qty: Math.max(0, Math.min(999999, +x.qty || 0)),
-      min: Math.max(0, Math.min(999999, +x.min || 0)),
-      location: String(x && x.location || '').trim().slice(0, 60),
-      expiry: x && /^\d{4}-\d{2}-\d{2}$/.test(x.expiry || '') ? x.expiry : '',
-      note: String(x && x.note || '').trim().slice(0, 160)
-    })).filter(x => {
-      if (!x.name) return false;
-      const k = x.name.toLowerCase() + '|' + x.unit.toLowerCase();
-      if (keys.has(k)) return false;
-      keys.add(k);
-      return true;
+    const merged = [];
+    (Array.isArray(d.stock[kind]) ? d.stock[kind] : []).forEach(raw => {
+      const x = {
+        id: raw && raw.id || uid(),
+        name: String(raw && raw.name || '').trim().slice(0, 80),
+        unit: String(raw && raw.unit || '').trim().slice(0, 16) || (kind === 'wadah' ? 'pcs' : ''),
+        qty: Math.max(0, Math.min(999999, +raw.qty || 0)),
+        min: Math.max(0, Math.min(999999, +raw.min || 0)),
+        location: String(raw && raw.location || '').trim().slice(0, 60),
+        expiry: raw && /^\d{4}-\d{2}-\d{2}$/.test(raw.expiry || '') ? raw.expiry : '',
+        note: String(raw && raw.note || '').trim().slice(0, 160),
+        pin: !!(raw && raw.pin)
+      };
+      if (!x.name) return;
+      const key = x.name.toLowerCase() + '|' + x.unit.toLowerCase() + '|' + x.expiry + '|' + x.location.toLowerCase();
+      const found = merged.find(y => y.name.toLowerCase() + '|' + y.unit.toLowerCase() + '|' + y.expiry + '|' + y.location.toLowerCase() === key);
+      if (found) {
+        /* batch kembar dari data lama digabung jumlahnya, bukan dibuang */
+        found.qty = Math.min(999999, Math.round((found.qty + x.qty) * 100) / 100);
+        found.pin = found.pin || x.pin;
+        if (!found.min) found.min = x.min;
+        if (!found.note) found.note = x.note;
+      } else merged.push(x);
     });
+    d.stock[kind] = merged;
+  });
+  if (!Array.isArray(d.storage)) {
+    const locs = [];
+    ['bahan', 'wadah'].forEach(kind => d.stock[kind].forEach(x => {
+      const loc = String(x.location || '').trim();
+      if (loc && !locs.some(y => y.toLowerCase() === loc.toLowerCase())) locs.push(loc);
+    }));
+    const awal = locs.length ? locs : ['Kulkas', 'Freezer', 'Rak A', 'Laci Meja', 'Meja Persiapan'];
+    /* wadah layout dibuat sekali dari lokasi stok yang sudah ada, sesudahnya pemilik bebas mengubah */
+    d.storage = awal.map(name => ({ id: uid(), name, kind: storageKindGuess(name), note: '' }));
+  }
+  const namaWadah = new Set();
+  d.storage = (Array.isArray(d.storage) ? d.storage : []).map(x => {
+    const name = String(x && x.name || '').trim().slice(0, 60);
+    return {
+      id: String(x && x.id || uid()),
+      name: name,
+      kind: STORAGE_KINDS[x && x.kind] ? x.kind : storageKindGuess(name),
+      note: String(x && x.note || '').trim().slice(0, 120)
+    };
+  }).filter(x => {
+    if (!x.name) return false;
+    const k = x.name.toLowerCase();
+    if (namaWadah.has(k)) return false;
+    namaWadah.add(k);
+    return true;
   });
   if (!Array.isArray(d.expenses)) d.expenses = [];
   d.expenses = d.expenses.map(e => ({
@@ -839,6 +884,7 @@ const state = {
   stockKind: 'bahan',   // tab halaman Stok: bahan | wadah
   stockQ: '',           // pencarian nama, lokasi, atau catatan stok
   stockFilter: 'all',   // filter status stok: all | aman | menipis | habis | expired
+  storageSel: '',       // wadah yang sedang menyala di halaman Penyimpanan (beta)
   expMonth: monthKey(todayStr()), // bulan yang dibuka di halaman Pengeluaran
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
@@ -1448,7 +1494,7 @@ function drawDonut(canvas, segments, centerLabel, fmtVal) {
 }
 
 /* ---------- Render: navigasi ---------- */
-const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', print: 'Cetak', report: 'Laporan', expenses: 'Pengeluaran', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
+const TITLES = { dashboard: 'Beranda', hari: 'Hari Ini', custom: 'Pesanan Mingguan', dapur: 'Dapur', stok: 'Stok', storage: 'Penyimpanan (beta)', print: 'Cetak', report: 'Laporan', expenses: 'Pengeluaran', pengingat: 'Pengingat & Tagihan', po: 'Pre-Order (PO)', customers: 'Pelanggan', log: 'Log Aktivitas', settings: 'Pengaturan' };
 
 function navOrder() { return (db.settings.navOrder || NAV_DEFAULT_ORDER).slice(); }
 function navHidden() { return (db.settings.navHidden || []).slice(); }
@@ -1594,6 +1640,7 @@ function renderPage(name) {
   else if (name === 'custom') renderCustom();
   else if (name === 'dapur') renderDapur();
   else if (name === 'stok') renderStok();
+  else if (name === 'storage') renderStorage();
   else if (name === 'expenses') renderExpenses();
   else if (name === 'po') renderPO();
   else if (name === 'report') renderReport();
@@ -6117,6 +6164,20 @@ function stockExpiryState(x) {
   return { label: fmtShortDate(x.expiry), cls: '', days };
 }
 function fmtStockQty(x) { return fmtQtyNum(x.qty) + (x.unit ? ' ' + x.unit : ''); }
+const PIN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6l-2 3h8l-2-3V3"/><path d="M12 12v9"/></svg>';
+function stockSort(a, b) {
+  return (b.pin ? 1 : 0) - (a.pin ? 1 : 0) ||
+    a.name.localeCompare(b.name, 'id') ||
+    a.unit.localeCompare(b.unit, 'id') ||
+    (a.expiry || '9999-99-99').localeCompare(b.expiry || '9999-99-99') ||
+    (a.location || '').localeCompare(b.location || '', 'id');
+}
+function stockBatchKey(x) {
+  return [x.name.toLowerCase(), x.unit.toLowerCase(), x.expiry || '', (x.location || '').toLowerCase()].join('|');
+}
+function stockBatches(kind, it) {
+  return stockItems(kind).filter(x => stockBatchKey(x) === stockBatchKey(it));
+}
 function renderStok() {
   const kind = stockKindOf(state.stockKind);
   state.stockKind = kind;
@@ -6131,7 +6192,7 @@ function renderStok() {
   if (search && search.value !== state.stockQ) search.value = state.stockQ;
   const filter = document.getElementById('stockFilter');
   if (filter && filter.value !== state.stockFilter) filter.value = state.stockFilter;
-  const all = stockItems(kind).slice().sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
+  const all = stockItems(kind).slice().sort(stockSort);
   const q = String(state.stockQ || '').trim().toLowerCase();
   const mode = ['aman', 'menipis', 'habis', 'expired'].includes(state.stockFilter) ? state.stockFilter : 'all';
   const list = all.filter(x => {
@@ -6147,9 +6208,10 @@ function renderStok() {
   const expired = all.filter(x => !!x.expiry && x.expiry < todayStr()).length;
   const near = all.filter(x => { const e = stockExpiryState(x); return e.days !== null && e.days >= 0 && e.days <= 7; }).length;
   const noLoc = all.filter(x => !x.location).length;
+  const jenis = new Set(all.map(x => x.name.toLowerCase() + '|' + x.unit.toLowerCase())).size;
   const stat = document.getElementById('stockStats');
   if (stat) stat.innerHTML =
-    statCard('Jenis Tercatat', all.length, 'di ' + label.toLowerCase(), 'primary') +
+    statCard('Jenis Tercatat', jenis, all.length > jenis ? all.length + ' batch di ' + label.toLowerCase() : 'di ' + label.toLowerCase(), 'primary') +
     statCard('Menipis', low, 'sudah di batas minimum', 'gold') +
     statCard('Habis', empty, 'perlu segera dibeli', 'danger') +
     (kind === 'bahan'
@@ -6159,15 +6221,19 @@ function renderStok() {
   if (tb) tb.innerHTML = list.map(x => {
     const st = stockStatus(x);
     const ex = stockExpiryState(x);
-    return '<tr>' +
+    const kembar = stockItems(kind).filter(y => y.name === x.name && y.unit === x.unit).length > 1;
+    return '<tr' + (x.pin ? ' class="is-pinned"' : '') + '>' +
       '<td><div class="dapur-menu-name"><strong>' + escapeHtml(x.name) + '</strong>' +
-        (x.note ? '<small>' + escapeHtml(x.note) + '</small>' : '') + '</div></td>' +
+        (x.note ? '<small>' + escapeHtml(x.note) + '</small>' : '') +
+        (kind === 'bahan' && kembar ? '<small class="stock-batch-tag">Batch · ' + (x.expiry ? fmtShortDate(x.expiry) : 'tanpa tanggal') + '</small>' : '') +
+        '</div></td>' +
       '<td class="num">' + escapeHtml(fmtStockQty(x)) + '</td>' +
       '<td class="num">' + (+x.min > 0 ? escapeHtml(fmtQtyNum(x.min) + (x.unit ? ' ' + x.unit : '')) : '<span class="muted">-</span>') + '</td>' +
       '<td>' + (x.location ? escapeHtml(x.location) : '<span class="muted">-</span>') + '</td>' +
       '<td>' + (x.expiry ? '<span class="badge ' + ex.cls + '" title="' + escapeHtml(fmtShortDate(x.expiry)) + '">' + ex.label + '</span>' : '<span class="muted">-</span>') + '</td>' +
       '<td class="c"><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
       '<td class="end"><div class="dapur-row-actions">' +
+        '<button class="icon-act stock-pin' + (x.pin ? ' is-on' : '') + '" data-act="stock-pin" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '" title="' + (x.pin ? 'Lepas sematan' : 'Sematkan ke atas tabel') + '">' + PIN_ICON + '</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="stock-in" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '">+ Stok</button>' +
         '<button class="btn btn-ghost btn-sm" data-act="stock-edit" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '">Ubah</button>' +
         '<button class="icon-act danger" data-act="stock-delete" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '" title="Hapus item">×</button>' +
@@ -6220,8 +6286,8 @@ function saveStockItemModal() {
   const note = (document.getElementById('stockItemNote').value || '').trim();
   if (!name) { toast('Tulis nama item dulu'); return; }
   if (!unit) { toast('Isi satuannya dulu'); return; }
-  const dup = stockItems(kind).find(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase() && x.unit.toLowerCase() === unit.toLowerCase());
-  if (dup) { toast('Item dengan nama dan satuan itu sudah ada'); return; }
+  const dup = stockItems(kind).find(x => x.id !== id && stockBatchKey(x) === stockBatchKey({ name, unit, expiry, location }));
+  if (dup) { toast('Batch dengan nama, satuan, tanggal, dan lokasi itu sudah ada'); return; }
   const old = id ? stockById(kind, id) : null;
   if (old) {
     Object.assign(old, { name, unit, qty, min, location, expiry, note });
@@ -6233,12 +6299,19 @@ function saveStockItemModal() {
   save();
   closeModal();
   if (state.page === 'stok') renderStok();
+  else if (state.page === 'storage') renderStorage();
   toast(old ? 'Stok diperbarui' : 'Item stok ditambahkan');
 }
 function openStockMoveModal(kind, id) {
   kind = stockKindOf(kind);
   const it = stockById(kind, id);
   if (!it) return;
+  const batches = stockBatches(kind, it);
+  const batchInfo = batches.length > 1
+    ? '<div class="stock-batches"><span class="po-info-label">Batch tercatat</span>' +
+      batches.map(x => '<span class="stock-batch-line"><strong>' + escapeHtml(fmtStockQty(x)) + '</strong> · ' +
+        (x.expiry ? escapeHtml(fmtShortDate(x.expiry)) : 'tanpa tanggal') + '</span>').join('') + '</div>'
+    : '';
   openModal(
     '<h3>Tambah Stok</h3>' +
     '<div class="po-menu-info">' +
@@ -6246,11 +6319,12 @@ function openStockMoveModal(kind, id) {
       '<div><span class="po-info-label">Stok sekarang</span><strong>' + escapeHtml(fmtStockQty(it)) + '</strong></div>' +
       '<div><span class="po-info-label">Satuan</span><strong>' + escapeHtml(it.unit || '-') + '</strong></div>' +
       '<div><span class="po-info-label">Lokasi</span><strong>' + escapeHtml(it.location || '-') + '</strong></div>' +
-    '</div>' +
+    '</div>' + batchInfo +
     '<input type="hidden" id="stockMoveKind" value="' + kind + '">' +
     '<input type="hidden" id="stockMoveId" value="' + escapeHtml(it.id) + '">' +
     '<label class="field"><span>Jumlah masuk</span><input type="number" id="stockMoveQty" class="input" min="0" step="any" value="" placeholder="0"></label>' +
-    '<label class="field"><span>Kedaluwarsa baru (opsional)</span><input type="date" id="stockMoveExpiry" class="input" value="' + escapeHtml(it.expiry || '') + '"></label>' +
+    '<label class="field"><span>Kedaluwarsa batch ini</span><input type="date" id="stockMoveExpiry" class="input" value="' + escapeHtml(it.expiry || '') + '"></label>' +
+    '<p class="muted tiny">Tanggal yang sama menambah jumlah batch ini. Tanggal berbeda membuat batch baru, stok lama tidak diubah.</p>' +
     '<label class="field"><span>Catatan (opsional)</span><input type="text" id="stockMoveNote" class="input" maxlength="160" placeholder="mis. beli di pasar"></label>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="stock-move-save">Tambah ke Stok</button></div>'
@@ -6263,16 +6337,161 @@ function saveStockMoveModal() {
   const qty = +document.getElementById('stockMoveQty').value || 0;
   if (!it) { toast('Item stoknya sudah tidak ada'); return; }
   if (!(qty > 0)) { toast('Isi jumlah stok yang masuk'); return; }
-  it.qty = Math.min(999999, Math.round((+it.qty + qty) * 100) / 100);
-  const expiry = document.getElementById('stockMoveExpiry').value || '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(expiry)) it.expiry = expiry;
-  const note = (document.getElementById('stockMoveNote').value || '').trim();
-  if (note) it.note = note.slice(0, 160);
-  logAction('stok', 'Tambah stok ' + it.name + ' · ' + fmtQtyNum(qty) + (it.unit ? ' ' + it.unit : ''));
+  const expiryRaw = document.getElementById('stockMoveExpiry').value || '';
+  const expiry = /^\d{4}-\d{2}-\d{2}$/.test(expiryRaw) ? expiryRaw : (it.expiry || '');
+  const note = (document.getElementById('stockMoveNote').value || '').trim().slice(0, 160);
+  const jumlah = Math.min(999999, Math.round(qty * 100) / 100);
+  const beda = expiry !== (it.expiry || '');
+  /* tanggal beda: pakai batch yang sudah punya tanggal itu, atau buat batch baru tanpa menimpa yang lama */
+  const target = beda
+    ? stockItems(kind).find(x => stockBatchKey(x) === stockBatchKey({ name: it.name, unit: it.unit, expiry: expiry, location: it.location })) || null
+    : it;
+  if (target) {
+    target.qty = Math.min(999999, Math.round((+target.qty + jumlah) * 100) / 100);
+    if (note) target.note = note;
+    logAction('stok', 'Tambah stok ' + it.name + ' · ' + fmtQtyNum(jumlah) + (it.unit ? ' ' + it.unit : '') +
+      (beda ? ' · batch kedaluwarsa ' + fmtShortDate(expiry) : ''));
+  } else {
+    stockItems(kind).push({
+      id: uid(), name: it.name, unit: it.unit, qty: jumlah, min: 0,
+      location: it.location, expiry, note, pin: !!it.pin
+    });
+    logAction('stok', 'Tambah batch ' + it.name + ' · ' + fmtQtyNum(jumlah) + (it.unit ? ' ' + it.unit : '') + ' · kedaluwarsa ' + fmtShortDate(expiry));
+  }
   save();
   closeModal();
   if (state.page === 'stok') renderStok();
-  toast('Stok ' + it.name + ' bertambah');
+  else if (state.page === 'storage') renderStorage();
+  toast(target ? 'Stok ' + it.name + ' bertambah' : 'Batch baru dicatat, stok lama tetap');
+}
+
+/* ---------- Penyimpanan (beta): wadah yang menyala saat ditekan ---------- */
+const STORAGE_ICON = {
+  kulkas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 10h14M9 6.5v1.5M9 13v2.5"/></svg>',
+  freezer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 9h14M12 12v5M9.8 13.2l4.4 2.6M14.2 13.2l-4.4 2.6"/></svg>',
+  rak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v15M20 5v15M4 6h16M4 11h16M4 16h16"/></svg>',
+  laci: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 11h16M8.5 7.5h7M8.5 14.5h7"/></svg>',
+  meja: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M6 7v13M18 7v13M6 13h12"/></svg>',
+  lemari: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v18M10 8v2M14 8v2"/></svg>',
+  lainnya: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4-8 4-8-4zM4 8v8l8 4 8-4V8M12 12v8"/></svg>'
+};
+function storageContainers() { return Array.isArray(db.storage) ? db.storage : []; }
+function storageById(id) { return storageContainers().find(x => x.id === id) || null; }
+function storageItemsAt(w) {
+  const key = String(w && w.name || '').trim().toLowerCase();
+  if (!key) return [];
+  const out = [];
+  ['bahan', 'wadah'].forEach(kind => stockItems(kind).forEach(x => {
+    if (String(x.location || '').trim().toLowerCase() === key) out.push({ kind, item: x });
+  }));
+  return out.sort((a, b) => stockSort(a.item, b.item));
+}
+function storageKindClass(kind) { return STORAGE_KINDS[kind] ? kind : 'lainnya'; }
+function renderStorage() {
+  const grid = document.getElementById('storageGrid');
+  if (!grid) return;
+  const list = storageContainers();
+  if (state.storageSel && !list.some(w => w.id === state.storageSel)) state.storageSel = '';
+  grid.innerHTML = list.map(w => {
+    const isi = storageItemsAt(w);
+    const perlu = isi.filter(x => stockStatus(x.item).label !== 'Aman').length;
+    const on = w.id === state.storageSel;
+    return '<div class="storage-tile kind-' + storageKindClass(w.kind) + (on ? ' is-on' : '') + '">' +
+      '<button type="button" class="storage-tile-main" data-act="storage-select" data-id="' + escapeHtml(w.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<span class="storage-ico">' + (STORAGE_ICON[w.kind] || STORAGE_ICON.lainnya) + '</span>' +
+        '<strong>' + escapeHtml(w.name) + '</strong>' +
+        '<span class="storage-meta">' + escapeHtml(STORAGE_KINDS[w.kind] || 'Lainnya') + ' · ' + isi.length + ' isi</span>' +
+        (perlu ? '<span class="storage-alert">' + perlu + ' perlu dicek</span>' : '') +
+      '</button>' +
+      '<button type="button" class="storage-tile-edit" data-act="storage-edit" data-id="' + escapeHtml(w.id) + '" title="Ubah wadah">Ubah</button>' +
+      '</div>';
+  }).join('');
+  const em = document.getElementById('storageEmpty');
+  if (em) em.hidden = list.length > 0;
+  const meta = document.getElementById('storageMeta');
+  if (meta) {
+    const total = list.reduce((s, w) => s + storageItemsAt(w).length, 0);
+    meta.textContent = list.length + ' wadah · ' + total + ' isi tercatat';
+  }
+  const panel = document.getElementById('storagePanel');
+  if (!panel) return;
+  const w = storageById(state.storageSel);
+  panel.hidden = !w;
+  if (!w) return;
+  const isi = storageItemsAt(w);
+  setText('storagePanelTitle', w.name);
+  const tools = document.getElementById('storagePanelTools');
+  if (tools) tools.innerHTML =
+    '<span class="muted tiny">' + escapeHtml(STORAGE_KINDS[w.kind] || 'Lainnya') + ' · ' + isi.length + ' isi</span>' +
+    '<button type="button" class="btn btn-ghost btn-sm" data-act="storage-edit" data-id="' + escapeHtml(w.id) + '">Ubah wadah</button>' +
+    '<button type="button" class="btn btn-ghost btn-sm" data-nav="stok">Buka Stok</button>';
+  const body = document.getElementById('storagePanelBody');
+  if (body) body.innerHTML = (w.note ? '<p class="muted tiny storage-note">' + escapeHtml(w.note) + '</p>' : '') +
+    (isi.length
+      ? '<div class="table-wrap"><table class="table storage-table"><thead><tr><th>Nama</th><th>Jenis</th><th class="num">Stok</th><th>Kedaluwarsa</th><th class="c">Status</th><th class="end">Aksi</th></tr></thead><tbody>' +
+        isi.map(x => {
+          const st = stockStatus(x.item);
+          const ex = stockExpiryState(x.item);
+          return '<tr>' +
+            '<td><div class="dapur-menu-name"><strong>' + escapeHtml(x.item.name) + '</strong>' +
+              (x.item.note ? '<small>' + escapeHtml(x.item.note) + '</small>' : '') + '</div></td>' +
+            '<td><span class="badge ' + (x.kind === 'bahan' ? 'green' : 'gold') + '">' + (x.kind === 'bahan' ? 'Bahan' : 'Alat') + '</span></td>' +
+            '<td class="num">' + escapeHtml(fmtStockQty(x.item)) + '</td>' +
+            '<td>' + (x.item.expiry ? '<span class="badge ' + ex.cls + '">' + ex.label + '</span>' : '<span class="muted">-</span>') + '</td>' +
+            '<td class="c"><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
+            '<td class="end"><div class="dapur-row-actions">' +
+              '<button class="btn btn-ghost btn-sm" data-act="stock-in" data-kind="' + x.kind + '" data-id="' + escapeHtml(x.item.id) + '">+ Stok</button>' +
+              '<button class="btn btn-ghost btn-sm" data-act="stock-edit" data-kind="' + x.kind + '" data-id="' + escapeHtml(x.item.id) + '">Ubah</button>' +
+            '</div></td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<p class="empty">Belum ada stok dengan lokasi <strong>' + escapeHtml(w.name) + '</strong>. Isi kolom Lokasi item di halaman Stok dengan nama wadah ini. <button type="button" class="btn btn-ghost btn-sm" data-nav="stok">Buka Stok</button></p>');
+}
+function openStorageModal(id) {
+  const w = id ? storageById(id) : null;
+  openModal(
+    '<h3>' + (w ? 'Ubah Wadah' : 'Tambah Wadah') + '</h3>' +
+    '<input type="hidden" id="storageId" value="' + escapeHtml(w ? w.id : '') + '">' +
+    '<label class="field"><span>Nama wadah</span><input type="text" id="storageName" class="input" maxlength="60" placeholder="mis. Kulkas / Rak A / Laci meja" value="' + escapeHtml(w ? w.name : '') + '"></label>' +
+    '<label class="field"><span>Jenis</span><select id="storageKind" class="input">' +
+      Object.keys(STORAGE_KINDS).map(k => '<option value="' + k + '"' + (w && w.kind === k ? ' selected' : '') + '>' + STORAGE_KINDS[k] + '</option>').join('') +
+    '</select></label>' +
+    '<label class="field"><span>Catatan (opsional)</span><input type="text" id="storageNote" class="input" maxlength="120" placeholder="mis. khusus bahan beku" value="' + escapeHtml(w ? w.note : '') + '"></label>' +
+    '<p class="muted tiny">Isi tampil dari item Stok yang kolom Lokasinya sama dengan nama wadah ini. Mengganti nama wadah ikut mengganti lokasi item tersebut.</p>' +
+    '<div class="modal-actions">' +
+      (w ? '<button type="button" class="btn btn-danger" data-act="storage-delete" data-id="' + escapeHtml(w.id) + '">Hapus wadah</button><span class="spacer"></span>' : '') +
+      '<button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
+      '<button type="button" class="btn btn-primary" data-act="storage-save">Simpan</button>' +
+    '</div>'
+  );
+}
+function saveStorageModal() {
+  const id = document.getElementById('storageId').value;
+  const name = (document.getElementById('storageName').value || '').trim().slice(0, 60);
+  const kind = STORAGE_KINDS[document.getElementById('storageKind').value] ? document.getElementById('storageKind').value : 'lainnya';
+  const note = (document.getElementById('storageNote').value || '').trim().slice(0, 120);
+  if (!name) { toast('Tulis nama wadah dulu'); return; }
+  const dup = storageContainers().find(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase());
+  if (dup) { toast('Nama wadah itu sudah dipakai'); return; }
+  const old = id ? storageById(id) : null;
+  if (old) {
+    const lama = old.name;
+    old.name = name; old.kind = kind; old.note = note;
+    if (lama.toLowerCase() !== name.toLowerCase()) {
+      ['bahan', 'wadah'].forEach(k => stockItems(k).forEach(x => {
+        if (String(x.location || '').trim().toLowerCase() === lama.toLowerCase()) x.location = name;
+      }));
+    }
+    logAction('stok', 'Ubah wadah ' + lama + (lama !== name ? ' → ' + name : ''));
+  } else {
+    const w = { id: uid(), name: name, kind: kind, note: note };
+    db.storage.push(w);
+    state.storageSel = w.id;
+    logAction('stok', 'Tambah wadah ' + name);
+  }
+  save();
+  closeModal();
+  if (state.page === 'storage') renderStorage();
+  toast(old ? 'Wadah diperbarui' : 'Wadah ditambahkan');
 }
 
 /* ---------- Pengeluaran operasional ---------- */
@@ -7085,8 +7304,39 @@ function onDocClick(e) {
     case 'goto-stok': state.stockKind = 'bahan'; showPage('stok'); break;
     case 'stock-kind': state.stockKind = act.dataset.kind === 'wadah' ? 'wadah' : 'bahan'; renderStok(); break;
     case 'stock-add': openStockItemModal(state.stockKind, ''); break;
+    case 'storage-select': {
+      const wid = act.dataset.id;
+      state.storageSel = state.storageSel === wid ? '' : wid;
+      renderStorage();
+      break;
+    }
+    case 'storage-add': openStorageModal(''); break;
+    case 'storage-edit': openStorageModal(act.dataset.id); break;
+    case 'storage-save': saveStorageModal(); break;
+    case 'storage-delete': {
+      const w = storageById(act.dataset.id);
+      if (w && confirm('Hapus wadah "' + w.name + '" dari tata letak? Stok dengan lokasi ini tidak ikut terhapus.')) {
+        db.storage = storageContainers().filter(x => x.id !== w.id);
+        if (state.storageSel === w.id) state.storageSel = '';
+        logAction('stok', 'Hapus wadah ' + w.name);
+        save(); renderStorage();
+        toast('Wadah dihapus dari tata letak');
+      }
+      break;
+    }
     case 'stock-edit': openStockItemModal(act.dataset.kind, id); break;
     case 'stock-in': openStockMoveModal(act.dataset.kind, id); break;
+    case 'stock-pin': {
+      const kind = stockKindOf(act.dataset.kind);
+      const it = stockById(kind, id);
+      if (it) {
+        it.pin = !it.pin;
+        save({ noUndo: true });
+        renderStok();
+        toast(it.pin ? 'Item disematkan ke atas' : 'Sematan dilepas', { undo: false });
+      }
+      break;
+    }
     case 'stock-save': saveStockItemModal(); break;
     case 'stock-move-save': saveStockMoveModal(); break;
     case 'stock-delete': {
