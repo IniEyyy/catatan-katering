@@ -699,8 +699,8 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 
 /* ===== Kustomisasi mingguan ===== */
 .custom-wrap{overflow:auto;max-height:min(88vh,900px)}
-.custom-table{min-width:940px}
-.custom-table th.day{min-width:108px;line-height:1.25;text-align:center}
+.custom-table{min-width:1060px}
+.custom-table th.day{min-width:122px;line-height:1.25;text-align:center}
 .custom-table th.day small{display:block;font-size:10px;font-weight:600;letter-spacing:0;color:var(--muted);text-transform:none}
 .custom-table th.day .day-jump{display:block;width:100%;margin-top:1px;background:none;border:0;padding:0;cursor:pointer;
   font-size:10px;font-weight:600;letter-spacing:0;color:var(--muted);text-transform:none;font-family:inherit}
@@ -708,13 +708,18 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .row-jump{border:1px solid var(--border);background:var(--surface-2);color:var(--muted);border-radius:999px;
   font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .row-jump:hover,.row-jump:focus-visible{border-color:var(--primary);color:var(--primary-dark)}
-.custom-table td.cell{padding:5px;min-width:104px}
+.custom-table td.cell{padding:4px;min-width:118px}
 .custom-table td.cell select{width:100%;font-size:12.5px;padding:6px 22px 6px 8px;background-position:right 6px center}
-.cs-food{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}.cs-letter{width:27px;height:27px;padding:0;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-strong);
-  background:var(--surface-2);color:var(--muted);font-weight:800;font-size:12.5px;line-height:1;cursor:pointer;
-  transition:background .15s, color .15s, border-color .15s, transform .1s}
-.cs-letter:hover{border-color:var(--primary);color:var(--primary-dark);transform:translateY(-1px)}
+.cs-food{display:flex;flex-direction:column;gap:3px;align-items:stretch}
+.cs-letter{width:100%;height:auto;padding:3px 4px;display:flex;align-items:center;gap:3px;border-radius:8px;border:1px solid var(--border-strong);
+  background:var(--surface-2);color:var(--muted);font-weight:700;font-size:10px;line-height:1.2;cursor:pointer;text-align:left;
+  transition:background .15s, color .15s, border-color .15s}
+.cs-letter-k{flex:none;min-width:16px;height:16px;padding:0 3px;display:grid;place-items:center;border-radius:5px;
+  background:var(--surface-3);color:var(--muted);font-size:9.5px;font-weight:800}
+.cs-letter-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-letter:hover{border-color:var(--primary);color:var(--primary-dark)}
 .cs-letter.is-on{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 3px 10px var(--glow-1)}
+.cs-letter.is-on .cs-letter-k{background:rgba(255,255,255,.22);color:#fff}
 .cs-letter.is-locked{opacity:.32;filter:grayscale(.4);cursor:not-allowed}
 .cs-letter.is-locked:hover{border-color:var(--border-strong);color:var(--muted);transform:none}
 .cs-pkg{margin-top:4px;font-size:10px;font-weight:700;color:var(--muted);text-align:center;line-height:1.25;

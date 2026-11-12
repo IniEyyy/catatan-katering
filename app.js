@@ -2685,7 +2685,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf makanan (A, B, C…) untuk menandai pesanan, klik lagi untuk membatalkan. Arahkan kursor ke huruf itu untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah huruf menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik nama makanan untuk menandai pesanan, klik lagi untuk membatalkan. Huruf kecil A, B, C… menandai pilihan yang sama di tabel cetak; arahkan kursor ke nama untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah nama menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2927,7 +2927,9 @@ function renderCustom() {
           return '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
             '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '"' +
             (!allowed && pj ? ' title="Khusus paket ' + escapeHtml(pj.name) + '"' : '') +
-            ' data-tip="' + foodTip(k, it, extra) + '">' + LETTERS[k] + '</button>';
+            ' data-tip="' + foodTip(k, it, extra) + '">' +
+            '<span class="cs-letter-k">' + LETTERS[k] + '</span>' +
+            '<span class="cs-letter-name">' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 30)) + '</span></button>';
         }).join('') + '</div>' +
         '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
         escapeHtml(picks.length > 1 ? (picks.length + ' pilihan · harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu, harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih lebih dari satu makanan' : 'Satu pilihan per hari'))) + '">' +
