@@ -1041,9 +1041,15 @@ body.theme-dark .toast{background:rgba(24,27,40,.97)}
 #page-expenses .table-wrap .table{min-width:680px}
 .nav-cfg{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .nav-cfg-group{display:flex;flex-direction:column;gap:2px}
-.nav-cfg-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.nav-cfg-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 4px;border-bottom:1px dashed var(--border);border-radius:8px}
 .nav-cfg-row:last-child{border-bottom:0}
 .nav-cfg-row .check{margin:0;flex:1;min-width:0;font-size:13px}
+.nav-cfg-grip{display:grid;place-items:center;flex:none;width:22px;height:26px;border-radius:7px;color:var(--muted);cursor:grab;transition:background .15s,color .15s}
+.nav-cfg-grip:hover{background:var(--surface-2);color:var(--primary)}
+.nav-cfg-grip:active{cursor:grabbing}
+.nav-cfg-grip svg{width:14px;height:14px;pointer-events:none}
+.nav-cfg-row.is-dragging{opacity:.45}
+.nav-cfg-row.is-over{background:var(--primary-soft);outline:1px dashed var(--primary)}
 .nav-cfg-move{display:flex;gap:4px;flex:none}
 .nav-cfg-move .icon-act{width:27px;height:27px;border-radius:9px;font-size:14px;line-height:1}
 .nav-cfg-move .icon-act:disabled{opacity:.3;cursor:default;transform:none;box-shadow:none}

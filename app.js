@@ -1474,7 +1474,10 @@ function renderNavCfg() {
   el.innerHTML = NAV_GROUPS.map(g => {
     const keys = g.keys.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b));
     return '<div class="nav-cfg-group"><div class="cat-title">' + escapeHtml(g.label) + '</div>' +
-      keys.map((k, i) => '<div class="nav-cfg-row">' +
+      keys.map((k, i) => '<div class="nav-cfg-row" data-nav-key="' + escapeHtml(k) + '">' +
+        '<span class="nav-cfg-grip" draggable="true" title="Tarik untuk menggeser urutan" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>' +
+        '</span>' +
         '<label class="check"><input type="checkbox" class="nav-toggle" data-key="' + escapeHtml(k) + '"' +
           (hidden.includes(k) ? '' : ' checked') +
           (k === 'settings' ? ' disabled title="Pengaturan selalu tampil"' : '') + '> ' + escapeHtml(navLabel(k)) + '</label>' +
@@ -1494,6 +1497,23 @@ function moveNav(key, delta) {
   const a = keys[i], b = keys[j];
   const ia = order.indexOf(a), ib = order.indexOf(b);
   [order[ia], order[ib]] = [order[ib], order[ia]];
+  db.settings.navOrder = order;
+  save({ noUndo: true });
+  applyNavSettings();
+  renderNavCfg();
+}
+function moveNavTo(key, targetKey) {
+  const g = NAV_GROUPS.find(x => x.keys.includes(key));
+  if (!g || key === targetKey || !g.keys.includes(targetKey)) return;
+  const order = navOrder();
+  const keys = g.keys.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const from = keys.indexOf(key), to = keys.indexOf(targetKey);
+  if (from < 0 || to < 0) return;
+  keys.splice(from, 1);
+  keys.splice(to, 0, key);
+  const slots = [];
+  order.forEach((k, i) => { if (g.keys.includes(k)) slots.push(i); });
+  slots.forEach((slot, i) => { order[slot] = keys[i]; });
   db.settings.navOrder = order;
   save({ noUndo: true });
   applyNavSettings();
@@ -7605,6 +7625,44 @@ function init() {
   window.addEventListener('resize', hideFoodTip);
   document.getElementById('undoBtn').addEventListener('click', undoLast);
   document.getElementById('redoBtn').addEventListener('click', redoLast);
+
+  const navCfg = document.getElementById('navCfg');
+  if (navCfg) {
+    let draggedKey = '';
+    const clearDragMarks = () => navCfg.querySelectorAll('.nav-cfg-row.is-over,.nav-cfg-row.is-dragging')
+      .forEach(x => x.classList.remove('is-over', 'is-dragging'));
+    navCfg.addEventListener('dragstart', e => {
+      const grip = e.target.closest('.nav-cfg-grip');
+      if (!grip) { e.preventDefault(); return; }
+      const row = grip.closest('.nav-cfg-row');
+      if (!row) return;
+      draggedKey = row.dataset.navKey;
+      row.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', draggedKey); } catch (err) { /* abaikan */ }
+    });
+    navCfg.addEventListener('dragover', e => {
+      const row = e.target.closest('.nav-cfg-row');
+      if (!row || !draggedKey) return;
+      const fromRow = navCfg.querySelector('.nav-cfg-row.is-dragging');
+      if (!fromRow || fromRow.closest('.nav-cfg-group') !== row.closest('.nav-cfg-group')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      navCfg.querySelectorAll('.nav-cfg-row.is-over').forEach(x => x.classList.remove('is-over'));
+      if (row.dataset.navKey !== draggedKey) row.classList.add('is-over');
+    });
+    navCfg.addEventListener('drop', e => {
+      const row = e.target.closest('.nav-cfg-row');
+      if (!row || !draggedKey) return;
+      e.preventDefault();
+      const key = draggedKey, targetKey = row.dataset.navKey;
+      draggedKey = '';
+      clearDragMarks();
+      moveNavTo(key, targetKey);
+    });
+    navCfg.addEventListener('dragend', () => { draggedKey = ''; clearDragMarks(); });
+  }
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (!document.getElementById('modalBackdrop').hidden) closeModal();
