@@ -833,6 +833,8 @@ const state = {
   custSel: new Set(), // pelanggan terpilih untuk aksi massal
   menuTab: 'week', // tab kartu Menu di Beranda: 'week' | 'daily'
   menuDay: 0, // hari terpilih (0=Senin..6=Minggu) saat tab Menu Harian aktif
+  pageHistory: [], // riwayat halaman untuk tombol kembali/maju
+  pageHistoryAt: -1,
   custom: { type: 'snack', weekStart: '', level: '', cohort: '', cls: '', q: '', hideWeekend: true }
 };
 
@@ -1508,7 +1510,38 @@ function setNavHidden(key, on) {
   if (on && state.page === key) showPage(firstVisibleNav());
 }
 
-function showPage(name) {
+function syncPageNavButtons() {
+  const back = document.getElementById('pageBackBtn');
+  const fwd = document.getElementById('pageForwardBtn');
+  if (back) {
+    back.disabled = state.pageHistoryAt <= 0;
+    back.classList.toggle('is-ready', !back.disabled);
+  }
+  if (fwd) {
+    fwd.disabled = state.pageHistoryAt >= state.pageHistory.length - 1;
+    fwd.classList.toggle('is-ready', !fwd.disabled);
+  }
+}
+function goPageHistory(delta) {
+  const at = state.pageHistoryAt + delta;
+  if (at < 0 || at >= state.pageHistory.length) return;
+  state.pageHistoryAt = at;
+  showPage(state.pageHistory[at], { fromHistory: true });
+}
+function showPage(name, opts) {
+  opts = opts || {};
+  if (!opts.fromHistory && name !== state.page) {
+    if (!state.pageHistory.length) {
+      state.pageHistory = [state.page];
+      state.pageHistoryAt = 0;
+    }
+    state.pageHistory = state.pageHistory.slice(0, state.pageHistoryAt + 1);
+    state.pageHistory.push(name);
+    state.pageHistoryAt = state.pageHistory.length - 1;
+  } else if (!state.pageHistory.length) {
+    state.pageHistory = [name];
+    state.pageHistoryAt = 0;
+  }
   state.page = name;
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('is-active', b.dataset.nav === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('is-active', p.id === 'page-' + name));
@@ -1516,6 +1549,7 @@ function showPage(name) {
   closeSidebar();
   if (name === 'print') autoPrintDates();
   renderPage(name);
+  syncPageNavButtons();
 }
 function renderPage(name) {
   if (name === 'dashboard') renderDashboard();
@@ -6805,6 +6839,8 @@ function onDocClick(e) {
   const id = act.dataset.id;
 
   switch (a) {
+    case 'page-back': goPageHistory(-1); break;
+    case 'page-forward': goPageHistory(1); break;
     case 'day-prev': state.currentDate = shiftDate(state.currentDate, -1); renderDailyMerged(); break;
     case 'day-next': state.currentDate = shiftDate(state.currentDate, 1); renderDailyMerged(); break;
     case 'daily-filter-reset':
