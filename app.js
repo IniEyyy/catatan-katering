@@ -2700,7 +2700,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik huruf A, B, C… untuk menandai pesanan, klik lagi untuk membatalkan. Nama makanan tertulis di bawah tombol, dan nama paket anak ada di bawah namanya. Arahkan kursor ke huruf atau nama untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Hari yang belum punya menu cukup ditandai <em>pesan</em>. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf A, B, C… untuk menandai pesanan, klik lagi untuk membatalkan. Nama makanan yang dipilih muncul di bawah tombol, dan nama paket anak ada di bawah namanya. Arahkan kursor ke huruf atau nama untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Hari yang belum punya menu cukup ditandai <em>pesan</em>. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2924,23 +2924,25 @@ function renderCustom() {
           (ordered ? '✓ pesan' : 'pesan') + '</button></td>';
       }
       const picks = ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
+      const picked = picks.map(k => items[k]);
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
-        '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) => {
+        '<div class="cs-food">' +
+        '<div class="cs-letters">' + items.slice(0, LETTERS.length).map((it, k) => {
           const pj = menuItemPkg(it);
           const allowed = itemAllowedFor(type, it, rec, c);
-          const fullName = menuLines(it.name).join(' · ');
           const extra = [
             spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ', berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini',
             pj ? (allowed ? 'Paket ' : 'Khusus paket ') + pj.name : ''
           ].filter(Boolean).join('\n');
-          return '<div class="cs-pick">' +
-            '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
+          return '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
             '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '"' +
-            (!allowed && pj ? ' title="Khusus paket ' + escapeHtml(pj.name) + '"' : '') +
-            ' data-tip="' + foodTip(k, it, extra) + '">' + LETTERS[k] + '</button>' +
-            '<div class="cs-food-name" title="' + escapeHtml(fullName) + '">' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 26)) + '</div>' +
-            '</div>';
+            ' data-tip="' + foodTip(k, it, extra) + '">' + LETTERS[k] + '</button>';
         }).join('') + '</div>' +
+        (picked.length
+          ? '<div class="cs-picked" title="' + escapeHtml(picked.map(it => menuLines(it.name).join(' · ')).join(' / ')) + '">' +
+            picked.map(it => escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 24))).join(' · ') + '</div>'
+          : (ordered ? '<div class="cs-picked is-empty">pesan</div>' : '')) +
+        '</div>' +
         '</td>';
     }).join('');
     const rowPkg = customRowPkg(type, c);
