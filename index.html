@@ -303,13 +303,27 @@
         </div>
       </section>
 
-      <!-- ============ STOK: bahan & tempat makan ============ -->
+      <!-- ============ STOK: bahan, tempat makan, dan alat makan ============ -->
       <section class="page" id="page-stok">
         <div class="toolbar toolbar-center">
           <div class="seg seg-sm">
             <button class="seg-btn is-on" data-act="stock-kind" data-kind="bahan">Bahan</button>
-            <button class="seg-btn" data-act="stock-kind" data-kind="wadah">Tempat Makan</button>
+            <button class="seg-btn" data-act="stock-kind" data-kind="wadah">Tempat &amp; Alat Makan</button>
           </div>
+          <label class="ctl stock-search">
+            <span>Cari</span>
+            <input type="text" id="stockSearch" class="input input-sm" placeholder="Nama, lokasi, catatan…">
+          </label>
+          <label class="ctl">
+            <span>Status</span>
+            <select id="stockFilter" class="input input-sm">
+              <option value="all">Semua status</option>
+              <option value="aman">Aman</option>
+              <option value="menipis">Menipis</option>
+              <option value="habis">Habis</option>
+              <option value="expired">Kedaluwarsa</option>
+            </select>
+          </label>
           <span class="spacer"></span>
           <button class="btn btn-primary btn-sm" data-act="stock-add" id="stockAddBtn">+ Bahan</button>
         </div>
@@ -319,8 +333,8 @@
         <div class="card">
           <div class="card-head"><h3 id="stockTitle">Stok Bahan</h3><span class="muted tiny" id="stockCount"></span></div>
           <p class="muted tiny" id="stockHint">Stok dicatat manual. Tombol + Stok dipakai saat belanja datang.</p>
-          <div class="table-wrap"><table class="table">
-            <thead><tr><th>Nama</th><th class="num">Stok</th><th class="num">Minimum</th><th class="c">Status</th><th class="end">Aksi</th></tr></thead>
+          <div class="table-wrap"><table class="table stock-table">
+            <thead><tr><th>Nama</th><th class="num">Stok</th><th class="num">Minimum</th><th>Lokasi</th><th>Kedaluwarsa</th><th class="c">Status</th><th class="end">Aksi</th></tr></thead>
             <tbody id="stockList"></tbody>
           </table></div>
           <p class="empty" id="stockEmpty" hidden>Belum ada item. Klik tombol tambah di kanan atas.</p>

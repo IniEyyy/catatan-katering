@@ -85,7 +85,7 @@ const MENU_TYPES = ['snack', 'snack-spesial', 'lunch', 'lunch-spesial', 'po'];
 const MENU_TYPE_LABEL = { snack: 'Snack', 'snack-spesial': 'Snack Spesial', lunch: 'Lunch', 'lunch-spesial': 'Lunch Spesial', po: 'PO' };
 const RECIPE_TYPE_LABEL = { snack: 'Snack', lunch: 'Lunch', po: 'PO' };
 const RECIPE_UNITS = ['kg', 'gram', 'liter', 'ml', 'butir', 'ikat', 'bungkus', 'botol', 'kaleng', 'sachet', 'porsi', 'buah'];
-const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat Makan' };
+const STOCK_KIND_LABEL = { bahan: 'Bahan', wadah: 'Tempat & Alat Makan' };
 const STOCK_UNITS = RECIPE_UNITS.concat(['pcs', 'lusin', 'pack', 'box', 'lembar', 'roll']);
 const EXPENSE_CATEGORIES = ['Belanja pasar', 'Gas & energi', 'Kemasan', 'Transport', 'Gaji', 'Sewa', 'Listrik & air', 'Lainnya'];
 const NAV_DEFAULT_ORDER = ['dashboard', 'hari', 'print', 'custom', 'dapur', 'stok', 'report', 'expenses', 'pengingat', 'po', 'customers', 'log', 'settings'];
@@ -292,6 +292,8 @@ function normalize(d) {
       unit: String(x && x.unit || '').trim().slice(0, 16) || (kind === 'wadah' ? 'pcs' : ''),
       qty: Math.max(0, Math.min(999999, +x.qty || 0)),
       min: Math.max(0, Math.min(999999, +x.min || 0)),
+      location: String(x && x.location || '').trim().slice(0, 60),
+      expiry: x && /^\d{4}-\d{2}-\d{2}$/.test(x.expiry || '') ? x.expiry : '',
       note: String(x && x.note || '').trim().slice(0, 160)
     })).filter(x => {
       if (!x.name) return false;
@@ -632,27 +634,29 @@ function makeDemoData() {
     rc('Tumpeng Mini', 'po', [['Beras', 3, 'kg'], ['Ayam', 2, 'kg'], ['Sayur', 2, 'kg'], ['Telur', 1, 'kg'], ['Buah', 2, 'kg']], '', '1. Masak nasi kuning dan cetak kerucut.\n2. Siapkan lauk dan sayur.\n3. Susun tumpeng mini per pesanan.')
   ];
 
-  const st = (kind, name, unit, qty, min, note) => ({ id: uid(), name, unit, qty, min, note: note || '' });
+  const st = (kind, name, unit, qty, min, note, location, expiry) => ({
+    id: uid(), name, unit, qty, min, note: note || '', location: location || '', expiry: expiry || ''
+  });
   d.stock = {
     bahan: [
-      st('bahan', 'Beras', 'kg', 20, 5),
-      st('bahan', 'Ayam', 'kg', 4, 2),
-      st('bahan', 'Telur', 'kg', 2, 1),
-      st('bahan', 'Minyak goreng', 'liter', 2, 2),
-      st('bahan', 'Biskuit', 'kaleng', 1, 2),
-      st('bahan', 'Susu UHT', 'liter', 3, 2),
-      st('bahan', 'Puding', 'bungkus', 2, 2),
-      st('bahan', 'Santan', 'liter', 1, 1),
-      st('bahan', 'Sayur', 'kg', 1, 1),
-      st('bahan', 'Tepung', 'kg', 2, 1),
-      st('bahan', 'Buah', 'kg', 0, 2, 'Perlu dibeli')
+      st('bahan', 'Beras', 'kg', 20, 5, '', 'Rak A', shiftDate(today, 120)),
+      st('bahan', 'Ayam', 'kg', 4, 2, '', 'Freezer', shiftDate(today, 20)),
+      st('bahan', 'Telur', 'kg', 2, 1, '', 'Chiller', shiftDate(today, 10)),
+      st('bahan', 'Minyak goreng', 'liter', 2, 2, '', 'Rak B', shiftDate(today, 180)),
+      st('bahan', 'Biskuit', 'kaleng', 1, 2, '', 'Rak A', shiftDate(today, 60)),
+      st('bahan', 'Susu UHT', 'liter', 3, 2, '', 'Chiller', shiftDate(today, 14)),
+      st('bahan', 'Puding', 'bungkus', 2, 2, '', 'Chiller', shiftDate(today, 30)),
+      st('bahan', 'Santan', 'liter', 1, 1, 'Perlu dicek', 'Rak B', shiftDate(today, -2)),
+      st('bahan', 'Sayur', 'kg', 1, 1, '', 'Chiller', shiftDate(today, 3)),
+      st('bahan', 'Tepung', 'kg', 2, 1, '', 'Rak A', shiftDate(today, 150)),
+      st('bahan', 'Buah', 'kg', 0, 2, 'Perlu dibeli', 'Chiller', shiftDate(today, 2))
     ],
     wadah: [
-      st('wadah', 'Kotak snack', 'pcs', 180, 50),
-      st('wadah', 'Nasi kotak', 'pcs', 90, 40),
-      st('wadah', 'Sendok plastik', 'pcs', 240, 60),
-      st('wadah', 'Kantong kresek', 'pcs', 150, 50),
-      st('wadah', 'Gelas cup', 'pcs', 40, 50, 'Tinggal sedikit')
+      st('wadah', 'Kotak snack', 'pcs', 180, 50, '', 'Rak kemasan'),
+      st('wadah', 'Nasi kotak', 'pcs', 90, 40, '', 'Rak kemasan'),
+      st('wadah', 'Sendok plastik', 'pcs', 240, 60, '', 'Laci meja A'),
+      st('wadah', 'Kantong kresek', 'pcs', 150, 50, '', 'Laci meja A'),
+      st('wadah', 'Gelas cup', 'pcs', 40, 50, 'Tinggal sedikit', 'Rak kemasan')
     ]
   };
 
@@ -831,6 +835,8 @@ const state = {
   dapurWeek: '',        // Senin minggu yang dibuka di halaman Dapur
   dapurQ: '',           // pencarian di Daftar Resep
   stockKind: 'bahan',   // tab halaman Stok: bahan | wadah
+  stockQ: '',           // pencarian nama, lokasi, atau catatan stok
+  stockFilter: 'all',   // filter status stok: all | aman | menipis | habis | expired
   expMonth: monthKey(todayStr()), // bulan yang dibuka di halaman Pengeluaran
   daily: { hari: { level: '', cohort: '', cls: '', q: '' } },
   billSel: new Set(), // anak yang dicentang untuk cek tagihan
@@ -6094,9 +6100,17 @@ function stockQtyFor(name, unit) {
     .reduce((s, x) => s + (+x.qty || 0), 0);
 }
 function stockStatus(x) {
-  if (+x.qty <= 0) return { label: 'Habis', cls: 'danger' };
+  if (+x.qty <= 0) return { label: 'Habis', cls: 'red' };
   if (+x.min > 0 && +x.qty <= +x.min) return { label: 'Menipis', cls: 'orange' };
   return { label: 'Aman', cls: 'green' };
+}
+function stockExpiryState(x) {
+  if (!x.expiry) return { label: 'Tanpa tanggal', cls: '', days: null };
+  const days = diffDays(todayStr(), x.expiry);
+  if (days < 0) return { label: 'Kedaluwarsa', cls: 'red', days };
+  if (days === 0) return { label: 'Hari ini', cls: 'orange', days };
+  if (days <= 7) return { label: days + ' hari lagi', cls: 'gold', days };
+  return { label: fmtShortDate(x.expiry), cls: '', days };
 }
 function fmtStockQty(x) { return fmtQtyNum(x.qty) + (x.unit ? ' ' + x.unit : ''); }
 function renderStok() {
@@ -6105,23 +6119,49 @@ function renderStok() {
   document.querySelectorAll('[data-act="stock-kind"]').forEach(b => b.classList.toggle('is-on', b.dataset.kind === kind));
   const label = STOCK_KIND_LABEL[kind];
   setText('stockTitle', 'Stok ' + label);
-  setText('stockAddBtn', '+ ' + label);
-  const list = stockItems(kind).slice().sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
-  const low = list.filter(x => +x.qty > 0 && +x.min > 0 && +x.qty <= +x.min).length;
-  const empty = list.filter(x => +x.qty <= 0).length;
+  setText('stockAddBtn', '+ ' + (kind === 'wadah' ? 'Tempat & Alat' : 'Bahan'));
+  setText('stockHint', kind === 'wadah'
+    ? 'Tempat makan dan alat makan seperti kotak, sendok, gelas, dan kantong dicatat di tab ini. Isi Lokasi untuk rak atau laci penyimpanannya.'
+    : 'Stok bahan dicatat manual. Isi Lokasi dan Kedaluwarsa supaya isi rak, chiller, dan freezer mudah dicek.');
+  const search = document.getElementById('stockSearch');
+  if (search && search.value !== state.stockQ) search.value = state.stockQ;
+  const filter = document.getElementById('stockFilter');
+  if (filter && filter.value !== state.stockFilter) filter.value = state.stockFilter;
+  const all = stockItems(kind).slice().sort((a, b) => a.name.localeCompare(b.name, 'id') || a.unit.localeCompare(b.unit, 'id'));
+  const q = String(state.stockQ || '').trim().toLowerCase();
+  const mode = ['aman', 'menipis', 'habis', 'expired'].includes(state.stockFilter) ? state.stockFilter : 'all';
+  const list = all.filter(x => {
+    if (q && !((x.name || '') + ' ' + (x.location || '') + ' ' + (x.note || '')).toLowerCase().includes(q)) return false;
+    if (mode === 'expired') return !!x.expiry && x.expiry < todayStr();
+    if (mode === 'aman') return stockStatus(x).label === 'Aman';
+    if (mode === 'menipis') return stockStatus(x).label === 'Menipis';
+    if (mode === 'habis') return stockStatus(x).label === 'Habis';
+    return true;
+  });
+  const low = all.filter(x => +x.qty > 0 && +x.min > 0 && +x.qty <= +x.min).length;
+  const empty = all.filter(x => +x.qty <= 0).length;
+  const expired = all.filter(x => !!x.expiry && x.expiry < todayStr()).length;
+  const near = all.filter(x => { const e = stockExpiryState(x); return e.days !== null && e.days >= 0 && e.days <= 7; }).length;
+  const noLoc = all.filter(x => !x.location).length;
   const stat = document.getElementById('stockStats');
   if (stat) stat.innerHTML =
-    statCard('Jenis Tercatat', list.length, 'di ' + label.toLowerCase(), 'primary') +
+    statCard('Jenis Tercatat', all.length, 'di ' + label.toLowerCase(), 'primary') +
     statCard('Menipis', low, 'sudah di batas minimum', 'gold') +
-    statCard('Habis', empty, 'perlu segera dibeli', 'danger');
+    statCard('Habis', empty, 'perlu segera dibeli', 'danger') +
+    (kind === 'bahan'
+      ? statCard('Kedaluwarsa', expired, near ? near + ' mendekati tanggal' : 'sudah lewat tanggal', 'danger')
+      : statCard('Tanpa Lokasi', noLoc, 'belum diisi rak atau laci', noLoc ? 'gold' : 'primary'));
   const tb = document.getElementById('stockList');
   if (tb) tb.innerHTML = list.map(x => {
     const st = stockStatus(x);
+    const ex = stockExpiryState(x);
     return '<tr>' +
       '<td><div class="dapur-menu-name"><strong>' + escapeHtml(x.name) + '</strong>' +
         (x.note ? '<small>' + escapeHtml(x.note) + '</small>' : '') + '</div></td>' +
       '<td class="num">' + escapeHtml(fmtStockQty(x)) + '</td>' +
       '<td class="num">' + (+x.min > 0 ? escapeHtml(fmtQtyNum(x.min) + (x.unit ? ' ' + x.unit : '')) : '<span class="muted">-</span>') + '</td>' +
+      '<td>' + (x.location ? escapeHtml(x.location) : '<span class="muted">-</span>') + '</td>' +
+      '<td>' + (x.expiry ? '<span class="badge ' + ex.cls + '" title="' + escapeHtml(fmtShortDate(x.expiry)) + '">' + ex.label + '</span>' : '<span class="muted">-</span>') + '</td>' +
       '<td class="c"><span class="badge ' + st.cls + '">' + st.label + '</span></td>' +
       '<td class="end"><div class="dapur-row-actions">' +
         '<button class="btn btn-ghost btn-sm" data-act="stock-in" data-kind="' + kind + '" data-id="' + escapeHtml(x.id) + '">+ Stok</button>' +
@@ -6130,8 +6170,13 @@ function renderStok() {
       '</div></td></tr>';
   }).join('');
   const em = document.getElementById('stockEmpty');
-  if (em) em.hidden = list.length > 0;
-  setText('stockCount', list.length + ' item');
+  if (em) {
+    em.hidden = list.length > 0;
+    em.textContent = all.length && (q || mode !== 'all')
+      ? 'Tidak ada item yang cocok dengan pencarian atau filter ini.'
+      : 'Belum ada item. Klik tombol tambah di kanan atas.';
+  }
+  setText('stockCount', (q || mode !== 'all' ? list.length + ' dari ' + all.length : all.length) + ' item');
 }
 function openStockItemModal(kind, id) {
   kind = stockKindOf(kind);
@@ -6149,6 +6194,10 @@ function openStockItemModal(kind, id) {
       '<label class="field"><span>Minimum (opsional)</span><input type="number" id="stockItemMin" class="input" min="0" step="any" value="' + (it ? it.min : 0) + '"></label>' +
       '<label class="field"><span>Catatan (opsional)</span><input type="text" id="stockItemNote" class="input" maxlength="160" value="' + escapeHtml(it ? it.note : '') + '"></label>' +
     '</div>' +
+    '<div class="pkg-pair">' +
+      '<label class="field"><span>Lokasi penyimpanan</span><input type="text" id="stockItemLocation" class="input" maxlength="60" placeholder="' + (kind === 'wadah' ? 'mis. Rak kemasan / Laci meja A' : 'mis. Rak A / Chiller / Freezer') + '" value="' + escapeHtml(it ? it.location : '') + '"></label>' +
+      '<label class="field"><span>Kedaluwarsa (opsional)</span><input type="date" id="stockItemExpiry" class="input" value="' + escapeHtml(it ? it.expiry : '') + '"></label>' +
+    '</div>' +
     '<datalist id="stockUnits">' + STOCK_UNITS.map(u => '<option value="' + u + '">').join('') + '</datalist>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="stock-save">Simpan</button></div>'
@@ -6161,6 +6210,9 @@ function saveStockItemModal() {
   const unit = (document.getElementById('stockItemUnit').value || '').trim();
   const qty = Math.max(0, +document.getElementById('stockItemQty').value || 0);
   const min = Math.max(0, +document.getElementById('stockItemMin').value || 0);
+  const location = (document.getElementById('stockItemLocation').value || '').trim().slice(0, 60);
+  const expiryRaw = document.getElementById('stockItemExpiry').value || '';
+  const expiry = /^\d{4}-\d{2}-\d{2}$/.test(expiryRaw) ? expiryRaw : '';
   const note = (document.getElementById('stockItemNote').value || '').trim();
   if (!name) { toast('Tulis nama item dulu'); return; }
   if (!unit) { toast('Isi satuannya dulu'); return; }
@@ -6168,10 +6220,10 @@ function saveStockItemModal() {
   if (dup) { toast('Item dengan nama dan satuan itu sudah ada'); return; }
   const old = id ? stockById(kind, id) : null;
   if (old) {
-    Object.assign(old, { name, unit, qty, min, note });
+    Object.assign(old, { name, unit, qty, min, location, expiry, note });
     logAction('stok', 'Ubah stok ' + name);
   } else {
-    stockItems(kind).push({ id: uid(), name, unit, qty, min, note });
+    stockItems(kind).push({ id: uid(), name, unit, qty, min, location, expiry, note });
     logAction('stok', 'Tambah stok ' + name + ' · ' + fmtQtyNum(qty) + (unit ? ' ' + unit : ''));
   }
   save();
@@ -6189,10 +6241,12 @@ function openStockMoveModal(kind, id) {
       '<div><span class="po-info-label">Item</span><strong>' + escapeHtml(it.name) + '</strong></div>' +
       '<div><span class="po-info-label">Stok sekarang</span><strong>' + escapeHtml(fmtStockQty(it)) + '</strong></div>' +
       '<div><span class="po-info-label">Satuan</span><strong>' + escapeHtml(it.unit || '-') + '</strong></div>' +
+      '<div><span class="po-info-label">Lokasi</span><strong>' + escapeHtml(it.location || '-') + '</strong></div>' +
     '</div>' +
     '<input type="hidden" id="stockMoveKind" value="' + kind + '">' +
     '<input type="hidden" id="stockMoveId" value="' + escapeHtml(it.id) + '">' +
     '<label class="field"><span>Jumlah masuk</span><input type="number" id="stockMoveQty" class="input" min="0" step="any" value="" placeholder="0"></label>' +
+    '<label class="field"><span>Kedaluwarsa baru (opsional)</span><input type="date" id="stockMoveExpiry" class="input" value="' + escapeHtml(it.expiry || '') + '"></label>' +
     '<label class="field"><span>Catatan (opsional)</span><input type="text" id="stockMoveNote" class="input" maxlength="160" placeholder="mis. beli di pasar"></label>' +
     '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
     '<button type="button" class="btn btn-primary" data-act="stock-move-save">Tambah ke Stok</button></div>'
@@ -6206,6 +6260,8 @@ function saveStockMoveModal() {
   if (!it) { toast('Item stoknya sudah tidak ada'); return; }
   if (!(qty > 0)) { toast('Isi jumlah stok yang masuk'); return; }
   it.qty = Math.min(999999, Math.round((+it.qty + qty) * 100) / 100);
+  const expiry = document.getElementById('stockMoveExpiry').value || '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(expiry)) it.expiry = expiry;
   const note = (document.getElementById('stockMoveNote').value || '').trim();
   if (note) it.note = note.slice(0, 160);
   logAction('stok', 'Tambah stok ' + it.name + ' · ' + fmtQtyNum(qty) + (it.unit ? ' ' + it.unit : ''));
@@ -7450,6 +7506,11 @@ function onDocChange(e) {
     saveStickerStyle(); stickerPreview(); return;
   }
   if (t.id === 'satpamShowClass') { satpamPreview(); return; }
+  if (t.id === 'stockFilter') {
+    state.stockFilter = ['aman', 'menipis', 'habis', 'expired'].includes(t.value) ? t.value : 'all';
+    renderStok();
+    return;
+  }
   if (t.id === 'rptClass' || t.id === 'rptAllTime' || t.id === 'rptSort') { renderReport(); return; }
   if (t.classList.contains('cust-cb')) {
     if (t.checked) state.custSel.add(t.dataset.id); else state.custSel.delete(t.dataset.id);
@@ -7749,6 +7810,7 @@ function init() {
     if (t.id === 'customSearch') { state.custom.q = (t.value || '').trim().toLowerCase(); renderCustom(); }
     if (t.id === 'hariSearch') { state.daily.hari.q = (t.value || '').trim().toLowerCase(); renderDailyMerged(); }
     if (t.id === 'custSearch') { state.cust.q = (t.value || '').trim().toLowerCase(); renderCustomers(); }
+    if (t.id === 'stockSearch') { state.stockQ = t.value || ''; renderStok(); }
     if (t.id === 'holidayPeopleQ') { filterHolidayPeople(); return; }
     if (t.id === 'dapurRecipeSearch') { state.dapurQ = t.value || ''; renderDapur(); }
     if (t.classList.contains('wm-name')) { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight + 2, 170) + 'px'; applyMenuEdit(t, true); }
