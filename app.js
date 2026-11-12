@@ -1619,6 +1619,9 @@ function renderPrint() {  const mode = state.printMode === 'konfirmasi' ? 'konfi
   syncTypeSeg('sticker-type', state.stickerType);
   syncTypeSeg('satpam-type', state.satpamType);
   syncPrintStyleControls();
+  /* browser bisa memulihkan centang lama saat halaman dimuat ulang; kolom kelas selalu mulai aktif */
+  const showClass = document.getElementById('satpamShowClass');
+  if (showClass) showClass.checked = true;
   if (mode === 'stiker') { renderStickerDate(); renderStickerCustomers(); stickerPreview(); }
   else satpamPreview();
 }
