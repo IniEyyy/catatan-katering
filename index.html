@@ -355,6 +355,7 @@
             <input type="text" id="poSearch" class="input input-sm" placeholder="Cari nama / menu…">
           </label>
           <span class="spacer"></span>
+          <label class="check" style="margin:0" title="Berlaku untuk invoice, resi, dan rekap PO"><input type="checkbox" id="poLogoUse" class="print-logo" data-key="invoice"> Logo</label>
           <button class="btn btn-ghost btn-sm" data-act="po-print-month">Cetak Rekap PO</button>
           <button class="btn btn-accent btn-sm" data-act="po-group-add">+ Pesanan Kelompok</button>
           <button class="btn btn-primary" data-act="po-menu-add">+ Tambah Menu PO</button>
@@ -383,9 +384,7 @@
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span>
-            <span class="head-tools"><label class="check" style="margin:0" title="Berlaku untuk invoice, resi, dan rekap PO"><input type="checkbox" id="poLogoUse" class="print-logo" data-key="invoice"> Logo</label></span>
-          </div>
+          <div class="card-head"><h3>Pesanan Kelompok / Lembaga</h3><span class="muted tiny" id="poGroupCount"></span></div>
           <p class="muted tiny" style="margin:-6px 0 10px">Satu organisasi yang memesan banyak porsi, dicatat per tanggal ambil. Uang muka dipakai melunasi tanggal paling awal sampai habis.</p>
           <div class="table-wrap"><table class="table">
             <thead><tr><th>Kelompok / lembaga</th><th>Tanggal ambil</th><th class="num">Porsi</th><th class="num">Nilai</th><th class="c">Lunas</th><th class="end">Aksi</th></tr></thead>
