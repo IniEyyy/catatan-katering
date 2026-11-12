@@ -2692,7 +2692,7 @@ function buildCustomPage() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<p class="muted tiny">Klik nama makanan untuk menandai pesanan, klik lagi untuk membatalkan. Huruf kecil A, B, C… menandai pilihan yang sama di tabel cetak; arahkan kursor ke nama untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Baris di bawah nama menunjukkan paket/harga. Hari yang belum punya menu cukup ditandai <em>pesan</em>. Paketnya mengikuti default pelanggan. <span id="customHiddenNote"></span></p>' +
+      '<p class="muted tiny">Klik huruf A, B, C… untuk menandai pesanan, klik lagi untuk membatalkan. Nama makanan tertulis di bawah tombol, dan nama paket anak ada di bawah namanya. Arahkan kursor ke huruf atau nama untuk melihat <strong>isi lengkapnya</strong>. <strong>Snack boleh pilih lebih dari satu makanan</strong> (harga mengikuti pilihan pertama: paket anak itu, atau harga barisnya kalau menunya <em>Spesial</em>). Hari yang belum punya menu cukup ditandai <em>pesan</em>. <span id="customHiddenNote"></span></p>' +
       '<div class="table-wrap custom-wrap"><table class="table custom-table">' +
         '<thead><tr id="customHead"></tr></thead><tbody id="customList"></tbody>' +
       '</table></div>' +
@@ -2706,15 +2706,9 @@ function customDates() {
   for (let i = 0; i < 7; i++) out.push(shiftDate(start, i));
   return out;
 }
-function customPkgNote(type, rec, c, chosen) {
-  const mode = db.settings.customDisplay === 'name' ? 'name' : db.settings.customDisplay === 'price' ? 'price' : 'both';
-  const sp = spesialPrice(chosen);
-  if (sp) return mode === 'name' ? 'Spesial' : mode === 'price' ? fmtIDR(sp) : 'Spesial · ' + fmtIDR(sp);
-  const p = pkgFor(type, rec, c);
-  if (!p) return mode === 'price' ? '—' : 'tanpa paket';
-  if (mode === 'name') return p.name;
-  if (mode === 'price') return fmtIDR(p.price);
-  return p.name + ' · ' + fmtIDR(p.price);
+function customRowPkg(type, c) {
+  const rec = customDates().map(d => (db[type][d] || {})[c.id]).find(r => r && r.ordered && r.pkg);
+  return pkgFor(type, rec || {}, c);
 }
 function customPicks(type, rec) {
   const max = type === 'snack' ? Infinity : 1;
@@ -2919,32 +2913,37 @@ function renderCustom() {
         return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
           '<button type="button" class="cs-plain' + (ordered ? ' is-on' : '') + (leave && !ordered ? ' is-blocked' : '') + '" data-act="custom-plain" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" title="' +
           (ordered ? 'Batalkan pesanan hari ini' : leave ? 'Libur: lepas dulu tanda liburnya untuk memesan' : 'Tandai pesan hari ini · paket mengikuti default pelanggan, ubah paketnya di sel ini') + '">' +
-          (ordered ? '✓ pesan' : 'pesan') + '</button>' +
-          '<div class="cs-pkg' + (ordered ? ' is-manual' : ' is-off') + '">' + escapeHtml(ordered ? customPkgNote(type, rec, c) : 'belum pesan') + '</div></td>';
+          (ordered ? '✓ pesan' : 'pesan') + '</button></td>';
       }
       const picks = ordered ? customPicks(type, rec).filter(k => k < items.length) : [];
       return '<td class="cell' + (leave ? ' is-leave' : '') + '"' + (leave ? ' title="Sedang libur"' : '') + '>' +
         '<div class="cs-food">' + items.slice(0, LETTERS.length).map((it, k) => {
           const pj = menuItemPkg(it);
           const allowed = itemAllowedFor(type, it, rec, c);
+          const fullName = menuLines(it.name).join(' · ');
           const extra = [
             spesialPrice(it) ? 'Harga spesial ' + fmtIDR(spesialPrice(it)) + ', berlaku untuk semua yang memilih' : 'Harga mengikuti paket anak ini',
             pj ? (allowed ? 'Paket ' : 'Khusus paket ') + pj.name : ''
           ].filter(Boolean).join('\n');
-          return '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
+          return '<div class="cs-pick">' +
+            '<button type="button" class="cs-letter' + (picks.indexOf(k) >= 0 ? ' is-on' : '') + (allowed ? '' : ' is-locked') +
             '" data-act="custom-food" data-cid="' + escapeHtml(c.id) + '" data-date="' + d + '" data-mi="' + k + '"' +
             (!allowed && pj ? ' title="Khusus paket ' + escapeHtml(pj.name) + '"' : '') +
-            ' data-tip="' + foodTip(k, it, extra) + '">' +
-            '<span class="cs-letter-k">' + LETTERS[k] + '</span>' +
-            '<span class="cs-letter-name">' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 30)) + '</span></button>';
+            ' data-tip="' + foodTip(k, it, extra) + '">' + LETTERS[k] + '</button>' +
+            '<div class="cs-food-name" title="' + escapeHtml(fullName) + '">' + escapeHtml(shortTxt(menuLines(it.name)[0] || it.name, 26)) + '</div>' +
+            '</div>';
         }).join('') + '</div>' +
-        '<div class="cs-pkg' + (picks.length ? '' : (ordered ? ' is-manual' : ' is-off')) + '" title="' +
-        escapeHtml(picks.length > 1 ? (picks.length + ' pilihan · harga mengikuti pilihan ' + LETTERS[picks[0]]) : (picks.length === 0 && ordered ? 'Pesanan tercatat tanpa pilihan menu, harga mengikuti paket pelanggan' : (type === 'snack' ? 'Boleh pilih lebih dari satu makanan' : 'Satu pilihan per hari'))) + '">' +
-        escapeHtml(picks.length || ordered ? customPkgNote(type, rec, c, picks.length ? items[picks[0]] : null) : 'belum pesan') + '</div>' +
         '</td>';
     }).join('');
+    const rowPkg = customRowPkg(type, c);
+    const pkgMode = db.settings.customDisplay === 'name' || db.settings.customDisplay === 'price' ? db.settings.customDisplay : 'both';
+    const rowPkgText = !rowPkg ? 'Paket belum diatur'
+      : pkgMode === 'name' ? rowPkg.name
+      : pkgMode === 'price' ? fmtIDR(rowPkg.price)
+      : rowPkg.name + ' · ' + fmtIDR(rowPkg.price);
     return '<tr data-cid="' + c.id + '">' +
-      '<td class="sticky-col"><strong>' + escapeHtml(c.name) + '</strong>' + (c.allergy ? '<span class="alg-dot" title="' + escapeHtml(c.allergy) + '">&#9888;</span>' : '') + '</td>' +
+      '<td class="sticky-col"><strong>' + escapeHtml(c.name) + '</strong>' + (c.allergy ? '<span class="alg-dot" title="' + escapeHtml(c.allergy) + '">&#9888;</span>' : '') +
+      '<span class="row-pkg" title="' + escapeHtml(rowPkg ? rowPkg.name : 'Paket belum diatur') + '">' + escapeHtml(rowPkgText) + '</span></td>' +
       '<td class="muted">' + escapeHtml(c.className || '—') + '</td>' + cells +
       '<td class="num"><strong>' + n + '</strong><br><span class="muted tiny">' + fmtIDR(rowValue) + '</span></td></tr>';
   }).join('');

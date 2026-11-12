@@ -710,25 +710,22 @@ button.food-chip:hover{border-color:var(--primary);color:var(--primary-dark);opa
 .row-jump:hover,.row-jump:focus-visible{border-color:var(--primary);color:var(--primary-dark)}
 .custom-table td.cell{padding:4px;min-width:118px}
 .custom-table td.cell select{width:100%;font-size:12.5px;padding:6px 22px 6px 8px;background-position:right 6px center}
-.cs-food{display:flex;flex-direction:column;gap:3px;align-items:stretch}
-.cs-letter{width:100%;height:auto;padding:3px 4px;display:flex;align-items:center;gap:3px;border-radius:8px;border:1px solid var(--border-strong);
-  background:var(--surface-2);color:var(--muted);font-weight:700;font-size:10px;line-height:1.2;cursor:pointer;text-align:left;
+.cs-food{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.cs-pick{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cs-letter{width:100%;height:23px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--border-strong);
+  background:var(--surface-2);color:var(--muted);font-weight:800;font-size:12px;line-height:1;cursor:pointer;font-family:inherit;
   transition:background .15s, color .15s, border-color .15s}
-.cs-letter-k{flex:none;min-width:16px;height:16px;padding:0 3px;display:grid;place-items:center;border-radius:5px;
-  background:var(--surface-3);color:var(--muted);font-size:9.5px;font-weight:800}
-.cs-letter-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-food-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;
+  font-size:9.5px;font-weight:600;line-height:1.15;color:var(--muted)}
 .cs-letter:hover{border-color:var(--primary);color:var(--primary-dark)}
 .cs-letter.is-on{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 3px 10px var(--glow-1)}
-.cs-letter.is-on .cs-letter-k{background:rgba(255,255,255,.22);color:#fff}
+.cs-letter.is-on + .cs-food-name{color:var(--primary-dark);font-weight:700}
 .cs-letter.is-locked{opacity:.32;filter:grayscale(.4);cursor:not-allowed}
 .cs-letter.is-locked:hover{border-color:var(--border-strong);color:var(--muted);transform:none}
-.cs-pkg{margin-top:4px;font-size:10px;font-weight:700;color:var(--muted);text-align:center;line-height:1.25;
+.custom-table .row-pkg{display:block;margin-top:2px;font-size:10px;font-weight:600;color:var(--muted);
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-pkg.is-off{opacity:.55;font-weight:600}
-.cs-pkg.is-manual{color:var(--gold);font-style:italic}
 .cs-legend{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:6px;font-size:10px;font-weight:600;letter-spacing:0;
   text-transform:none;color:var(--muted);line-height:1.35}
-.cs-letter-xs{width:17px;height:17px;border-radius:5px;font-size:10px;flex:none}
 .cs-plain{display:block;width:100%;padding:5px 4px;border-radius:9px;border:1px dashed var(--border-strong);background:var(--surface-2);
   color:var(--muted);font-size:11px;font-weight:700;line-height:1;cursor:pointer;font-family:inherit;transition:.15s}
 .cs-plain:hover{border-color:var(--primary);color:var(--primary-dark)}
