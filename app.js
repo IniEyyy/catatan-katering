@@ -5581,7 +5581,7 @@ function renderHomeHoliday() {
   const daftar = db.holidays.filter(dalam).filter(h => daily || h.scope === 'all').sort((a, b) => a.date.localeCompare(b.date));
   sum.textContent = daftar.length
     ? daftar.length + ' tanggal libur ' + (daily ? 'hari ini' : 'minggu ini')
-    : '';
+    : (daily ? 'Tidak ada libur hari ini' : '');
   if (!chips) return;
   /* tab Harian: agenda libur dipisah dari kalender, di bawah menu, menyamping,
      dan hanya berisi libur tanggal terpilih (tidak ada pesan kalau kosong) */
