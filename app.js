@@ -439,7 +439,9 @@ function makeDemoData() {
     const tpl = [W1, W2, W3][((w % 3) + 3) % 3];
     for (let i = 0; i < 7; i++) {
       const date = shiftDate(mon, w * 7 + i);
-      if (tpl[i].length) d.menuPlan[date] = tpl[i].map(x => Object.assign({}, x));
+      /* Sabtu hanya untuk PO, Minggu tidak dipakai: usaha tidak menyiapkan snack/lunch akhir pekan */
+      const items = i === 5 ? tpl[i].filter(x => x.type === 'po') : i === 6 ? [] : tpl[i];
+      if (items.length) d.menuPlan[date] = items.map(x => Object.assign({}, x));
     }
   }
   /* tanggal libur semua orang dibiarkan hanya berisi baris PO, sama seperti hasil menandai libur di Beranda */
@@ -477,7 +479,7 @@ function makeDemoData() {
      jadi akhir pekan pun halaman Cetak / Pesanan Mingguan tidak kosong */
   for (let i = 41; i >= -7; i--) {
     const date = shiftDate(today, -i);
-    if (weekdayOf(date) === 7) continue;              // Minggu diliburkan
+    if (weekdayOf(date) > 5) continue;                // Sabtu & Minggu tidak ada pesanan rutin
     if (date === offAll) continue;                    // libur nasional (contoh)
     for (const type of ['snack', 'lunch']) {
       for (const c of kids) {
@@ -1011,15 +1013,15 @@ function fillOnceOrder(c) {
   autoPickSingles([d], c.id);
   return n;
 }
-/* Mingguan: 7 hari berikutnya. Bulanan: besok s/d akhir bulan. Hanya Senin–Jumat. */
+/* Mingguan: 7 hari mulai hari ini. Bulanan: hari ini s/d akhir bulan. Hanya Senin–Jumat. */
 function autoFillPeriod(c) {
   if (!c || c.active === false) return 0;
   if (c.status === 'sekali') return fillOnceOrder(c);
   if (c.period === 'semester' || c.period === 'daily') return 0;
   const today = todayStr();
-  const last = c.period === 'weekly' ? shiftDate(today, 7) : endOfMonth(today);
+  const last = c.period === 'weekly' ? shiftDate(today, 6) : endOfMonth(today);
   let n = 0;
-  for (let d = shiftDate(today, 1); d <= last; d = shiftDate(d, 1)) {
+  for (let d = today; d <= last; d = shiftDate(d, 1)) {
     if (weekdayOf(d) > 5) continue;
     for (const type of ['snack', 'lunch']) {
       if (!c[type === 'snack' ? 'snackDefault' : 'lunchDefault']) continue;
@@ -6670,8 +6672,8 @@ function openCustomerModal(c) {
           STATUS_LABEL[s] + ' · ' + STATUS_HINT[s] + '</option>').join('') +
       '</select></label>' +
       '<p class="muted tiny" id="custStatusNote">' + (isEdit
-        ? 'Status <strong>Aktif</strong> mengisi pesanan sampai periode berikutnya (Senin–Jumat, belum dibayar); <strong>Beli Sekali</strong> hanya satu tanggal.'
-        : 'Anak baru otomatis <strong>Aktif</strong> (mengisi pesanan sampai periode berikutnya) atau <strong>Beli Sekali</strong> (satu tanggal). Status <strong>Selesai</strong> / <strong>Berhenti</strong> diisi nanti lewat halaman Pelanggan.') + '</p>' +
+        ? 'Status <strong>Aktif</strong> mengisi pesanan mulai hari ini sampai periode berikutnya (Senin–Jumat, belum dibayar); <strong>Beli Sekali</strong> hanya satu tanggal.'
+        : 'Anak baru otomatis <strong>Aktif</strong> (mengisi pesanan mulai hari ini sampai periode berikutnya) atau <strong>Beli Sekali</strong> (satu tanggal). Status <strong>Selesai</strong> / <strong>Berhenti</strong> diisi nanti lewat halaman Pelanggan.') + '</p>' +
       '<div class="modal-actions">' +
         '<button type="button" class="btn btn-ghost" data-act="modal-close">Batal</button>' +
         '<button type="submit" class="btn btn-primary">Simpan</button>' +
