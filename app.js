@@ -107,11 +107,11 @@ function defaultData() {
       defaultPeriod: 'weekly',
       bankName: '', bankNumber: '', bankHolder: '', // rekening usaha: dicetak di invoice
       logo: '', // logo usaha sebagai data URL, kosong = tidak ada
-      logoOpts: { stiker: true, konfirmasi: true, laporan: true, invoice: true, headMm: 14 }, // pilihan cetak logo
+      logoOpts: { stiker: false, konfirmasi: false, laporan: true, invoice: true, headMm: 14 }, // pilihan cetak logo
       invSeq: 0, // penghitung nomor invoice yang sudah terbit
       waCountry: '62',
       waTemplate: 'Halo {orang}, berikut tagihan {usaha} yang belum dibayar:\n{rincian}\nTotal sisa: {sisa}\nMohon konfirmasi setelah transfer. Terima kasih.',
-      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, padV: 2.6, tight: 100, mark: 'bar', tone: 'soft' },
+      sticker: { nameFont: 'sans', clsFont: 'sans', brandFont: 'sans', logoLayout: 'bottom', lineW: 2, nameScale: 100, clsScale: 100, brandScale: 100, padV: 2.6, tight: 100, mark: 'bar', tone: 'soft' },
       uiFont: 'default', // jenis huruf seluruh aplikasi (key UI_FONTS)
       uiZoom: 100,       // skala teks seluruh aplikasi, 85–130 %
       customDisplay: 'both', // tampilan sel Kustomisasi: 'both' | 'name' | 'price'
@@ -147,6 +147,7 @@ function normalize(d) {
   sk.nameFont = STK_FONTS[sk.nameFont] ? sk.nameFont : 'sans';
   sk.clsFont = STK_FONTS[sk.clsFont] ? sk.clsFont : 'sans';
   sk.brandFont = STK_FONTS[sk.brandFont] ? sk.brandFont : 'sans';
+  sk.logoLayout = sk.logoLayout === 'left' ? 'left' : 'bottom';
   sk.lineW = Math.max(0.5, Math.min(6, +sk.lineW || 2));
   sk.nameScale = clampScale(sk.nameScale, 70, 140);
   sk.clsScale = clampScale(sk.clsScale, 40, 160);
@@ -252,6 +253,13 @@ function normalize(d) {
   const lo = Object.assign({}, def.settings.logoOpts, d.settings.logoOpts || {});
   ['stiker', 'konfirmasi', 'laporan', 'invoice'].forEach(k => { lo[k] = !!lo[k]; });
   lo.headMm = Math.min(30, Math.max(8, Math.round(+lo.headMm || 14)));
+  /* sejak batch ini stiker dan kertas konfirmasi bawaannya tanpa logo;
+     data lama dimigrasikan sekali, setelah itu pilihan pemilik tidak diubah lagi */
+  if (+(d.settings.logoDefaults || 0) < 2) {
+    lo.stiker = false;
+    lo.konfirmasi = false;
+    d.settings.logoDefaults = 2;
+  }
   d.settings.logoOpts = lo;
   d.settings.invSeq = Math.max(0, Math.min(999999, Math.round(+d.settings.invSeq || 0)));
   if (!Array.isArray(d.poMenus)) d.poMenus = [];
@@ -4773,6 +4781,7 @@ function stickerOptions() {
     cols: parts[0], rows: per, rowH: rowH,
     content: document.getElementById('stickerContent').value,
     brand: document.getElementById('stickerBrand').checked,
+    logoLayout: style.logoLayout === 'left' ? 'left' : 'bottom',
     lines: document.getElementById('stickerLines').checked,
     style: style
   };
@@ -4797,14 +4806,20 @@ function buildStickerHTML(customers, o) {
   const autoName = Math.max(12, Math.min(40, innerW / 4.2, innerH / 3.8));
   const autoCls = Math.max(10, Math.min(34, innerW / 3.6, innerH / 4.4));
   const logoSrc = printLogoOn('stiker') ? db.settings.logo : '';
-  /* logo dapat slot lebih tinggi dari teks nama usaha supaya tetap terbaca di sel kecil */
-  const logoSize = logoSrc ? Math.max(16, Math.min(38, innerH * 0.3 * (style.brandScale / 100))) : 0;
+  const brandSlot = !!(o.brand || logoSrc);
+  const leftLogo = !!(brandSlot && o.logoLayout === 'left');
+  /* logo dapat slot lebih tinggi dari teks nama usaha supaya tetap terbaca di sel kecil,
+     dan lebih besar lagi saat berdiri sendiri di kiri nama */
+  const logoSize = logoSrc ? Math.max(16, Math.min(leftLogo ? 58 : 38, innerH * (leftLogo ? 0.55 : 0.3) * (style.brandScale / 100))) : 0;
   const brandSize = Math.max(5, Math.min(30, autoName * 0.3 * (style.brandScale / 100)));
   const slotSize = logoSrc ? logoSize : brandSize;
-  const brandSlot = !!(o.brand || logoSrc);
   let nameSize = autoName * (style.nameScale / 100);
   let clsSize = autoCls * (style.clsScale / 100);
-  const stack = nameSize + clsSize + (brandSlot ? slotSize + 2 : 0);
+  /* kolom logo di kiri mengambil sebagian lebar sel, jadi teks nama dirapatkan sedikit */
+  if (leftLogo) { nameSize *= 0.9; clsSize *= 0.95; }
+  const stack = brandSlot
+    ? (leftLogo ? Math.max(nameSize + clsSize, slotSize + 2) : nameSize + clsSize + slotSize + 2)
+    : nameSize + clsSize;
   const budget = innerH * 0.92;
   if (stack > budget) { const k = budget / stack; nameSize *= k; clsSize *= k; }
   const nameFont = STK_FONTS[style.nameFont] || STK_FONTS.sans;
@@ -4826,7 +4841,7 @@ function buildStickerHTML(customers, o) {
       let cls = '';
       if (o.content === 'namealg' && c.allergy) {
         const len = Math.max(8, c.allergy.length);
-        const availH = Math.max(14, innerH * 0.8 - nameSize - (brandSlot ? slotSize + 2 : 0));
+        const availH = Math.max(14, innerH * 0.8 - nameSize - (brandSlot && !leftLogo ? slotSize + 2 : 0));
         let best = { sz: 0, lines: 1 };
         for (let ln = 1; ln <= 5; ln++) {
           const s = Math.min(clsSize, ln * innerW / (0.72 * len), availH / (1.12 * ln));
@@ -4848,9 +4863,11 @@ function buildStickerHTML(customers, o) {
           : '<span class="mk mk-word" style="color:' + markFg + ';font-size:' + wordPx.toFixed(1) + 'px">alergi</span>')
         : '';
       const br = logoSrc
-        ? '<img class="brand-logo" src="' + logoSrc + '" alt="">'
+        ? '<img class="brand-logo" src="' + logoSrc + '" alt=""' +
+          (leftLogo ? ' style="max-width:' + Math.min(innerW * 0.36, 64).toFixed(1) + 'px"' : '') + '>'
         : (o.brand ? '<div class="brand">' + escapeHtml(brandName) + '</div>' : '');
-      return '<div class="label' + (cornerMark ? ' has-mark' : '') + '">' + cornerMark + '<div class="name">' + escapeHtml(c.name) + '</div>' + underMark + cls + br + '</div>';
+      return '<div class="label' + (cornerMark ? ' has-mark' : '') + (leftLogo ? ' logo-left' : '') + '">' + cornerMark +
+        '<div class="body"><div class="name">' + escapeHtml(c.name) + '</div>' + underMark + cls + '</div>' + br + '</div>';
     }).join('');
     /* berhenti di baris terakhir yang terisi, tidak ada kotak kosong di bawahnya */
     const usedRows = Math.ceil(page.length / cols);
@@ -4873,6 +4890,11 @@ function buildStickerHTML(customers, o) {
     '.mk-bar{position:static;width:34%;height:1.1mm;border-radius:1mm;margin:.9mm auto 0}' +
     '.mk-word{position:static;display:block;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-top:.7mm;line-height:1}' +
     '.label.has-mark .brand,.label.has-mark .alg,.label.has-mark .cls{max-width:calc(100% - ' + (markMm + 1).toFixed(1) + 'mm)}' +
+    '.body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25mm;max-width:100%;min-width:0}' +
+    '.label.logo-left{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:1.5mm;text-align:left}' +
+    '.label.logo-left .body{grid-column:2;grid-row:1;align-items:flex-start;text-align:left}' +
+    '.label.logo-left .brand,.label.logo-left .brand-logo{grid-column:1;grid-row:1;max-width:38%}' +
+    '.label.logo-left .brand{text-align:left}' +
     '.name{flex:0 0 auto;font-family:' + nameFont + ';font-weight:700;font-size:' + nameSize.toFixed(1) + 'px;max-width:100%;overflow-wrap:anywhere}' +
     '.cls{flex:0 0 auto;font-family:' + clsFont + ';color:' + clsInk + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
     '.alg{font-family:' + clsFont + ';font-weight:700;font-size:' + clsSize.toFixed(1) + 'px;line-height:1.08;max-width:100%;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}' +
@@ -4887,6 +4909,7 @@ function syncStickerControls() {
   set('stickerNameFont', st.nameFont);
   set('stickerClsFont', st.clsFont);
   set('stickerBrandFont', st.brandFont);
+  set('stickerLogoLayout', st.logoLayout === 'left' ? 'left' : 'bottom');
   set('stickerLineW', String(st.lineW));
   set('stickerNameScale', String(st.nameScale));
   set('stickerClsScale', String(st.clsScale));
@@ -4946,6 +4969,7 @@ function saveStickerStyle() {
   st.nameScale = clampScale(val('stickerNameScale', 100), 70, 140);
   st.clsScale = clampScale(val('stickerClsScale', 100), 40, 160);
   st.brandScale = clampScale(val('stickerBrandScale', 100), 40, 200);
+  st.logoLayout = val('stickerLogoLayout', 'bottom') === 'left' ? 'left' : 'bottom';
   st.padV = Math.min(10, Math.max(0, +val('stickerCellPad', 2.6) || 0));
   st.tight = Math.min(100, Math.max(50, +val('stickerCellTight', 100) || 100));
   st.mark = STK_MARKS[val('stickerMark', 'bar')] ? val('stickerMark', 'bar') : 'bar';
@@ -7396,8 +7420,8 @@ function onDocChange(e) {
   if (t.id === 'setUiFont' || t.id === 'setUiZoom') { saveUiStyle(); return; }
   if (t.id === 'stickerNameFont' || t.id === 'stickerClsFont' || t.id === 'stickerBrandFont' ||
       t.id === 'stickerNameScale' || t.id === 'stickerClsScale' || t.id === 'stickerBrandScale' ||
-      t.id === 'stickerCellPad' || t.id === 'stickerCellTight' || t.id === 'stickerLineW' ||
-      t.id === 'stickerMark' || t.id === 'stickerTone') {
+      t.id === 'stickerLogoLayout' || t.id === 'stickerCellPad' || t.id === 'stickerCellTight' ||
+      t.id === 'stickerLineW' || t.id === 'stickerMark' || t.id === 'stickerTone') {
     saveStickerStyle(); stickerPreview(); return;
   }
   if (t.id === 'satpamShowClass') { satpamPreview(); return; }
